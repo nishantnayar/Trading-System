@@ -50,6 +50,7 @@ nav:
   - Logging Architecture: LOGGING_ARCHITECTURE.md
   - Testing Strategy: TESTING_STRATEGY.md
   - CI/CD Pipeline: CI_CD_PIPELINE.md
+  - CI/CD Troubleshooting: CI_CD_TROUBLESHOOTING.md
 
 # Extra configuration
 extra:
