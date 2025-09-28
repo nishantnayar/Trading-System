@@ -1,6 +1,25 @@
 # Trading System
 
-A production-grade algorithmic trading system designed for local deployment, focusing on equities trading through Alpaca with paper trading capabilities.
+<div align="center">
+
+![Trading System](https://img.shields.io/badge/Trading-System-blue?style=for-the-badge&logo=python)
+![Python](https://img.shields.io/badge/Python-3.11+-green?style=flat-square&logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-red?style=flat-square&logo=fastapi)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue?style=flat-square&logo=postgresql)
+![Redis](https://img.shields.io/badge/Redis-7+-red?style=flat-square&logo=redis)
+
+**A production-grade algorithmic trading system for equities trading**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/Documentation-MkDocs-blue.svg)](https://nishantnayar.github.io/trading-system)
+[![GitHub Issues](https://img.shields.io/github/issues/nishantnayar/trading-system)](https://github.com/nishantnayar/trading-system/issues)
+[![GitHub Stars](https://img.shields.io/github/stars/nishantnayar/trading-system)](https://github.com/nishantnayar/trading-system/stargazers)
+
+</div>
+
+---
+
+A production-grade algorithmic trading system designed for local deployment, focusing on equities trading through Alpaca with paper trading capabilities. Built with modern Python technologies and microservices architecture for scalability and maintainability.
 
 ## 🏗️ Architecture
 
@@ -12,54 +31,82 @@ This system uses a **microservices architecture** with **Prefect orchestration**
 - **Workflow Orchestration**: Prefect for automated trading workflows
 - **Comprehensive Monitoring**: Loguru logging with structured data
 
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| 🚀 **Paper Trading** | Safe testing environment with Alpaca paper trading API |
+| 📊 **Real-time Data** | Live market data ingestion and processing |
+| 🧠 **Strategy Engine** | Plugin-based framework for custom trading strategies |
+| ⚡ **Risk Management** | Built-in position sizing and risk controls |
+| 📈 **Analytics** | Comprehensive performance tracking and reporting |
+| 🔄 **Backtesting** | Historical strategy validation framework |
+| 📱 **Web Dashboard** | Modern, responsive trading interface |
+| 🔧 **Microservices** | Scalable, maintainable service architecture |
+
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Python 3.11+**
-- **Anaconda** (recommended)
-- **PostgreSQL 15+**
-- **Redis 7+**
-- **Alpaca API Account** (paper trading)
+| Requirement | Version | Purpose |
+|-------------|---------|---------|
+| **Python** | 3.11+ | Core runtime |
+| **Anaconda** | Latest | Package management |
+| **PostgreSQL** | 15+ | Primary database |
+| **Redis** | 7+ | Caching and messaging |
+| **Alpaca API** | - | Trading and market data |
+
+> **Note**: Alpaca paper trading account is free and recommended for testing
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/nishantnayar/trading-system.git
-   cd trading-system
-   ```
+<details>
+<summary><strong>Step-by-step installation guide</strong></summary>
 
-2. **Create conda environment**
-   ```bash
-   conda env create -f deployment/environment.yml
-   conda activate trading-system
-   ```
+#### 1. Clone Repository
+```bash
+git clone https://github.com/nishantnayar/trading-system.git
+cd trading-system
+```
 
-3. **Install additional dependencies**
-   ```bash
-   pip install -r deployment/requirements.txt
-   ```
+#### 2. Setup Environment
+```bash
+# Create conda environment
+conda env create -f deployment/environment.yml
+conda activate trading-system
 
-4. **Setup environment variables**
-   ```bash
-   cp deployment/env.example .env
-   # Edit .env with your actual values
-   ```
+# Install additional dependencies
+pip install -r deployment/requirements.txt
+```
 
-5. **Initialize database**
-   ```bash
-   python deployment/scripts/setup_database.py
-   ```
+#### 3. Configure Environment
+```bash
+# Copy environment template
+cp deployment/env.example .env
 
-6. **Start services**
-   ```bash
-   python deployment/scripts/start_services.py
-   ```
+# Edit .env with your Alpaca API credentials
+# Get your API keys from: https://app.alpaca.markets/paper/dashboard/overview
+```
 
-7. **Access the dashboard**
-   - Open http://localhost:8000 in your browser
-   - Default login: admin/admin
+#### 4. Initialize Database
+```bash
+# Start PostgreSQL and Redis services
+# Then initialize the database
+python deployment/scripts/setup_database.py
+```
+
+#### 5. Start Services
+```bash
+# Start all microservices
+python deployment/scripts/start_services.py
+```
+
+#### 6. Access Dashboard
+- **URL**: http://localhost:8000
+- **Default Login**: admin/admin
+- **API Docs**: http://localhost:8000/docs
+
+</details>
 
 ## 📁 Project Structure
 
@@ -145,24 +192,31 @@ sphinx-build -b html . _build/html
 
 ## 📊 Features
 
-### Trading Capabilities
-- **Paper Trading**: Safe testing environment
-- **Live Trading**: Production-ready execution
-- **Multiple Strategies**: Plugin-based strategy framework
-- **Risk Management**: Built-in position sizing and limits
-- **Backtesting**: Historical strategy validation
+### 🚀 Trading Capabilities
+- **Paper Trading**: Safe testing environment with Alpaca paper API
+- **Live Trading**: Production-ready execution for real money
+- **Multiple Strategies**: Plugin-based framework for custom strategies
+- **Risk Management**: Built-in position sizing and risk controls
+- **Backtesting**: Historical strategy validation and optimization
 
-### Data Processing
-- **Real-time Data**: Alpaca market data integration
-- **Historical Data**: Efficient storage with Polars
-- **Technical Indicators**: Comprehensive analysis tools
+### 📈 Data Processing
+- **Real-time Data**: Live market data ingestion from Alpaca
+- **Historical Data**: Efficient storage and processing with Polars
+- **Technical Indicators**: Comprehensive technical analysis tools
 - **Performance Metrics**: Detailed analytics and reporting
 
-### Monitoring & Alerts
-- **Real-time Dashboard**: Live portfolio monitoring
-- **Performance Tracking**: Strategy performance metrics
-- **Risk Monitoring**: Continuous risk assessment
-- **Email Alerts**: Critical event notifications
+### 🔔 Monitoring & Alerts
+- **Real-time Dashboard**: Live portfolio monitoring and control
+- **Performance Tracking**: Strategy performance metrics and analytics
+- **Risk Monitoring**: Continuous risk assessment and alerts
+- **Email Notifications**: Critical event notifications and reports
+
+### 🛠️ Development Features
+- **Microservices Architecture**: Scalable, maintainable service design
+- **Prefect Orchestration**: Automated workflow management
+- **Modern Frontend**: HTMX + Plotly + Tailwind CSS interface
+- **Comprehensive Logging**: Structured logging with Loguru
+- **Code Quality**: Black, Flake8, mypy, and pre-commit hooks
 
 ## 🔧 Configuration
 
@@ -244,16 +298,40 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Documentation**: [ARCHITECTURE.md](ARCHITECTURE.md)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/trading-system/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/trading-system/discussions)
+| Resource | Description | Link |
+|----------|-------------|------|
+| 📚 **Architecture** | Detailed system architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| 📖 **Documentation** | Complete user and developer docs | [MkDocs](https://nishantnayar.github.io/trading-system) |
+| 🐛 **Issues** | Report bugs and request features | [GitHub Issues](https://github.com/nishantnayar/trading-system/issues) |
+| 💬 **Discussions** | Community discussions and Q&A | [GitHub Discussions](https://github.com/nishantnayar/trading-system/discussions) |
+| 📧 **Contact** | Direct contact for support | nishant.nayar@hotmail.com |
 
 ## 🔄 Version History
 
-- **v1.0.0** - Initial release with paper trading support
-- **v1.1.0** - Live trading capabilities (planned)
-- **v1.2.0** - Advanced analytics and ML integration (planned)
+| Version | Status | Features |
+|---------|--------|----------|
+| **v1.0.0** | ✅ Released | Paper trading, basic strategies, web dashboard |
+| **v1.1.0** | 🚧 Planned | Live trading, advanced risk management |
+| **v1.2.0** | 📋 Roadmap | ML integration, multi-asset support |
+| **v1.3.0** | 📋 Roadmap | Cloud deployment, mobile app |
+
+## 🏆 Acknowledgments
+
+- **Alpaca Markets** for providing excellent trading APIs
+- **FastAPI** team for the amazing web framework
+- **Prefect** for workflow orchestration
+- **Polars** for high-performance data processing
+- **Python Community** for the incredible ecosystem
 
 ---
 
+<div align="center">
+
 **Happy Trading! 📈**
+
+Made with ❤️ by [Nishant Nayar](https://github.com/nishantnayar)
+
+[![GitHub](https://img.shields.io/badge/GitHub-nishantnayar-black?style=flat-square&logo=github)](https://github.com/nishantnayar)
+[![Email](https://img.shields.io/badge/Email-nishant.nayar@hotmail.com-blue?style=flat-square&logo=mail)](mailto:nishant.nayar@hotmail.com)
+
+</div>

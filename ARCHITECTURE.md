@@ -4,6 +4,11 @@
 
 A production-grade algorithmic trading system designed for local deployment, focusing on equities trading through Alpaca with paper trading capabilities. The system uses a microservices architecture with Prefect orchestration, Python-based services, and a modern web interface.
 
+**Author**: Nishant Nayar  
+**Email**: nishant.nayar@hotmail.com  
+**Repository**: https://github.com/nishantnayar/trading-system  
+**Documentation**: https://nishantnayar.github.io/trading-system
+
 ## System Requirements
 
 - **Asset Class**: Equities trading via Alpaca API
@@ -324,7 +329,9 @@ mypy .
 
 ### Environment Configuration
 ```python
-# config/settings.py
+# src/config/settings.py
+from pydantic_settings import BaseSettings
+
 class Settings(BaseSettings):
     # Database
     postgres_url: str
@@ -348,7 +355,7 @@ class Settings(BaseSettings):
 
 ### Strategy Configuration
 ```yaml
-# strategies/config.yaml
+# config/strategies.yaml
 strategies:
   - name: "momentum_strategy"
     enabled: true
