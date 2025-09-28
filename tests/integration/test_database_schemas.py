@@ -99,7 +99,7 @@ class TestDatabaseStructure:
             # Get the database name from configuration
             config = get_database_config()
             db_name = config.trading_db_name
-            
+
             result = conn.execute(
                 text(
                     f"SELECT pg_encoding_to_char(encoding) FROM pg_database WHERE datname = '{db_name}'"
