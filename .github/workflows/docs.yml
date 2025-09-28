@@ -103,9 +103,11 @@ jobs:
                                 else:
                                     # For relative links, resolve relative to the current file's directory
                                     current_dir = os.path.dirname(filepath)
-                                    if current_dir.startswith('docs/'):
+                                    # Normalize path separators for comparison
+                                    normalized_dir = current_dir.replace('\\', '/')
+                                    if normalized_dir.startswith('docs/'):
                                         # For files in docs/, resolve relative to their directory
-                                        link_path = os.path.join(current_dir, link)
+                                        link_path = normalized_dir + '/' + link
                                     else:
                                         link_path = os.path.join('docs', link)
                                 
