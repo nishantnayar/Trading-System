@@ -103,8 +103,8 @@ jobs:
                                 else:
                                     # For relative links, resolve relative to the current file's directory
                                     current_dir = os.path.dirname(filepath)
-                                    # Normalize path separators for comparison
-                                    normalized_dir = current_dir.replace('\\', '/')
+                                    # Use os.path.normpath and replace for cross-platform compatibility
+                                    normalized_dir = os.path.normpath(current_dir).replace(os.sep, '/')
                                     if normalized_dir.startswith('docs/'):
                                         # For files in docs/, resolve relative to their directory
                                         link_path = normalized_dir + '/' + link
