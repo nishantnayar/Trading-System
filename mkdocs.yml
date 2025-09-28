@@ -1,0 +1,79 @@
+# MkDocs Configuration
+site_name: Trading System Documentation
+site_description: Production-grade algorithmic trading system documentation
+site_author: Nishant Nayar
+site_url: https://nishantnayar.github.io/trading-system
+
+# Documentation directory
+docs_dir: docs
+
+# Repository
+repo_name: nishantnayar/trading-system
+repo_url: https://github.com/nishantnayar/trading-system
+
+# Copyright
+copyright: Copyright &copy; 2025 Nishant Nayar
+
+# Theme configuration
+theme:
+  name: readthedocs
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.share
+  show_sourcelink: false
+  show_prev_next: false
+
+# Plugins
+plugins:
+  - search:
+      lang: en
+
+# Extensions
+markdown_extensions:
+  - toc:
+      permalink: true
+      title: On this page
+  - codehilite
+  - fenced_code
+
+# Page tree
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Configuration: getting-started/configuration.md
+    - First Run: getting-started/first-run.md
+  - User Guide:
+    - Overview: user-guide/overview.md
+    - Dashboard: user-guide/dashboard.md
+    - Trading: user-guide/trading.md
+    - Strategies: user-guide/strategies.md
+    - Risk Management: user-guide/risk-management.md
+  - API Reference:
+    - Data Ingestion: api/data-ingestion.md
+    - Strategy Engine: api/strategy-engine.md
+    - Execution: api/execution.md
+    - Risk Management: api/risk-management.md
+    - Analytics: api/analytics.md
+  - Development:
+    - Architecture: development/architecture.md
+    - Logging Architecture: development/logging-architecture.md
+    - Contributing: development/contributing.md
+    - Testing: development/testing.md
+  - MkDocs:
+    - Logging Architecture: mkdocs/development/logging-architecture.md
+  - Architecture:
+    - Logging Architecture: LOGGING_ARCHITECTURE.md
+  - Troubleshooting:
+    - Common Issues: troubleshooting/common-issues.md
+    - FAQ: troubleshooting/faq.md
+
+# Extra configuration
+extra:
+  version: 1.0.0
+  last_updated: September 2025
+  status: Development Phase

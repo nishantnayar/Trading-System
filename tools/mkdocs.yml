@@ -4,6 +4,9 @@ site_description: Production-grade algorithmic trading system documentation
 site_author: Nishant Nayar
 site_url: https://nishantnayar.github.io/trading-system
 
+# Documentation directory (absolute path from project root)
+docs_dir: ../docs
+
 # Repository
 repo_name: nishantnayar/trading-system
 repo_url: https://github.com/nishantnayar/trading-system
