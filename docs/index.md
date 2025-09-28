@@ -218,8 +218,8 @@ LOG_RETENTION_DAYS=30
 - [Logging Architecture](LOGGING_ARCHITECTURE.md)
 - [Testing Strategy](TESTING_STRATEGY.md)
 - [CI/CD Pipeline](CI_CD_PIPELINE.md)
-- [API Reference](api/)
-- [Troubleshooting](troubleshooting/)
+- [API Reference](api/data-ingestion.md)
+- [Troubleshooting](troubleshooting/faq.md)
 
 ### **Getting Help**
 - Check the [FAQ](troubleshooting/faq.md)
@@ -232,7 +232,7 @@ LOG_RETENTION_DAYS=30
 
 ## 📄 **License**
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/nishantnayar/trading-system/blob/main/LICENSE) file for details.
 
 ---
 
