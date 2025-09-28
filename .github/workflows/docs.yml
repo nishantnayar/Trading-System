@@ -94,8 +94,21 @@ jobs:
                             for text, link in links:
                                 if link.startswith('http'):
                                     continue
-                                # Check if link exists relative to docs directory
-                                link_path = os.path.join('docs', link) if not link.startswith('docs/') else link
+                                if link.startswith('#'):
+                                    continue
+                                
+                                # Resolve link path correctly
+                                if link.startswith('docs/'):
+                                    link_path = link
+                                else:
+                                    # For relative links, resolve relative to the current file's directory
+                                    current_dir = os.path.dirname(filepath)
+                                    if current_dir.startswith('docs/'):
+                                        # For files in docs/, resolve relative to their directory
+                                        link_path = os.path.join(current_dir, link)
+                                    else:
+                                        link_path = os.path.join('docs', link)
+                                
                                 if not os.path.exists(link_path):
                                     broken_links.append(f'{filepath}: {text} -> {link}')
             
