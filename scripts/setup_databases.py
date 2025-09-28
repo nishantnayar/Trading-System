@@ -21,7 +21,7 @@ load_dotenv()
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 
-def run_sql_command(command: str, database: str = "postgres") -> bool:
+def run_sql_command(command: str, database: str = "template1") -> bool:
     """Run a SQL command using psycopg2"""
     try:
         # Get database connection details from environment
@@ -30,7 +30,7 @@ def run_sql_command(command: str, database: str = "postgres") -> bool:
         user = os.getenv("POSTGRES_USER", "postgres")
         password = os.getenv("POSTGRES_PASSWORD", "")
 
-        # Connect to PostgreSQL
+        # Connect to PostgreSQL (use template1 as default)
         conn = psycopg2.connect(
             host=host, port=port, user=user, password=password, database=database
         )
@@ -62,18 +62,18 @@ def create_prefect_database():
     SELECT 1 FROM pg_database WHERE datname = 'Prefect';
     """
 
-    if run_sql_command(check_db_cmd, "trading_system"):
+    if run_sql_command(check_db_cmd):
         print("Prefect database already exists")
         return True
 
     # Create the database
     create_db_cmd = 'CREATE DATABASE "Prefect";'
-    if run_sql_command(create_db_cmd, "trading_system"):
+    if run_sql_command(create_db_cmd):
         print("Prefect database created successfully")
 
         # Grant permissions
         grant_cmd = 'GRANT ALL PRIVILEGES ON DATABASE "Prefect" TO postgres;'
-        if run_sql_command(grant_cmd, "trading_system"):
+        if run_sql_command(grant_cmd):
             print("Permissions granted to postgres user")
             return True
 
