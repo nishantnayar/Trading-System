@@ -38,7 +38,6 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
-    'myst_parser',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -51,7 +50,7 @@ exclude_patterns = []
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-source_suffix = ['.rst', '.md']
+source_suffix = '.rst'
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -160,20 +159,9 @@ napoleon_attr_annotations = True
 autosummary_generate = True
 autosummary_imported_members = True
 
-# -- MyST Parser configuration -----------------------------------------------
+# -- MyST Parser configuration (disabled) -------------------------------------
 
-myst_enable_extensions = [
-    "colon_fence",
-    "deflist",
-    "dollarmath",
-    "html_admonition",
-    "html_image",
-    "linkify",
-    "replacements",
-    "smartquotes",
-    "substitution",
-    "tasklist",
-]
+# MyST parser is not installed, so we'll use standard reStructuredText
 
 # -- Custom configuration -----------------------------------------------------
 
