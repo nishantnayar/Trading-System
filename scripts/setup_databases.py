@@ -162,18 +162,13 @@ def create_service_schemas():
 
     # Verify all schemas were created
     print("\nVerifying all schemas were created...")
-    verify_cmd = """
-    SELECT schema_name 
-    FROM information_schema.schemata 
-    WHERE schema_name IN ('data_ingestion', 'strategy_engine', 'execution', 'risk_management', 'analytics', 'notification', 'logging', 'shared')
-    ORDER BY schema_name;
-    """
-    
+    verify_cmd = "SELECT schema_name FROM information_schema.schemata WHERE schema_name IN ('data_ingestion', 'strategy_engine', 'execution', 'risk_management', 'analytics', 'notification', 'logging', 'shared') ORDER BY schema_name;"
+
     if run_sql_command(verify_cmd, "trading_system"):
         print("All service schemas verified successfully!")
     else:
         print("WARNING: Could not verify schema creation")
-    
+
     return True
 
 
