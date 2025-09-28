@@ -210,7 +210,7 @@ LOG_RETENTION_DAYS=30
 
 ### **Documentation**
 - [User Documentation](https://nishantnayar.github.io/trading-system) (MkDocs)
-- [Technical Documentation](https://nishantnayar.github.io/trading-system-sphinx) (Sphinx)
+- [Technical Documentation](development/) (Sphinx - Local Development)
 - [Architecture Guide](development/architecture.md)
 - [Logging Architecture](development/logging-architecture.md)
 - [API Reference](api/)
