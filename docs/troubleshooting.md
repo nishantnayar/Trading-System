@@ -2,15 +2,6 @@
 
 This comprehensive guide covers common issues, solutions, and frequently asked questions for the Trading System.
 
-## Table of Contents
-
-- [Frequently Asked Questions](#frequently-asked-questions)
-- [Common Issues](#common-issues)
-- [Database Issues](#database-issues)
-- [CI/CD Issues](#cicd-issues)
-- [Performance Issues](#performance-issues)
-- [Getting Help](#getting-help)
-
 ## Frequently Asked Questions
 
 ### Installation Issues

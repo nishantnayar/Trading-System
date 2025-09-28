@@ -2,15 +2,6 @@
 
 This comprehensive guide will help you install, configure, and run the Trading System for the first time.
 
-## Table of Contents
-
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [First Run](#first-run)
-- [Verification](#verification)
-- [Next Steps](#next-steps)
-
 ## Prerequisites
 
 ### System Requirements
