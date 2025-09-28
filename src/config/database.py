@@ -16,28 +16,28 @@ class DatabaseConfig(BaseSettings):
     """Database configuration following the separate database strategy"""
 
     # Trading System Database Configuration
-    postgres_host: str = Field(default="localhost", env="POSTGRES_HOST")
-    postgres_port: int = Field(default=5432, env="POSTGRES_PORT")
-    postgres_user: str = Field(default="postgres", env="POSTGRES_USER")
-    postgres_password: str = Field(default="", env="POSTGRES_PASSWORD")
+    postgres_host: str = Field(default="localhost", alias="POSTGRES_HOST")
+    postgres_port: int = Field(default=5432, alias="POSTGRES_PORT")
+    postgres_user: str = Field(default="postgres", alias="POSTGRES_USER")
+    postgres_password: str = Field(default="", alias="POSTGRES_PASSWORD")
 
     # Trading System Database
-    trading_db_name: str = Field(default="trading_system", env="TRADING_DB_NAME")
+    trading_db_name: str = Field(default="trading_system", alias="TRADING_DB_NAME")
 
     # Prefect Database
-    prefect_db_name: str = Field(default="Prefect", env="PREFECT_DB_NAME")
+    prefect_db_name: str = Field(default="Prefect", alias="PREFECT_DB_NAME")
 
     # Redis Configuration
-    redis_host: str = Field(default="localhost", env="REDIS_HOST")
-    redis_port: int = Field(default=6379, env="REDIS_PORT")
-    redis_db: int = Field(default=0, env="REDIS_DB")
-    redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
+    redis_host: str = Field(default="localhost", alias="REDIS_HOST")
+    redis_port: int = Field(default=6379, alias="REDIS_PORT")
+    redis_db: int = Field(default=0, alias="REDIS_DB")
+    redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
 
     # Connection Pool Settings
-    pool_size: int = Field(default=10, env="DB_POOL_SIZE")
-    max_overflow: int = Field(default=20, env="DB_MAX_OVERFLOW")
-    pool_timeout: int = Field(default=30, env="DB_POOL_TIMEOUT")
-    pool_recycle: int = Field(default=3600, env="DB_POOL_RECYCLE")
+    pool_size: int = Field(default=10, alias="DB_POOL_SIZE")
+    max_overflow: int = Field(default=20, alias="DB_MAX_OVERFLOW")
+    pool_timeout: int = Field(default=30, alias="DB_POOL_TIMEOUT")
+    pool_recycle: int = Field(default=3600, alias="DB_POOL_RECYCLE")
 
     class Config:
         env_file = ".env"
