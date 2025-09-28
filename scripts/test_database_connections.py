@@ -10,6 +10,7 @@ For comprehensive testing, use: python scripts/run_tests.py unit
 import os
 import sys
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -18,14 +19,15 @@ load_dotenv()
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from config.database import get_database_config, get_engine, get_prefect_engine
 from sqlalchemy import text
+
+from config.database import get_database_config, get_engine, get_prefect_engine
 
 
 def test_trading_database():
     """Test connection to trading_system database"""
     print("Testing trading_system database connection...")
-    
+
     try:
         engine = get_engine("trading")
         with engine.connect() as conn:
@@ -45,7 +47,7 @@ def test_trading_database():
 def test_prefect_database():
     """Test connection to Prefect database"""
     print("Testing Prefect database connection...")
-    
+
     try:
         engine = get_prefect_engine()
         with engine.connect() as conn:
@@ -65,16 +67,20 @@ def test_prefect_database():
 def test_service_schemas():
     """Test service-specific schema access"""
     print("Testing service-specific schemas...")
-    
+
     config = get_database_config()
     schemas = config.schemas
-    
+
     for service, schema in schemas.items():
         try:
             engine = config.get_service_engine(service)
             with engine.connect() as conn:
                 # Test if we can query the schema
-                result = conn.execute(text(f"SELECT schema_name FROM information_schema.schemata WHERE schema_name = '{schema}'"))
+                result = conn.execute(
+                    text(
+                        f"SELECT schema_name FROM information_schema.schemata WHERE schema_name = '{schema}'"
+                    )
+                )
                 row = result.fetchone()
                 if row:
                     print(f"Schema '{schema}' for service '{service}' is accessible")
@@ -84,27 +90,31 @@ def test_service_schemas():
         except Exception as e:
             print(f"Error accessing schema '{schema}' for service '{service}': {e}")
             return False
-    
+
     return True
 
 
 def test_connection_pools():
     """Test connection pool configuration"""
     print("Testing connection pool configuration...")
-    
+
     try:
         config = get_database_config()
-        
+
         # Test trading database pool
         trading_engine = get_engine("trading")
         pool = trading_engine.pool
-        print(f"Trading database pool: size={pool.size()}, checked_out={pool.checkedout()}")
-        
+        print(
+            f"Trading database pool: size={pool.size()}, checked_out={pool.checkedout()}"
+        )
+
         # Test prefect database pool
         prefect_engine = get_prefect_engine()
         pool = prefect_engine.pool
-        print(f"Prefect database pool: size={pool.size()}, checked_out={pool.checkedout()}")
-        
+        print(
+            f"Prefect database pool: size={pool.size()}, checked_out={pool.checkedout()}"
+        )
+
         return True
     except Exception as e:
         print(f"Connection pool test failed: {e}")
@@ -118,35 +128,35 @@ def main():
     print("Quick verification of database connections and basic functionality.")
     print("For comprehensive testing, use: python scripts/run_tests.py unit")
     print("=" * 50)
-    
+
     # Check if required environment variables are set
     required_vars = ["POSTGRES_HOST", "POSTGRES_USER", "POSTGRES_PASSWORD"]
     missing_vars = [var for var in required_vars if not os.getenv(var)]
-    
+
     if missing_vars:
         print(f"Missing required environment variables: {', '.join(missing_vars)}")
         print("Please set these variables in your .env file or environment")
         return False
-    
+
     tests = [
         ("Trading Database", test_trading_database),
         ("Prefect Database", test_prefect_database),
         ("Service Schemas", test_service_schemas),
         ("Connection Pools", test_connection_pools),
     ]
-    
+
     passed = 0
     total = len(tests)
-    
+
     for test_name, test_func in tests:
         print(f"\n--- {test_name} ---")
         if test_func():
             passed += 1
         else:
             print(f"{test_name} test failed")
-    
+
     print(f"\nVerification Results: {passed}/{total} checks passed")
-    
+
     if passed == total:
         print("SUCCESS: All database connections verified!")
         print("Database is ready for use.")

@@ -1,5 +1,11 @@
 # Risk Management
 
-Control your trading risk and exposure.
+This guide covers risk management features.
 
-*Coming soon...*
+## Risk Controls
+
+- Position limits
+- Stop losses
+- Risk monitoring
+
+*This is a placeholder file. Content will be added during development.*

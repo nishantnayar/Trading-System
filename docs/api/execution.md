@@ -1,5 +1,11 @@
-# Execution API
+# Execution Engine API
 
-API documentation for trade execution services.
+This guide covers the execution engine API endpoints.
 
-*Coming soon...*
+## Endpoints
+
+- Order management
+- Trade execution
+- Position tracking
+
+*This is a placeholder file. Content will be added during development.*

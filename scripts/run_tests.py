@@ -5,8 +5,8 @@ Provides different test execution modes and reporting
 """
 
 import os
-import sys
 import subprocess
+import sys
 from pathlib import Path
 from typing import List, Optional
 
@@ -20,7 +20,7 @@ def run_command(cmd: List[str], description: str) -> bool:
     print(f"Running: {description}")
     print(f"Command: {' '.join(cmd)}")
     print(f"{'='*60}")
-    
+
     try:
         result = subprocess.run(cmd, check=True, capture_output=False)
         print(f"SUCCESS: {description} completed successfully")
@@ -35,106 +35,87 @@ def run_command(cmd: List[str], description: str) -> bool:
 
 def run_unit_tests() -> bool:
     """Run unit tests"""
-    cmd = [
-        "python", "-m", "pytest", 
-        "tests/unit/", 
-        "-v", 
-        "--tb=short",
-        "-m", "unit"
-    ]
+    cmd = ["python", "-m", "pytest", "tests/unit/", "-v", "--tb=short", "-m", "unit"]
     return run_command(cmd, "Unit Tests")
 
 
 def run_integration_tests() -> bool:
     """Run integration tests"""
     cmd = [
-        "python", "-m", "pytest", 
-        "tests/integration/", 
-        "-v", 
+        "python",
+        "-m",
+        "pytest",
+        "tests/integration/",
+        "-v",
         "--tb=short",
-        "-m", "integration"
+        "-m",
+        "integration",
     ]
     return run_command(cmd, "Integration Tests")
 
 
 def run_database_tests() -> bool:
     """Run database-specific tests"""
-    cmd = [
-        "python", "-m", "pytest", 
-        "tests/", 
-        "-v", 
-        "--tb=short",
-        "-m", "database"
-    ]
+    cmd = ["python", "-m", "pytest", "tests/", "-v", "--tb=short", "-m", "database"]
     return run_command(cmd, "Database Tests")
 
 
 def run_all_tests() -> bool:
     """Run all tests"""
     cmd = [
-        "python", "-m", "pytest", 
-        "tests/", 
-        "-v", 
+        "python",
+        "-m",
+        "pytest",
+        "tests/",
+        "-v",
         "--tb=short",
         "--cov=src",
         "--cov-report=html",
-        "--cov-report=term"
+        "--cov-report=term",
     ]
     return run_command(cmd, "All Tests with Coverage")
 
 
 def run_specific_test(test_path: str) -> bool:
     """Run a specific test file or test function"""
-    cmd = [
-        "python", "-m", "pytest", 
-        test_path, 
-        "-v", 
-        "--tb=short"
-    ]
+    cmd = ["python", "-m", "pytest", test_path, "-v", "--tb=short"]
     return run_command(cmd, f"Specific Test: {test_path}")
 
 
 def run_quick_tests() -> bool:
     """Run quick tests (excluding slow tests)"""
-    cmd = [
-        "python", "-m", "pytest", 
-        "tests/", 
-        "-v", 
-        "--tb=short",
-        "-m", "not slow"
-    ]
+    cmd = ["python", "-m", "pytest", "tests/", "-v", "--tb=short", "-m", "not slow"]
     return run_command(cmd, "Quick Tests (excluding slow tests)")
 
 
 def run_parallel_tests() -> bool:
     """Run tests in parallel"""
-    cmd = [
-        "python", "-m", "pytest", 
-        "tests/", 
-        "-v", 
-        "--tb=short",
-        "-n", "auto"
-    ]
+    cmd = ["python", "-m", "pytest", "tests/", "-v", "--tb=short", "-n", "auto"]
     return run_command(cmd, "Parallel Tests")
 
 
 def check_test_environment() -> bool:
     """Check if test environment is properly set up"""
     print("Checking test environment...")
-    
+
     # Check if pytest is installed
     try:
-        subprocess.run(["python", "-m", "pytest", "--version"], 
-                      check=True, capture_output=True)
+        subprocess.run(
+            ["python", "-m", "pytest", "--version"], check=True, capture_output=True
+        )
         print("SUCCESS: pytest is installed")
     except (subprocess.CalledProcessError, FileNotFoundError):
-        print("ERROR: pytest is not installed. Run: pip install -r requirements-test.txt")
+        print(
+            "ERROR: pytest is not installed. Run: pip install -r requirements-test.txt"
+        )
         return False
-    
+
     # Check if test database is accessible
     try:
-        from config.database import get_engine
         from sqlalchemy import text
+
+        from config.database import get_engine
+
         engine = get_engine("trading")
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
@@ -142,7 +123,7 @@ def check_test_environment() -> bool:
     except Exception as e:
         print(f"ERROR: Test database is not accessible: {e}")
         return False
-    
+
     # Check if test directories exist
     test_dirs = ["tests/unit", "tests/integration"]
     for test_dir in test_dirs:
@@ -151,7 +132,7 @@ def check_test_environment() -> bool:
         else:
             print(f"ERROR: {test_dir} directory does not exist")
             return False
-    
+
     print("SUCCESS: Test environment is ready")
     return True
 
@@ -160,7 +141,7 @@ def main():
     """Main test runner function"""
     print("Trading System Test Runner")
     print("=" * 60)
-    
+
     if len(sys.argv) < 2:
         print("Usage: python scripts/run_tests.py <command>")
         print("\nAvailable commands:")
@@ -175,15 +156,17 @@ def main():
         print("\nExamples:")
         print("  python scripts/run_tests.py unit")
         print("  python scripts/run_tests.py tests/unit/test_database_connections.py")
-        print("  python scripts/run_tests.py tests/unit/test_database_connections.py::TestDatabaseConnections::test_trading_database_connection")
+        print(
+            "  python scripts/run_tests.py tests/unit/test_database_connections.py::TestDatabaseConnections::test_trading_database_connection"
+        )
         return 1
-    
+
     command = sys.argv[1]
-    
+
     # Check environment first
     if not check_test_environment():
         return 1
-    
+
     # Run appropriate test command
     if command == "unit":
         success = run_unit_tests()
@@ -202,7 +185,7 @@ def main():
     else:
         # Assume it's a specific test path
         success = run_specific_test(command)
-    
+
     if success:
         print(f"\nSUCCESS: Test execution completed successfully!")
         return 0

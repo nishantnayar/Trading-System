@@ -1,5 +1,11 @@
 # Common Issues
 
-Solutions to common problems and issues.
+This guide covers common issues and their solutions.
 
-*Coming soon...*
+## Issue Categories
+
+- Database connection issues
+- API errors
+- Performance problems
+
+*This is a placeholder file. Content will be added during development.*

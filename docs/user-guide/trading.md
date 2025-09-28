@@ -1,5 +1,11 @@
 # Trading Operations
 
-Execute trades and manage your trading activities.
+This guide covers trading operations and workflows.
 
-*Coming soon...*
+## Trading Features
+
+- Order management
+- Position tracking
+- P&L monitoring
+
+*This is a placeholder file. Content will be added during development.*

@@ -85,9 +85,9 @@ jobs:
           bandit-report.json
           semgrep-report.json
 
-  # Container Security Scan
-  container-scan:
-    name: Container Security Scan
+  # Filesystem Security Scan
+  filesystem-scan:
+    name: Filesystem Security Scan
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
@@ -98,27 +98,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Build Docker image
-      run: |
-        # Build Docker image if Dockerfile exists
-        if [ -f Dockerfile ]; then
-          docker build -t trading-system:latest .
-        else
-          echo "No Dockerfile found, skipping container scan"
-          exit 0
-        fi
-        
-    - name: Run Trivy vulnerability scanner
+    - name: Run Trivy filesystem scanner
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: 'trading-system:latest'
+        scan-type: 'fs'
+        scan-ref: '.'
         format: 'sarif'
-        output: 'trivy-container-results.sarif'
+        output: 'trivy-filesystem-results.sarif'
+        skip-version-check: true
         
     - name: Upload Trivy scan results
       uses: github/codeql-action/upload-sarif@v3
       with:
-        sarif_file: 'trivy-container-results.sarif'
+        sarif_file: 'trivy-filesystem-results.sarif'
 
   # Secret Scanning
   secret-scan:
@@ -138,6 +130,4 @@ jobs:
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
-        base: main
-        head: HEAD
         extra_args: --debug --only-verified

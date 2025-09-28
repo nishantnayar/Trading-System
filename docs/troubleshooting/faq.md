@@ -1,5 +1,11 @@
 # Frequently Asked Questions
 
-Common questions and answers about the Trading System.
+This section contains frequently asked questions and answers.
 
-*Coming soon...*
+## Common Questions
+
+- Installation issues
+- Configuration problems
+- Runtime errors
+
+*This is a placeholder file. Content will be added during development.*

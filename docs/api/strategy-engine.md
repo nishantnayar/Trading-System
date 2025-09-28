@@ -1,5 +1,11 @@
 # Strategy Engine API
 
-API documentation for strategy engine services.
+This guide covers the strategy engine API endpoints.
 
-*Coming soon...*
+## Endpoints
+
+- Strategy execution
+- Performance monitoring
+- Configuration
+
+*This is a placeholder file. Content will be added during development.*

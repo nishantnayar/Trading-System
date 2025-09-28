@@ -1,5 +1,11 @@
 # Risk Management API
 
-API documentation for risk management services.
+This guide covers the risk management API endpoints.
 
-*Coming soon...*
+## Endpoints
+
+- Risk monitoring
+- Limit management
+- Alerts
+
+*This is a placeholder file. Content will be added during development.*

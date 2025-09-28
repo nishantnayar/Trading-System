@@ -2,9 +2,10 @@
 Pytest configuration and fixtures for database testing
 """
 
-import pytest
 import os
 from pathlib import Path
+
+import pytest
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -14,6 +15,7 @@ load_dotenv()
 
 # Add src to path
 import sys
+
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from config.database import get_database_config, get_engine

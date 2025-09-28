@@ -1,5 +1,11 @@
 # Strategy Management
 
-Create and manage your trading strategies.
+This guide covers strategy creation and management.
 
-*Coming soon...*
+## Strategy Features
+
+- Strategy creation
+- Backtesting
+- Live deployment
+
+*This is a placeholder file. Content will be added during development.*

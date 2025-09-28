@@ -1,5 +1,11 @@
 # Analytics API
 
-API documentation for analytics services.
+This guide covers the analytics API endpoints.
 
-*Coming soon...*
+## Endpoints
+
+- Performance analytics
+- Reporting
+- Metrics
+
+*This is a placeholder file. Content will be added during development.*

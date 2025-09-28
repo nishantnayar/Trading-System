@@ -1,5 +1,11 @@
 # Data Ingestion API
 
-API documentation for data ingestion services.
+This guide covers the data ingestion API endpoints.
 
-*Coming soon...*
+## Endpoints
+
+- Market data ingestion
+- Historical data
+- Real-time feeds
+
+*This is a placeholder file. Content will be added during development.*
