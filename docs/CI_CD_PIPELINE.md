@@ -153,7 +153,7 @@ POSTGRES_PORT: 5432
 POSTGRES_USER: postgres
 POSTGRES_PASSWORD: postgres
 TRADING_DB_NAME: trading_system_test
-PREFECT_DB_NAME: prefect_test
+PREFECT_DB_NAME: Prefect
 REDIS_HOST: localhost
 REDIS_PORT: 6379
 ```
