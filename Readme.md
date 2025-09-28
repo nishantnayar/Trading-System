@@ -304,7 +304,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 | 📚 **Architecture** | Detailed system architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | 📋 **Logging Architecture** | Comprehensive logging design | [LOGGING_ARCHITECTURE.md](docs/LOGGING_ARCHITECTURE.md) |
 | 📖 **User Documentation** | Complete user and developer docs | [MkDocs](https://nishantnayar.github.io/Trading-System/) |
-| 🔧 **Technical Documentation** | API reference and technical docs | [MkDocs](https://nishantnayar.github.io/Trading-System/) |
 | 🐛 **Issues** | Report bugs and request features | [GitHub Issues](https://github.com/nishantnayar/trading-system/issues) |
 | 💬 **Discussions** | Community discussions and Q&A | [GitHub Discussions](https://github.com/nishantnayar/trading-system/discussions) |
 | 📧 **Contact** | Direct contact for support | nishant.nayar@hotmail.com |
