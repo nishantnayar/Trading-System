@@ -26,7 +26,7 @@ This system uses a **microservices architecture** with **Prefect orchestration**
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/trading-system.git
+   git clone https://github.com/nishantnayar/trading-system.git
    cd trading-system
    ```
 

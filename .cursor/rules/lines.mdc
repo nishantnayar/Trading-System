@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+- Dont write more than 100 lines of code in one attempt
+- always use lint8
+- never create .py to run a .sql
+- always review Architecture.md

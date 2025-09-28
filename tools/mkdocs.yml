@@ -1,15 +1,15 @@
 # MkDocs Configuration
 site_name: Trading System Documentation
 site_description: Production-grade algorithmic trading system documentation
-site_author: Your Name
-site_url: https://yourusername.github.io/trading-system
+site_author: Nishant Nayar
+site_url: https://nishantnayar.github.io/trading-system
 
 # Repository
-repo_name: yourusername/trading-system
-repo_url: https://github.com/yourusername/trading-system
+repo_name: nishantnayar/trading-system
+repo_url: https://github.com/nishantnayar/trading-system
 
 # Copyright
-copyright: Copyright &copy; 2024 Your Name
+copyright: Copyright &copy; 2025 Nishant Nayar
 
 # Configuration
 theme:
@@ -165,9 +165,9 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/yourusername
+      link: https://github.com/nishantnayar
     - icon: fontawesome/brands/twitter
-      link: https://twitter.com/yourusername
+      link: https://twitter.com/nishantnayar
 
   version:
     provider: mike
