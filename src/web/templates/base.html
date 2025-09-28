@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title }}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen font-sans">
+    <!-- Navigation Header -->
+    <nav class="bg-gradient-to-r from-slate-800 to-slate-900 shadow-xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!-- Logo and Brand -->
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center hover:opacity-80 transition-opacity">
+                        <i class="fas fa-chart-line text-2xl text-blue-400"></i>
+                        <span class="ml-4 text-xl font-bold text-white">Trading System</span>
+                    </a>
+                </div>
+
+                <!-- Navigation Menu -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="/" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors {% if request.url.path == '/' %}bg-blue-600 text-white{% endif %}">
+                        <i class="fas fa-home mr-2"></i>Home
+                    </a>
+                    <a href="/dashboard" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors {% if request.url.path == '/dashboard' %}bg-blue-600 text-white{% endif %}">
+                        <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                    </a>
+                    <a href="/trading" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors {% if request.url.path == '/trading' %}bg-blue-600 text-white{% endif %}">
+                        <i class="fas fa-chart-line mr-2"></i>Trading
+                    </a>
+                    <a href="/strategies" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors {% if request.url.path == '/strategies' %}bg-blue-600 text-white{% endif %}">
+                        <i class="fas fa-cogs mr-2"></i>Strategies
+                    </a>
+                    <a href="/profile" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors {% if request.url.path == '/profile' %}bg-blue-600 text-white{% endif %}">
+                        <i class="fas fa-user mr-2"></i>Profile
+                    </a>
+                </div>
+
+                <!-- Right side - Time and User Info -->
+                <div class="flex items-center space-x-4">
+                    <span class="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg text-sm text-white font-medium border border-white/20">
+                        {{ current_time }}
+                    </span>
+                    <!-- Mobile menu button -->
+                    <button id="mobile-menu-button" class="md:hidden text-gray-300 hover:text-white">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Navigation Menu -->
+            <div id="mobile-menu" class="md:hidden hidden">
+                <div class="px-2 pt-2 pb-3 space-y-1 bg-slate-800 rounded-lg mt-2">
+                    <a href="/" class="text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium {% if request.url.path == '/' %}bg-blue-600 text-white{% endif %}">
+                        <i class="fas fa-home mr-2"></i>Home
+                    </a>
+                    <a href="/dashboard" class="text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium {% if request.url.path == '/dashboard' %}bg-blue-600 text-white{% endif %}">
+                        <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                    </a>
+                    <a href="/trading" class="text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium {% if request.url.path == '/trading' %}bg-blue-600 text-white{% endif %}">
+                        <i class="fas fa-chart-line mr-2"></i>Trading
+                    </a>
+                    <a href="/strategies" class="text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium {% if request.url.path == '/strategies' %}bg-blue-600 text-white{% endif %}">
+                        <i class="fas fa-cogs mr-2"></i>Strategies
+                    </a>
+                    <a href="/profile" class="text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium {% if request.url.path == '/profile' %}bg-blue-600 text-white{% endif %}">
+                        <i class="fas fa-user mr-2"></i>Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gradient-to-r from-slate-800 to-slate-900 mt-12">
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <p class="text-gray-300 text-sm mb-4">&copy; 2025 Trading System. Built with FastAPI and modern web technologies.</p>
+                <div class="flex justify-center space-x-6">
+                    <span class="text-xs text-gray-400 bg-gray-700 px-3 py-1 rounded-full">Python</span>
+                    <span class="text-xs text-gray-400 bg-gray-700 px-3 py-1 rounded-full">FastAPI</span>
+                    <span class="text-xs text-gray-400 bg-gray-700 px-3 py-1 rounded-full">Tailwind CSS</span>
+                    <span class="text-xs text-gray-400 bg-gray-700 px-3 py-1 rounded-full">PostgreSQL</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- JavaScript -->
+    <script src="/static/js/trading-system.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

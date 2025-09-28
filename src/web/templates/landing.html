@@ -1,45 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-50 min-h-screen">
-    <!-- Navigation Header -->
-    <nav class="bg-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-chart-line text-2xl text-blue-600"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h1 class="text-xl font-bold text-gray-900">Trading System</h1>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-500">{{ current_time }}</span>
-                </div>
-            </div>
-        </div>
-    </nav>
+{% extends "base.html" %}
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+{% block content %}
         <!-- Hero Section -->
-        <div class="bg-white overflow-hidden shadow rounded-lg mb-8">
-            <div class="px-4 py-5 sm:p-6">
+        <div class="bg-gradient-to-r from-blue-600 to-purple-700 overflow-hidden shadow-2xl rounded-2xl mb-8">
+            <div class="px-4 py-12 sm:p-8">
                 <div class="text-center">
-                    <h2 class="text-3xl font-bold text-gray-900 mb-4">
-                        Welcome to Your Trading System
+                    <h2 class="text-4xl md:text-5xl font-bold text-white mb-6">
+                        Welcome to Trading System
                     </h2>
-                    <p class="text-lg text-gray-600 mb-8">
+                    <p class="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
                         A production-grade algorithmic trading system designed for equities trading
                     </p>
-                    <div class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    <div class="inline-flex items-center px-6 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full text-white font-semibold hover:bg-white/30 transition-all duration-300 hover:scale-105">
+                        <div class="w-2 h-2 bg-green-400 rounded-full mr-3 animate-pulse"></div>
                         <i class="fas fa-play mr-2"></i>
                         System Status: Online
                     </div>
@@ -50,129 +23,106 @@
         <!-- Features Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <!-- Data Ingestion -->
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-database text-2xl text-green-600"></i>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">
-                                    Data Ingestion
-                                </dt>
-                                <dd class="text-lg font-medium text-gray-900">
-                                    Market Data
-                                </dd>
-                            </dl>
-                        </div>
-                    </div>
+            <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-6 border border-gray-100">
+                <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center mb-4">
+                    <i class="fas fa-database text-white text-xl"></i>
                 </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Data Ingestion</h3>
+                <p class="text-gray-600 text-sm">Real-time market data processing and storage</p>
             </div>
 
             <!-- Strategy Engine -->
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-cogs text-2xl text-blue-600"></i>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">
-                                    Strategy Engine
-                                </dt>
-                                <dd class="text-lg font-medium text-gray-900">
-                                    Algorithmic Trading
-                                </dd>
-                            </dl>
-                        </div>
-                    </div>
+            <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-6 border border-gray-100">
+                <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mb-4">
+                    <i class="fas fa-cogs text-white text-xl"></i>
                 </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Strategy Engine</h3>
+                <p class="text-gray-600 text-sm">Advanced algorithmic trading strategies</p>
             </div>
 
             <!-- Risk Management -->
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-shield-alt text-2xl text-red-600"></i>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">
-                                    Risk Management
-                                </dt>
-                                <dd class="text-lg font-medium text-gray-900">
-                                    Portfolio Protection
-                                </dd>
-                            </dl>
-                        </div>
-                    </div>
+            <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-6 border border-gray-100">
+                <div class="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-lg flex items-center justify-center mb-4">
+                    <i class="fas fa-shield-alt text-white text-xl"></i>
                 </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Risk Management</h3>
+                <p class="text-gray-600 text-sm">Portfolio protection and risk controls</p>
             </div>
 
             <!-- Execution -->
-            <div class="bg-white overflow-hidden shadow rounded-lg">
-                <div class="p-5">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-bolt text-2xl text-yellow-600"></i>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">
-                                    Execution
-                                </dt>
-                                <dd class="text-lg font-medium text-gray-900">
-                                    Trade Execution
-                                </dd>
-                            </dl>
-                        </div>
-                    </div>
+            <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-6 border border-gray-100">
+                <div class="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center mb-4">
+                    <i class="fas fa-bolt text-white text-xl"></i>
                 </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Execution</h3>
+                <p class="text-gray-600 text-sm">High-speed trade execution engine</p>
             </div>
         </div>
 
         <!-- System Overview -->
-        <div class="bg-white shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-100">
+            <div class="px-6 py-8">
+                <h3 class="text-2xl font-bold text-center mb-8 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                     System Overview
                 </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                        <h4 class="text-md font-semibold text-gray-700 mb-2">Architecture</h4>
-                        <ul class="text-sm text-gray-600 space-y-1">
-                            <li>• Microservices Architecture</li>
-                            <li>• FastAPI Backend</li>
-                            <li>• PostgreSQL Database</li>
-                            <li>• Redis Caching</li>
-                            <li>• Prefect Orchestration</li>
+                        <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <div class="w-1 h-6 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full mr-3"></div>
+                            Architecture
+                        </h4>
+                        <ul class="space-y-2">
+                            <li class="flex items-center text-gray-600">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                Microservices Architecture
+                            </li>
+                            <li class="flex items-center text-gray-600">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                FastAPI Backend
+                            </li>
+                            <li class="flex items-center text-gray-600">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                PostgreSQL Database
+                            </li>
+                            <li class="flex items-center text-gray-600">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                Redis Caching
+                            </li>
+                            <li class="flex items-center text-gray-600">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                Prefect Orchestration
+                            </li>
                         </ul>
                     </div>
                     <div>
-                        <h4 class="text-md font-semibold text-gray-700 mb-2">Technology Stack</h4>
-                        <ul class="text-sm text-gray-600 space-y-1">
-                            <li>• Python 3.11+</li>
-                            <li>• HTMX + Tailwind CSS</li>
-                            <li>• Plotly.js Charts</li>
-                            <li>• Alpaca API Integration</li>
-                            <li>• Real-time WebSocket</li>
+                        <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <div class="w-1 h-6 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full mr-3"></div>
+                            Technology Stack
+                        </h4>
+                        <ul class="space-y-2">
+                            <li class="flex items-center text-gray-600">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                Python 3.11+
+                            </li>
+                            <li class="flex items-center text-gray-600">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                HTMX + Tailwind CSS
+                            </li>
+                            <li class="flex items-center text-gray-600">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                Plotly.js Charts
+                            </li>
+                            <li class="flex items-center text-gray-600">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                Alpaca API Integration
+                            </li>
+                            <li class="flex items-center text-gray-600">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                Real-time WebSocket
+                            </li>
                         </ul>
                     </div>
                 </div>
             </div>
         </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-white border-t mt-12">
-        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-            <div class="text-center text-sm text-gray-500">
-                <p>&copy; 2024 Trading System. Built with FastAPI and modern web technologies.</p>
-            </div>
-        </div>
-    </footer>
-</body>
-</html>
+{% endblock %}

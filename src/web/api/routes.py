@@ -23,3 +23,55 @@ async def landing_page(request: Request):
             "current_time": datetime.now().strftime("%B %d, %Y at %H:%M:%S"),
         },
     )
+
+
+@router.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page(request: Request):
+    """Trading dashboard page."""
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {
+            "request": request,
+            "page_title": "Dashboard - Trading System",
+            "current_time": datetime.now().strftime("%B %d, %Y at %H:%M:%S"),
+        },
+    )
+
+
+@router.get("/trading", response_class=HTMLResponse)
+async def trading_page(request: Request):
+    """Trading interface page."""
+    return templates.TemplateResponse(
+        "trading.html",
+        {
+            "request": request,
+            "page_title": "Trading - Trading System",
+            "current_time": datetime.now().strftime("%B %d, %Y at %H:%M:%S"),
+        },
+    )
+
+
+@router.get("/strategies", response_class=HTMLResponse)
+async def strategies_page(request: Request):
+    """Trading strategies page."""
+    return templates.TemplateResponse(
+        "strategies.html",
+        {
+            "request": request,
+            "page_title": "Strategies - Trading System",
+            "current_time": datetime.now().strftime("%B %d, %Y at %H:%M:%S"),
+        },
+    )
+
+
+@router.get("/profile", response_class=HTMLResponse)
+async def profile_page(request: Request):
+    """Author profile page."""
+    return templates.TemplateResponse(
+        "profile.html",
+        {
+            "request": request,
+            "page_title": "Profile - Trading System",
+            "current_time": datetime.now().strftime("%B %d, %Y at %H:%M:%S"),
+        },
+    )

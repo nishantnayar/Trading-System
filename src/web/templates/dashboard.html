@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Trading System{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Dashboard Header -->
+    <div class="tailmin-card">
+        <div class="tailmin-card-header">
+            <h1 class="text-3xl font-bold text-gray-900">Trading Dashboard</h1>
+            <p class="text-gray-600">Monitor your portfolio performance and trading activities</p>
+        </div>
+    </div>
+
+    <!-- Portfolio Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="tailmin-stat-card">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-wallet text-2xl text-primary-600"></i>
+                </div>
+                <div class="ml-4">
+                    <div class="tailmin-stat-value">$24,567.89</div>
+                    <div class="tailmin-stat-label">Total Portfolio Value</div>
+                    <div class="tailmin-stat-change tailmin-stat-change-positive">
+                        <i class="fas fa-arrow-up mr-1"></i>
+                        +$1,234.56 (+5.3%)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tailmin-stat-card">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-chart-line text-2xl text-success-600"></i>
+                </div>
+                <div class="ml-4">
+                    <div class="tailmin-stat-value">+$1,234.56</div>
+                    <div class="tailmin-stat-label">Today's P&L</div>
+                    <div class="tailmin-stat-change tailmin-stat-change-positive">
+                        <i class="fas fa-arrow-up mr-1"></i>
+                        +5.3%
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tailmin-stat-card">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exchange-alt text-2xl text-warning-600"></i>
+                </div>
+                <div class="ml-4">
+                    <div class="tailmin-stat-value">47</div>
+                    <div class="tailmin-stat-label">Active Positions</div>
+                    <div class="tailmin-stat-change tailmin-stat-change-positive">
+                        <i class="fas fa-plus mr-1"></i>
+                        +3 today
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tailmin-stat-card">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-shield-alt text-2xl text-error-600"></i>
+                </div>
+                <div class="ml-4">
+                    <div class="tailmin-stat-value">2.3%</div>
+                    <div class="tailmin-stat-label">Risk Level</div>
+                    <div class="tailmin-stat-change tailmin-stat-change-positive">
+                        <i class="fas fa-check mr-1"></i>
+                        Safe
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Trades Table -->
+    <div class="tailmin-card">
+        <div class="tailmin-card-header">
+            <h2 class="text-lg font-semibold text-gray-900">Recent Trades</h2>
+        </div>
+        <div class="tailmin-card-body p-0">
+            <table class="tailmin-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>P&L</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="font-semibold">AAPL</td>
+                        <td><span class="tailmin-badge tailmin-badge-success">BUY</span></td>
+                        <td>100</td>
+                        <td>$150.25</td>
+                        <td class="text-success-600 font-semibold">+$125.50</td>
+                        <td><span class="tailmin-badge tailmin-badge-success">Filled</span></td>
+                        <td>10:30 AM</td>
+                    </tr>
+                    <tr>
+                        <td class="font-semibold">GOOGL</td>
+                        <td><span class="tailmin-badge tailmin-badge-error">SELL</span></td>
+                        <td>50</td>
+                        <td>$2,850.75</td>
+                        <td class="text-error-600 font-semibold">-$45.25</td>
+                        <td><span class="tailmin-badge tailmin-badge-warning">Pending</span></td>
+                        <td>10:15 AM</td>
+                    </tr>
+                    <tr>
+                        <td class="font-semibold">MSFT</td>
+                        <td><span class="tailmin-badge tailmin-badge-success">BUY</span></td>
+                        <td>75</td>
+                        <td>$320.50</td>
+                        <td class="text-success-600 font-semibold">+$67.25</td>
+                        <td><span class="tailmin-badge tailmin-badge-success">Filled</span></td>
+                        <td>09:45 AM</td>
+                    </tr>
+                    <tr>
+                        <td class="font-semibold">TSLA</td>
+                        <td><span class="tailmin-badge tailmin-badge-error">SELL</span></td>
+                        <td>25</td>
+                        <td>$245.80</td>
+                        <td class="text-success-600 font-semibold">+$89.75</td>
+                        <td><span class="tailmin-badge tailmin-badge-success">Filled</span></td>
+                        <td>09:30 AM</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="space-y-4">
+        <div class="tailmin-alert tailmin-alert-success">
+            <div class="flex">
+                <i class="fas fa-check-circle mr-3"></i>
+                <div>
+                    <h3 class="text-sm font-medium">Portfolio Performance</h3>
+                    <p class="text-sm mt-1">Your portfolio is up 5.3% today, outperforming the market by 2.1%.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="tailmin-alert tailmin-alert-warning">
+            <div class="flex">
+                <i class="fas fa-exclamation-triangle mr-3"></i>
+                <div>
+                    <h3 class="text-sm font-medium">Risk Alert</h3>
+                    <p class="text-sm mt-1">AAPL position is approaching your maximum allocation limit (24.8% of portfolio).</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="tailmin-card">
+        <div class="tailmin-card-header">
+            <h2 class="text-lg font-semibold text-gray-900">Quick Actions</h2>
+        </div>
+        <div class="tailmin-card-body">
+            <div class="flex flex-wrap gap-4">
+                <button class="tailmin-btn tailmin-btn-primary">
+                    <i class="fas fa-plus mr-2"></i>
+                    New Trade
+                </button>
+                <button class="tailmin-btn tailmin-btn-secondary">
+                    <i class="fas fa-chart-bar mr-2"></i>
+                    View Analytics
+                </button>
+                <button class="tailmin-btn tailmin-btn-success">
+                    <i class="fas fa-download mr-2"></i>
+                    Export Data
+                </button>
+                <button class="tailmin-btn tailmin-btn-warning">
+                    <i class="fas fa-cog mr-2"></i>
+                    Settings
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Author Profile - Trading System{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Profile Header -->
+    <div class="tailmin-card overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-purple-700 px-6 py-8">
+            <div class="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
+                <!-- Profile Picture -->
+                <div class="relative">
+                    <img src="/static/images/image.jpg" 
+                         alt="Nishant Nayar Profile" 
+                         class="w-32 h-32 rounded-full border-4 border-white shadow-lg">
+                    <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white flex items-center justify-center">
+                        <i class="fas fa-check text-white text-sm"></i>
+                    </div>
+                </div>
+                
+                <!-- Profile Info -->
+                <div class="text-center md:text-left text-white">
+                    <h1 class="text-3xl font-bold mb-2">Nishant Nayar</h1>
+                    <p class="text-blue-100 text-lg mb-2">Program Manager</p>
+                    <p class="text-blue-200 text-sm mb-4">Financial Technology</p>
+                    
+                    <!-- Status Badge -->
+                    <div class="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full text-white font-semibold">
+                        <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                        Available for Consulting
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profile Stats -->
+        <div class="tailmin-card-body">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="tailmin-stat-value">8+</div>
+                    <div class="tailmin-stat-label">Years Experience</div>
+                </div>
+                <div class="text-center">
+                    <div class="tailmin-stat-value">50+</div>
+                    <div class="tailmin-stat-label">Trading Strategies</div>
+                </div>
+                <div class="text-center">
+                    <div class="tailmin-stat-value">$2.5M+</div>
+                    <div class="tailmin-stat-label">Assets Under Management</div>
+                </div>
+                <div class="text-center">
+                    <div class="tailmin-stat-value">15.2%</div>
+                    <div class="tailmin-stat-label">Average Annual Return</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Section -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+            <i class="fas fa-user-circle text-blue-600 mr-3"></i>
+            About Me
+        </h2>
+        <div class="prose max-w-none text-gray-700">
+            <p class="mb-4">
+                I'm a passionate quantitative developer with over 8 years of experience in algorithmic trading, 
+                risk management, and financial technology. I specialize in building robust, scalable trading systems 
+                that can handle high-frequency data and execute trades with precision.
+            </p>
+            <p class="mb-4">
+                My expertise spans across Python, machine learning, time series analysis, and real-time data processing. 
+                I've successfully developed and deployed trading strategies that have consistently outperformed market benchmarks 
+                while maintaining strict risk controls.
+            </p>
+            <p>
+                When I'm not coding, you'll find me analyzing market trends, contributing to open-source projects, 
+                or sharing knowledge with the trading community through technical blogs and workshops.
+            </p>
+        </div>
+    </div>
+
+    <!-- Skills & Expertise -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+            <i class="fas fa-code text-blue-600 mr-3"></i>
+            Skills & Expertise
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Technical Skills -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Technical Skills</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-700">Python</span>
+                        <div class="flex space-x-1">
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-700">Machine Learning</span>
+                        <div class="flex space-x-1">
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-gray-300"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-700">Quantitative Finance</span>
+                        <div class="flex space-x-1">
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-700">Risk Management</span>
+                        <div class="flex space-x-1">
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-yellow-400"></i>
+                            <i class="fas fa-star text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technologies -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Technologies</h3>
+                <div class="flex flex-wrap gap-2">
+                    <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">Python</span>
+                    <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Pandas</span>
+                    <span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">NumPy</span>
+                    <span class="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">Scikit-learn</span>
+                    <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">PyTorch</span>
+                    <span class="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">FastAPI</span>
+                    <span class="px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm font-medium">PostgreSQL</span>
+                    <span class="px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm font-medium">Redis</span>
+                    <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">Docker</span>
+                    <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">AWS</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Experience Timeline -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+            <i class="fas fa-briefcase text-blue-600 mr-3"></i>
+            Professional Experience
+        </h2>
+        
+        <div class="space-y-6">
+            <!-- Current Role -->
+            <div class="flex items-start space-x-4">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-chart-line text-white"></i>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900">Senior Quantitative Developer</h3>
+                    <p class="text-blue-600 font-medium">Trading System Inc.</p>
+                    <p class="text-gray-600 text-sm">2020 - Present</p>
+                    <p class="text-gray-700 mt-2">
+                        Leading the development of next-generation algorithmic trading systems, 
+                        implementing machine learning models for market prediction, and managing 
+                        a portfolio of quantitative strategies.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Previous Role -->
+            <div class="flex items-start space-x-4">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-shield-alt text-white"></i>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900">Risk Management Specialist</h3>
+                    <p class="text-blue-600 font-medium">Global Finance Corp</p>
+                    <p class="text-gray-600 text-sm">2018 - 2020</p>
+                    <p class="text-gray-700 mt-2">
+                        Developed and implemented risk management frameworks, built real-time 
+                        monitoring systems, and created automated risk controls for high-frequency trading.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Earlier Role -->
+            <div class="flex items-start space-x-4">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-database text-white"></i>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900">Data Engineer</h3>
+                    <p class="text-blue-600 font-medium">Market Data Solutions</p>
+                    <p class="text-gray-600 text-sm">2016 - 2018</p>
+                    <p class="text-gray-700 mt-2">
+                        Built scalable data pipelines for market data ingestion, optimized 
+                        database performance, and developed real-time data processing systems.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact & Social -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+            <i class="fas fa-envelope text-blue-600 mr-3"></i>
+            Get In Touch
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Contact Information</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center text-gray-700">
+                        <i class="fas fa-envelope text-blue-600 mr-3"></i>
+                        nishant.nayar@hotmail.com
+                    </div>
+                    <div class="flex items-center text-gray-700">
+                        <i class="fas fa-phone text-blue-600 mr-3"></i>
+                        +1 (347) 348-5472
+                    </div>
+                    <div class="flex items-center text-gray-700">
+                        <i class="fas fa-map-marker-alt text-blue-600 mr-3"></i>
+                        Chicago, IL
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Social Links</h3>
+                <div class="flex space-x-4">
+                    <a href="https://www.linkedin.com/in/nishantnayar/" target="_blank" class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition-colors">
+                        <i class="fab fa-linkedin-in"></i>
+                    </a>
+                    <a href="https://github.com/nishantnayar" target="_blank" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center text-white hover:bg-gray-900 transition-colors">
+                        <i class="fab fa-github"></i>
+                    </a>
+                    <a href="https://medium.com/@nishant-nayar" target="_blank" class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center text-white hover:bg-gray-700 transition-colors">
+                        <i class="fab fa-medium"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
