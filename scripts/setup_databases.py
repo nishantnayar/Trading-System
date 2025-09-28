@@ -152,13 +152,28 @@ def create_service_schemas():
     ]
 
     for schema in schemas:
-        create_schema_cmd = f"\nCREATE SCHEMA IF NOT EXISTS {schema};"
+        create_schema_cmd = f"CREATE SCHEMA IF NOT EXISTS {schema};"
+        print(f"Creating schema '{schema}'...")
         if run_sql_command(create_schema_cmd, "trading_system"):
-            print(f"Schema '{schema}' created/verified\n")
+            print(f"Schema '{schema}' created/verified successfully")
         else:
-            print(f"Failed to create schema '{schema}'")
+            print(f"ERROR: Failed to create schema '{schema}'")
             return False
 
+    # Verify all schemas were created
+    print("\nVerifying all schemas were created...")
+    verify_cmd = """
+    SELECT schema_name 
+    FROM information_schema.schemata 
+    WHERE schema_name IN ('data_ingestion', 'strategy_engine', 'execution', 'risk_management', 'analytics', 'notification', 'logging', 'shared')
+    ORDER BY schema_name;
+    """
+    
+    if run_sql_command(verify_cmd, "trading_system"):
+        print("All service schemas verified successfully!")
+    else:
+        print("WARNING: Could not verify schema creation")
+    
     return True
 
 
