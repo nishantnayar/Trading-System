@@ -38,7 +38,7 @@ A production-grade algorithmic trading system designed for local deployment, foc
 ### Development & Quality
 - **Linting**: Flake8 + Black + isort
 - **Type Checking**: mypy
-- **Documentation**: MkDocs + Sphinx
+- **Documentation**: MkDocs
 - **Logging**: Loguru (consolidated logging)
 - **Testing**: pytest + coverage
 

@@ -139,7 +139,7 @@ graph TB
 
 ### **Development Features**
 - ✅ **Code Quality** - Flake8, Black, isort, mypy
-- ✅ **Documentation** - MkDocs + Sphinx
+- ✅ **Documentation** - MkDocs
 - ✅ **Testing** - Comprehensive test coverage
 - ✅ **CI/CD** - Automated quality checks
 
@@ -210,7 +210,7 @@ LOG_RETENTION_DAYS=30
 
 ### **Documentation**
 - [User Documentation](https://nishantnayar.github.io/trading-system) (MkDocs)
-- [Technical Documentation](development/) (Sphinx - Local Development)
+- [Technical Documentation](development/) (MkDocs)
 - [Architecture Guide](development/architecture.md)
 - [Logging Architecture](development/logging-architecture.md)
 - [API Reference](api/)

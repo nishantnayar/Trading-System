@@ -44,55 +44,6 @@ def run_mkdocs():
         return True
 
 
-def run_sphinx():
-    """Start the Sphinx documentation server."""
-    print("Starting Sphinx server...")
-    print("Documentation will be available at: http://127.0.0.1:8001")
-    print("Press Ctrl+C to stop the server")
-    print("-" * 50)
-    
-    try:
-        # Check if sphinx directory exists
-        sphinx_dir = Path("docs/sphinx")
-        if not sphinx_dir.exists():
-            print("Error: docs/sphinx/ directory not found")
-            return False
-            
-        # Check if conf.py exists
-        conf_file = sphinx_dir / "conf.py"
-        if not conf_file.exists():
-            print("Error: docs/sphinx/conf.py not found")
-            return False
-            
-        # Try to use sphinx-autobuild for better development experience
-        try:
-            cmd = ["sphinx-autobuild", "docs/sphinx", "docs/sphinx/_build/html", "--host", "127.0.0.1", "--port", "8001"]
-            subprocess.run(cmd, check=True)
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            # Fallback to manual build and serve
-            print("sphinx-autobuild not found, using manual build...")
-            
-            # Build Sphinx documentation
-            print("Building Sphinx documentation...")
-            subprocess.run(["sphinx-build", "-b", "html", ".", "_build/html"], 
-                          cwd=sphinx_dir, check=True)
-            
-            # Start a simple HTTP server
-            import http.server
-            import socketserver
-            import os
-            
-            os.chdir(sphinx_dir / "_build" / "html")
-            with socketserver.TCPServer(("", 8001), http.server.SimpleHTTPRequestHandler) as httpd:
-                print("Sphinx server running at http://127.0.0.1:8001")
-                httpd.serve_forever()
-            
-    except subprocess.CalledProcessError as e:
-        print(f"Error building Sphinx: {e}")
-        return False
-    except KeyboardInterrupt:
-        print("\nSphinx server stopped")
-        return True
 
 
 def main():
@@ -103,11 +54,10 @@ def main():
         epilog="""
 Examples:
   python scripts/run.py mkdocs     # Start MkDocs server (http://127.0.0.1:8000)
-  python scripts/run.py sphinx     # Start Sphinx server (http://127.0.0.1:8001)
         """
     )
     
-    parser.add_argument("command", choices=["mkdocs", "sphinx"], 
+    parser.add_argument("command", choices=["mkdocs"], 
                        help="Command to run")
     
     args = parser.parse_args()
@@ -120,8 +70,6 @@ Examples:
     # Run the requested command
     if args.command == "mkdocs":
         success = run_mkdocs()
-    elif args.command == "sphinx":
-        success = run_sphinx()
     
     if not success:
         sys.exit(1)
