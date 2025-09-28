@@ -30,9 +30,11 @@ Get your trading system up and running in minutes:
 git clone https://github.com/nishantnayar/trading-system.git
 cd trading-system
 
-# Create environment
-conda env create -f deployment/environment.yml
-conda activate trading-system
+# Activate your existing conda environment
+conda activate your-environment-name
+
+# Install dependencies
+pip install -r deployment/requirements.txt
 
 # Configure and run
 cp deployment/env.example .env

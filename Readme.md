@@ -71,11 +71,10 @@ cd trading-system
 
 #### 2. Setup Environment
 ```bash
-# Create conda environment
-conda env create -f deployment/environment.yml
-conda activate trading-system
+# Activate your existing conda environment
+conda activate your-environment-name
 
-# Install additional dependencies
+# Install dependencies
 pip install -r deployment/requirements.txt
 ```
 
