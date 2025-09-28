@@ -20,6 +20,8 @@ load_dotenv()
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
+from config.database import get_database_config
+
 
 def run_sql_command(command: str, database: str = "template1") -> bool:
     """Run a SQL command using psycopg2"""
@@ -108,36 +110,40 @@ def create_prefect_database():
 
 
 def create_trading_system_database():
-    """Create the trading_system database if it doesn't exist"""
-    print("Creating trading_system database...")
+    """Create the trading system database if it doesn't exist"""
+    config = get_database_config()
+    db_name = config.trading_db_name
+    print(f"Creating {db_name} database...")
 
     # Check if database already exists
-    if check_database_exists("trading_system"):
-        print("trading_system database already exists")
+    if check_database_exists(db_name):
+        print(f"{db_name} database already exists")
         return True
 
     # Create the database
-    create_db_cmd = "CREATE DATABASE trading_system;"
+    create_db_cmd = f"CREATE DATABASE {db_name};"
     if run_sql_command(create_db_cmd):
-        print("trading_system database created successfully")
+        print(f"{db_name} database created successfully")
         return True
 
     return False
 
 
 def create_service_schemas():
-    """Create service-specific schemas in trading_system database"""
-    print("\nCreating service-specific schemas...")
+    """Create service-specific schemas in trading system database"""
+    config = get_database_config()
+    db_name = config.trading_db_name
+    print(f"\nCreating service-specific schemas in {db_name} database...")
 
-    # First verify that trading_system database is accessible
-    if not check_database_exists("trading_system"):
-        print("ERROR: trading_system database does not exist!")
+    # First verify that trading system database is accessible
+    if not check_database_exists(db_name):
+        print(f"ERROR: {db_name} database does not exist!")
         return False
 
-    # Test connection to trading_system database
+    # Test connection to trading system database
     test_cmd = "SELECT 1;"
-    if not run_sql_command(test_cmd, "trading_system"):
-        print("ERROR: Cannot connect to trading_system database!")
+    if not run_sql_command(test_cmd, db_name):
+        print(f"ERROR: Cannot connect to {db_name} database!")
         return False
 
     schemas = [
@@ -154,7 +160,7 @@ def create_service_schemas():
     for schema in schemas:
         create_schema_cmd = f"CREATE SCHEMA IF NOT EXISTS {schema};"
         print(f"Creating schema '{schema}'...")
-        if run_sql_command(create_schema_cmd, "trading_system"):
+        if run_sql_command(create_schema_cmd, db_name):
             print(f"Schema '{schema}' created/verified successfully")
         else:
             print(f"ERROR: Failed to create schema '{schema}'")
@@ -164,7 +170,7 @@ def create_service_schemas():
     print("\nVerifying all schemas were created...")
     verify_cmd = "SELECT schema_name FROM information_schema.schemata WHERE schema_name IN ('data_ingestion', 'strategy_engine', 'execution', 'risk_management', 'analytics', 'notification', 'logging', 'shared') ORDER BY schema_name;"
 
-    if run_sql_command(verify_cmd, "trading_system"):
+    if run_sql_command(verify_cmd, db_name):
         print("All service schemas verified successfully!")
     else:
         print("WARNING: Could not verify schema creation")
@@ -227,22 +233,25 @@ def setup_prefect_config():
 
 def verify_databases():
     """Verify that both databases exist and are accessible"""
+    config = get_database_config()
+    trading_db_name = config.trading_db_name
+    prefect_db_name = config.prefect_db_name
 
     print("=" * 50)
     print("Starting verifying database setup...")
 
-    # Check trading_system database
-    if run_sql_command("SELECT 1;", "trading_system"):
-        print("trading_system database is accessible")
+    # Check trading system database
+    if run_sql_command("SELECT 1;", trading_db_name):
+        print(f"{trading_db_name} database is accessible")
     else:
-        print("trading_system database is not accessible")
+        print(f"{trading_db_name} database is not accessible")
         return False
 
     # Check prefect database
-    if run_sql_command("SELECT 1;", "Prefect"):
-        print("Prefect database is accessible")
+    if run_sql_command("SELECT 1;", prefect_db_name):
+        print(f"{prefect_db_name} database is accessible")
     else:
-        print("Prefect database is not accessible")
+        print(f"{prefect_db_name} database is not accessible")
         return False
 
     return True
