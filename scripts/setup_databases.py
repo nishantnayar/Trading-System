@@ -53,16 +53,43 @@ def run_sql_command(command: str, database: str = "template1") -> bool:
         return False
 
 
+def check_database_exists(db_name: str) -> bool:
+    """Check if a database exists by querying pg_database"""
+    try:
+        # Get database connection details from environment
+        host = os.getenv("POSTGRES_HOST", "localhost")
+        port = os.getenv("POSTGRES_PORT", "5432")
+        user = os.getenv("POSTGRES_USER", "postgres")
+        password = os.getenv("POSTGRES_PASSWORD", "")
+
+        # Connect to template1 database
+        conn = psycopg2.connect(
+            host=host, port=port, user=user, password=password, database="template1"
+        )
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+
+        # Check if database exists
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s;", (db_name,))
+        result = cursor.fetchone()
+
+        # Close connection
+        cursor.close()
+        conn.close()
+
+        return result is not None
+
+    except Exception as e:
+        print(f"Error checking database existence: {e}")
+        return False
+
+
 def create_prefect_database():
     """Create the Prefect database"""
     print("Creating Prefect database...")
 
     # Check if database already exists
-    check_db_cmd = """
-    SELECT 1 FROM pg_database WHERE datname = 'Prefect';
-    """
-
-    if run_sql_command(check_db_cmd):
+    if check_database_exists("Prefect"):
         print("Prefect database already exists")
         return True
 
@@ -85,11 +112,7 @@ def create_trading_system_database():
     print("Creating trading_system database...")
 
     # Check if database already exists
-    check_db_cmd = """
-    SELECT 1 FROM pg_database WHERE datname = 'trading_system';
-    """
-
-    if run_sql_command(check_db_cmd):
+    if check_database_exists("trading_system"):
         print("trading_system database already exists")
         return True
 
@@ -105,6 +128,17 @@ def create_trading_system_database():
 def create_service_schemas():
     """Create service-specific schemas in trading_system database"""
     print("\nCreating service-specific schemas...")
+
+    # First verify that trading_system database is accessible
+    if not check_database_exists("trading_system"):
+        print("ERROR: trading_system database does not exist!")
+        return False
+
+    # Test connection to trading_system database
+    test_cmd = "SELECT 1;"
+    if not run_sql_command(test_cmd, "trading_system"):
+        print("ERROR: Cannot connect to trading_system database!")
+        return False
 
     schemas = [
         "data_ingestion",
