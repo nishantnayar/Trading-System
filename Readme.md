@@ -12,6 +12,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/Documentation-MkDocs-blue.svg)](https://nishantnayar.github.io/trading-system)
+[![CI/CD Pipeline](https://github.com/nishantnayar/trading-system/workflows/Continuous%20Integration/badge.svg)](https://github.com/nishantnayar/trading-system/actions)
+[![Security Scan](https://github.com/nishantnayar/trading-system/workflows/Security%20Scan/badge.svg)](https://github.com/nishantnayar/trading-system/actions)
 [![GitHub Issues](https://img.shields.io/github/issues/nishantnayar/trading-system)](https://github.com/nishantnayar/trading-system/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/nishantnayar/trading-system)](https://github.com/nishantnayar/trading-system/stargazers)
 
@@ -215,6 +217,7 @@ mkdocs build
 - **Modern Frontend**: HTMX + Plotly + Tailwind CSS interface
 - **Comprehensive Logging**: Structured logging with Loguru
 - **Code Quality**: Black, Flake8, mypy, and pre-commit hooks
+- **CI/CD Pipeline**: Automated testing, security scanning, and deployment
 
 ## 🔧 Configuration
 

@@ -1,7 +1,6 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
-
 - Don’t write more than 100 lines of code in one attempt  
 - Always use lint8  
 - Never create a `.py` file to run a `.sql` file  

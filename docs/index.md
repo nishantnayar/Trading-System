@@ -2,7 +2,7 @@
 
 
 
-## 🚀 **A Production-Grade Algorithmic Trading System**
+## **A Production-Grade Algorithmic Trading System**
 
 *Built with Python, PostgreSQL, Redis, and Modern Web Technologies*
 
@@ -67,10 +67,12 @@ python deployment/scripts/start_services.py
 - [Analytics](api/analytics.md) - Performance metrics
 
 ### **Development**
-- [Architecture Overview](development/architecture.md) - System design
-- [Logging Architecture](development/logging-architecture.md) - Logging strategy
-- [Contributing](development/contributing.md) - Development guidelines
-- [Testing](development/testing.md) - Quality assurance
+- [System Architecture](COMPREHENSIVE_ARCHITECTURE.md) - Complete system design
+- [Database Architecture](DATABASE_ARCHITECTURE_DETAILED.md) - Database design and implementation
+- [Database Setup](DATABASE_SETUP.md) - Step-by-step database setup guide
+- [Logging Architecture](LOGGING_ARCHITECTURE.md) - Detailed logging strategy
+- [Testing Strategy](TESTING_STRATEGY.md) - Comprehensive testing approach
+- [CI/CD Pipeline](CI_CD_PIPELINE.md) - Continuous integration and deployment
 
 ---
 
@@ -210,9 +212,12 @@ LOG_RETENTION_DAYS=30
 
 ### **Documentation**
 - [User Documentation](https://nishantnayar.github.io/trading-system) (MkDocs)
-- [Technical Documentation](development/) (MkDocs)
-- [Architecture Guide](development/architecture.md)
-- [Logging Architecture](development/logging-architecture.md)
+- [System Architecture](COMPREHENSIVE_ARCHITECTURE.md)
+- [Database Architecture](DATABASE_ARCHITECTURE_DETAILED.md)
+- [Database Setup](DATABASE_SETUP.md)
+- [Logging Architecture](LOGGING_ARCHITECTURE.md)
+- [Testing Strategy](TESTING_STRATEGY.md)
+- [CI/CD Pipeline](CI_CD_PIPELINE.md)
 - [API Reference](api/)
 - [Troubleshooting](troubleshooting/)
 
@@ -233,7 +238,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 
 
-**Built with ❤️ by [Nishant Nayar](https://github.com/nishantnayar)**
+**Built by [Nishant Nayar](https://github.com/nishantnayar)**
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-black?style=for-the-badge&logo=github)](https://github.com/nishantnayar/trading-system)
 [![Documentation](https://img.shields.io/badge/Documentation-Online-blue?style=for-the-badge&logo=book)](https://nishantnayar.github.io/trading-system)

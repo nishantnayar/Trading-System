@@ -1,0 +1,131 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Dependency Security Scan
+  dependency-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety pip-audit
+        
+    - name: Run safety check
+      run: |
+        safety check --json --output safety-report.json || true
+        
+    - name: Run pip-audit
+      run: |
+        pip-audit --format=json --output=pip-audit-report.json || true
+        
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: dependency-security-reports
+        path: |
+          safety-report.json
+          pip-audit-report.json
+
+  # Code Security Scan
+  code-scan:
+    name: Code Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit semgrep
+        
+    - name: Run Bandit security linter
+      run: |
+        bandit -r src/ -f json -o bandit-report.json || true
+        
+    - name: Run Semgrep
+      run: |
+        semgrep --config=auto --json --output=semgrep-report.json . || true
+        
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-security-reports
+        path: |
+          bandit-report.json
+          semgrep-report.json
+
+  # Container Security Scan
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Build Docker image
+      run: |
+        # Build Docker image if Dockerfile exists
+        if [ -f Dockerfile ]; then
+          docker build -t trading-system:latest .
+        else
+          echo "No Dockerfile found, skipping container scan"
+          exit 0
+        fi
+        
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'trading-system:latest'
+        format: 'sarif'
+        output: 'trivy-container-results.sarif'
+        
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-container-results.sarif'
+
+  # Secret Scanning
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for secret scanning
+        
+    - name: Run TruffleHog
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
