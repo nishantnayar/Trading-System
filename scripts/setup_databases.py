@@ -163,8 +163,16 @@ def create_service_schemas():
 
 
 def setup_prefect_config():
-    """Setup Prefect configuration"""
+    """Setup Prefect configuration (optional)"""
     print("\n\nSetting up Prefect configuration...")
+
+    # Check if Prefect is available
+    try:
+        subprocess.run(["prefect", "--version"], check=True, capture_output=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("Prefect not available - skipping configuration")
+        print("Prefect database is ready for when Prefect is installed")
+        return True
 
     # Get database connection details
     host = os.getenv("POSTGRES_HOST", "localhost")
@@ -199,10 +207,12 @@ def setup_prefect_config():
 
     except subprocess.CalledProcessError as e:
         print(f"Error setting up Prefect configuration: {e}")
-        return False
+        print("Prefect database is ready for manual configuration")
+        return True  # Don't fail the script for Prefect config issues
     except FileNotFoundError:
-        print("Prefect command not found. Please install Prefect first.")
-        return False
+        print("Prefect command not found - skipping configuration")
+        print("Prefect database is ready for when Prefect is installed")
+        return True
 
 
 def verify_databases():
