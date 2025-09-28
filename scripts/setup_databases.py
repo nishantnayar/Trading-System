@@ -83,22 +83,22 @@ def create_prefect_database():
 def create_trading_system_database():
     """Create the trading_system database if it doesn't exist"""
     print("Creating trading_system database...")
-    
+
     # Check if database already exists
     check_db_cmd = """
     SELECT 1 FROM pg_database WHERE datname = 'trading_system';
     """
-    
+
     if run_sql_command(check_db_cmd):
         print("trading_system database already exists")
         return True
-    
+
     # Create the database
-    create_db_cmd = 'CREATE DATABASE trading_system;'
+    create_db_cmd = "CREATE DATABASE trading_system;"
     if run_sql_command(create_db_cmd):
         print("trading_system database created successfully")
         return True
-    
+
     return False
 
 
