@@ -1,7 +1,28 @@
 ---
 alwaysApply: true
 ---
-- Dont write more than 100 lines of code in one attempt
-- always use lint8
-- never create .py to run a .sql
-- always review Architecture.md
+
+- Don’t write more than 100 lines of code in one attempt  
+- Always use lint8  
+- Never create a `.py` file to run a `.sql` file  
+- Always review `Architecture.md` before coding  
+- Don’t create code until confirmed by user to proceed  
+
+```yaml
+# .cursorrules
+
+rules:
+  - name: "Ask Before Coding"
+    description: "The AI must always confirm with the user before writing or generating code."
+    match: ".*"
+    action: |
+      Before generating any code, ask the user: 
+      'Do you want me to proceed with coding this?'
+
+  - name: "Limit Code Length"
+    description: "The AI must not generate more than 100 lines of code before user review and approval."
+    match: ".*"
+    action: |
+      If code exceeds 100 lines, stop and say: 
+      'This code is getting long (>100 lines). Do you want me to continue?' 
+      Then wait for explicit approval.

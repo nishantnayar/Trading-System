@@ -155,6 +155,7 @@ nav:
     - Analytics: api/analytics.md
   - Development:
     - Architecture: development/architecture.md
+    - Logging Architecture: development/logging-architecture.md
     - Contributing: development/contributing.md
     - Testing: development/testing.md
   - Troubleshooting:
