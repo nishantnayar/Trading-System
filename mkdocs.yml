@@ -10,6 +10,7 @@ docs_dir: docs
 # Repository
 repo_name: nishantnayar/trading-system
 repo_url: https://github.com/nishantnayar/trading-system
+edit_uri: edit/main/docs/
 
 # Copyright
 copyright: Copyright &copy; 2025 Nishant Nayar
