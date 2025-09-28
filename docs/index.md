@@ -215,6 +215,7 @@ LOG_RETENTION_DAYS=30
 ### **Getting Help**
 - Check the [FAQ](troubleshooting/faq.md)
 - Review [Common Issues](troubleshooting/common-issues.md)
+- Join the [Discussions](https://github.com/nishantnayar/trading-system/discussions)
 - Create an issue on GitHub
 - Contact: nishantnayar@gmail.com
 
