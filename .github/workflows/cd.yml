@@ -21,7 +21,7 @@ jobs:
     name: Deploy to Staging
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
-    environment: staging
+    # environment: staging  # Commented out until environment is created
     
     steps:
     - name: Checkout code
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
     needs: [deploy-staging]
-    environment: production
+    # environment: production  # Commented out until environment is created
     
     steps:
     - name: Checkout code
@@ -109,7 +109,7 @@ jobs:
     name: Database Migration
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
-    environment: production
+    # environment: production  # Commented out until environment is created
     
     steps:
     - name: Checkout code
@@ -141,7 +141,7 @@ jobs:
     name: Rollback
     runs-on: ubuntu-latest
     if: failure()
-    environment: production
+    # environment: production  # Commented out until environment is created
     
     steps:
     - name: Checkout code
