@@ -52,26 +52,40 @@ def run_sphinx():
     print("-" * 50)
     
     try:
-        # Build Sphinx docs first
+        # Check if sphinx directory exists
         sphinx_dir = Path("docs/sphinx")
         if not sphinx_dir.exists():
             print("Error: docs/sphinx/ directory not found")
             return False
             
-        # Build Sphinx documentation
-        print("Building Sphinx documentation...")
-        subprocess.run(["sphinx-build", "-b", "html", ".", "_build/html"], 
-                      cwd=sphinx_dir, check=True)
-        
-        # Start a simple HTTP server
-        import http.server
-        import socketserver
-        import os
-        
-        os.chdir(sphinx_dir / "_build" / "html")
-        with socketserver.TCPServer(("", 8001), http.server.SimpleHTTPRequestHandler) as httpd:
-            print("Sphinx server running at http://127.0.0.1:8001")
-            httpd.serve_forever()
+        # Check if conf.py exists
+        conf_file = sphinx_dir / "conf.py"
+        if not conf_file.exists():
+            print("Error: docs/sphinx/conf.py not found")
+            return False
+            
+        # Try to use sphinx-autobuild for better development experience
+        try:
+            cmd = ["sphinx-autobuild", "docs/sphinx", "docs/sphinx/_build/html", "--host", "127.0.0.1", "--port", "8001"]
+            subprocess.run(cmd, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fallback to manual build and serve
+            print("sphinx-autobuild not found, using manual build...")
+            
+            # Build Sphinx documentation
+            print("Building Sphinx documentation...")
+            subprocess.run(["sphinx-build", "-b", "html", ".", "_build/html"], 
+                          cwd=sphinx_dir, check=True)
+            
+            # Start a simple HTTP server
+            import http.server
+            import socketserver
+            import os
+            
+            os.chdir(sphinx_dir / "_build" / "html")
+            with socketserver.TCPServer(("", 8001), http.server.SimpleHTTPRequestHandler) as httpd:
+                print("Sphinx server running at http://127.0.0.1:8001")
+                httpd.serve_forever()
             
     except subprocess.CalledProcessError as e:
         print(f"Error building Sphinx: {e}")
