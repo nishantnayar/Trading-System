@@ -108,10 +108,6 @@ latex_documents = [
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'fastapi': ('https://fastapi.tiangolo.com/', None),
-    'pydantic': ('https://docs.pydantic.dev/', None),
-    'polars': ('https://pola.rs/polars/', None),
-    'redis': ('https://redis-py.readthedocs.io/', None),
-    'prefect': ('https://docs.prefect.io/', None),
 }
 
 # -- Options for todo extension ----------------------------------------------
@@ -129,7 +125,6 @@ autodoc_mock_imports = [
     'prefect',
     'alpaca',
     'loguru',
-    'fastapi',
     'uvicorn',
     'pydantic',
     'pydantic_settings',
@@ -166,8 +161,8 @@ autosummary_imported_members = True
 # -- Custom configuration -----------------------------------------------------
 
 # Add any custom configuration here
-html_logo = '_static/logo.png'
-html_favicon = '_static/favicon.ico'
+# html_logo = '_static/logo.png'  # Uncomment when logo is available
+# html_favicon = '_static/favicon.ico'  # Uncomment when favicon is available
 
 # GitHub integration
 html_context = {
