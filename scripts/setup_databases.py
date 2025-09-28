@@ -80,6 +80,28 @@ def create_prefect_database():
     return False
 
 
+def create_trading_system_database():
+    """Create the trading_system database if it doesn't exist"""
+    print("Creating trading_system database...")
+    
+    # Check if database already exists
+    check_db_cmd = """
+    SELECT 1 FROM pg_database WHERE datname = 'trading_system';
+    """
+    
+    if run_sql_command(check_db_cmd):
+        print("trading_system database already exists")
+        return True
+    
+    # Create the database
+    create_db_cmd = 'CREATE DATABASE trading_system;'
+    if run_sql_command(create_db_cmd):
+        print("trading_system database created successfully")
+        return True
+    
+    return False
+
+
 def create_service_schemas():
     """Create service-specific schemas in trading_system database"""
     print("\nCreating service-specific schemas...")
@@ -197,17 +219,22 @@ def main():
         print("Failed to create Prefect database")
         return False
 
-    # Step 2: Create service schemas
+    # Step 2: Create trading_system database
+    if not create_trading_system_database():
+        print("Failed to create trading_system database")
+        return False
+
+    # Step 3: Create service schemas
     if not create_service_schemas():
         print("Failed to create service schemas")
         return False
 
-    # Step 3: Setup Prefect configuration
+    # Step 4: Setup Prefect configuration
     if not setup_prefect_config():
         print("Failed to setup Prefect configuration")
         return False
 
-    # Step 4: Verify setup
+    # Step 5: Verify setup
     if not verify_databases():
         print("Database verification failed")
         return False
