@@ -180,7 +180,7 @@ A production-grade algorithmic trading system designed for local deployment, foc
 
 ## Database Architecture
 
-> **📊 Detailed Database Analysis**: For a comprehensive review of database schema design, performance considerations, and implementation strategies, see [Database Architecture Detailed Review](DATABASE_ARCHITECTURE_DETAILED.md).
+> **📊 Detailed Database Analysis**: For a comprehensive review of database schema design, performance considerations, and implementation strategies, see [Database Architecture Detailed Review](database.md).
 
 ### Database Connectivity Strategy
 
@@ -594,7 +594,7 @@ async def get_trading_activity(db: Session = Depends(get_db)):
 
 ## Logging Architecture
 
-> **📝 Detailed Logging Analysis**: For comprehensive logging architecture, structured logging patterns, and implementation strategies, see [Logging Architecture Detailed Review](LOGGING_ARCHITECTURE.md).
+> **📝 Detailed Logging Analysis**: For comprehensive logging architecture, structured logging patterns, and implementation strategies, see [Logging Architecture Detailed Review](logging.md).
 
 ### Logging Strategy
 - **Loguru**: Consolidated logging across all services

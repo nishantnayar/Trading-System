@@ -49,9 +49,7 @@ python deployment/scripts/start_services.py
 ## 📋 **What You'll Find Here**
 
 ### **Getting Started**
-- [Installation Guide](getting-started/installation.md) - Step-by-step setup
-- [Configuration](getting-started/configuration.md) - Environment setup
-- [First Run](getting-started/first-run.md) - Launch your system
+- [Getting Started Guide](getting-started.md) - Complete setup and configuration guide
 
 ### **User Guide**
 - [Dashboard Overview](user-guide/dashboard.md) - Navigate the interface
@@ -67,12 +65,12 @@ python deployment/scripts/start_services.py
 - [Analytics](api/analytics.md) - Performance metrics
 
 ### **Development**
-- [System Architecture](COMPREHENSIVE_ARCHITECTURE.md) - Complete system design
-- [Database Architecture](DATABASE_ARCHITECTURE_DETAILED.md) - Database design and implementation
-- [Database Setup](DATABASE_SETUP.md) - Step-by-step database setup guide
-- [Logging Architecture](LOGGING_ARCHITECTURE.md) - Detailed logging strategy
-- [Testing Strategy](TESTING_STRATEGY.md) - Comprehensive testing approach
-- [CI/CD Pipeline](CI_CD_PIPELINE.md) - Continuous integration and deployment
+- [System Architecture](development/architecture.md) - Complete system design
+- [Database Architecture](development/database.md) - Database design and implementation
+- [Database Setup](development/database-setup.md) - Step-by-step database setup guide
+- [Logging Architecture](development/logging.md) - Detailed logging strategy
+- [Testing Strategy](development/testing.md) - Comprehensive testing approach
+- [CI/CD Pipeline](development/ci-cd.md) - Continuous integration and deployment
 
 ---
 
@@ -212,18 +210,17 @@ LOG_RETENTION_DAYS=30
 
 ### **Documentation**
 - [User Documentation](https://nishantnayar.github.io/trading-system) (MkDocs)
-- [System Architecture](COMPREHENSIVE_ARCHITECTURE.md)
-- [Database Architecture](DATABASE_ARCHITECTURE_DETAILED.md)
-- [Database Setup](DATABASE_SETUP.md)
-- [Logging Architecture](LOGGING_ARCHITECTURE.md)
-- [Testing Strategy](TESTING_STRATEGY.md)
-- [CI/CD Pipeline](CI_CD_PIPELINE.md)
+- [System Architecture](development/architecture.md)
+- [Database Architecture](development/database.md)
+- [Database Setup](development/database-setup.md)
+- [Logging Architecture](development/logging.md)
+- [Testing Strategy](development/testing.md)
+- [CI/CD Pipeline](development/ci-cd.md)
 - [API Reference](api/data-ingestion.md)
-- [Troubleshooting](troubleshooting/faq.md)
+- [Troubleshooting](troubleshooting.md)
 
 ### **Getting Help**
-- Check the [FAQ](troubleshooting/faq.md)
-- Review [Common Issues](troubleshooting/common-issues.md)
+- Check the [Troubleshooting Guide](troubleshooting.md)
 - Join the [Discussions](https://github.com/nishantnayar/trading-system/discussions)
 - Create an issue on GitHub
 - Contact: nishantnayar@gmail.com

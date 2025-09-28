@@ -44,10 +44,7 @@ markdown_extensions:
 # Page tree
 nav:
   - Home: index.md
-  - Getting Started:
-    - Installation: getting-started/installation.md
-    - Configuration: getting-started/configuration.md
-    - First Run: getting-started/first-run.md
+  - Getting Started: getting-started.md
   - User Guide:
     - Dashboard Overview: user-guide/dashboard.md
     - Trading Operations: user-guide/trading.md
@@ -59,18 +56,14 @@ nav:
     - Execution Engine: api/execution.md
     - Risk Management: api/risk-management.md
     - Analytics: api/analytics.md
-  - Troubleshooting:
-    - FAQ: troubleshooting/faq.md
-    - Common Issues: troubleshooting/common-issues.md
+  - Troubleshooting: troubleshooting.md
   - Development:
-    - System Architecture: COMPREHENSIVE_ARCHITECTURE.md
-    - Database Architecture: DATABASE_ARCHITECTURE_DETAILED.md
-    - Database Setup: DATABASE_SETUP.md
-    - Logging Architecture: LOGGING_ARCHITECTURE.md
-    - Testing Strategy: TESTING_STRATEGY.md
-    - CI/CD Pipeline: CI_CD_PIPELINE.md
-    - CI/CD Troubleshooting: CI_CD_TROUBLESHOOTING.md
-    - GitHub Pages Setup: GITHUB_PAGES_SETUP.md
+    - System Architecture: development/architecture.md
+    - Database Architecture: development/database.md
+    - Database Setup: development/database-setup.md
+    - Logging Architecture: development/logging.md
+    - Testing Strategy: development/testing.md
+    - CI/CD Pipeline: development/ci-cd.md
 
 # Extra configuration
 extra:

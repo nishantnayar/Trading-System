@@ -41,7 +41,6 @@ The Trading System uses a comprehensive CI/CD pipeline built on GitHub Actions t
 
 #### **Database Tests**
 - **PostgreSQL 15**: Test database setup
-- **Redis 7**: Cache layer testing
 - **Connection Tests**: Database connectivity verification
 - **Unit Tests**: Individual component testing
 - **Integration Tests**: Component interaction testing
@@ -98,8 +97,8 @@ The Trading System uses a comprehensive CI/CD pipeline built on GitHub Actions t
 - **Semgrep**: Advanced code analysis
 - **Reports**: Detailed security findings
 
-#### **Container Security**
-- **Trivy**: Container vulnerability scanning
+#### **Filesystem Security**
+- **Trivy**: Filesystem vulnerability scanning
 - **SARIF**: GitHub Security tab integration
 - **Multi-format**: JSON and SARIF reports
 
@@ -123,7 +122,6 @@ The Trading System uses a comprehensive CI/CD pipeline built on GitHub Actions t
 
 #### **Documentation Linting**
 - **Link Validation**: Broken link detection
-- **Markdown Linting**: Format validation
 - **Structure Check**: Documentation organization
 
 #### **Documentation Testing**
@@ -310,6 +308,112 @@ mypy src/
 bandit -r src/
 safety check
 ```
+
+## GitHub Pages Setup
+
+### **Prerequisites**
+
+1. **Repository Access**: You must have admin/write access to the repository
+2. **GitHub Pages Enabled**: Pages must be enabled in repository settings
+3. **Correct Permissions**: Workflow must have proper permissions
+
+### **Step-by-Step Setup**
+
+#### **1. Enable GitHub Pages**
+
+1. Go to your repository on GitHub
+2. Click **Settings** tab
+3. Scroll down to **Pages** section (left sidebar)
+4. Under **Source**, select **GitHub Actions**
+5. Click **Save**
+
+#### **2. Configure Repository Permissions**
+
+1. In repository **Settings**
+2. Go to **Actions** → **General**
+3. Scroll to **Workflow permissions**
+4. Select **Read and write permissions**
+5. Check **Allow GitHub Actions to create and approve pull requests**
+6. Click **Save**
+
+#### **3. Verify Workflow Configuration**
+
+The workflow should have these permissions:
+
+```yaml
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+```
+
+#### **4. Deploy Documentation**
+
+1. Push changes to `main` branch
+2. Go to **Actions** tab
+3. Find the **Documentation** workflow
+4. Click on the latest run
+5. Monitor the deployment progress
+
+### **Troubleshooting GitHub Pages**
+
+#### **Error: Permission Denied**
+
+**Error**: `Permission to nishantnayar/Trading-System.git denied to github-actions[bot]`
+
+**Solutions**:
+
+1. **Check Repository Permissions**:
+   - Go to Settings → Actions → General
+   - Ensure "Read and write permissions" is selected
+   - Save changes
+
+2. **Verify Workflow Permissions**:
+   ```yaml
+   permissions:
+     contents: read
+     pages: write
+     id-token: write
+   ```
+
+3. **Check GitHub Pages Source**:
+   - Go to Settings → Pages
+   - Ensure source is set to "GitHub Actions"
+
+#### **Error: 403 Forbidden**
+
+**Error**: `The requested URL returned error: 403`
+
+**Solutions**:
+
+1. **Regenerate Token** (if using personal access token):
+   - Go to Settings → Developer settings → Personal access tokens
+   - Generate new token with `repo` and `workflow` permissions
+   - Update repository secrets
+
+2. **Use Built-in GITHUB_TOKEN** (recommended):
+   - Remove custom token from workflow
+   - Use `${{ secrets.GITHUB_TOKEN }}` (automatic)
+
+#### **Error: Pages Not Found**
+
+**Error**: 404 when accessing GitHub Pages URL
+
+**Solutions**:
+
+1. **Check Deployment Status**:
+   - Go to Actions tab
+   - Look for "Deploy to GitHub Pages" job
+   - Ensure it completed successfully
+
+2. **Verify Pages Settings**:
+   - Go to Settings → Pages
+   - Check if Pages is enabled
+   - Verify source is "GitHub Actions"
+
+3. **Check Custom Domain** (if used):
+   - Ensure CNAME file is correct
+   - Verify DNS settings
 
 ## Future Enhancements
 

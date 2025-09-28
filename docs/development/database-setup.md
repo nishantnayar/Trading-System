@@ -176,4 +176,4 @@ After successful database setup:
 
 ---
 
-For detailed architecture information, see [DATABASE_ARCHITECTURE_DETAILED.md](DATABASE_ARCHITECTURE_DETAILED.md).
+For detailed architecture information, see [Database Architecture](database.md).
