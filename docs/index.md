@@ -67,7 +67,7 @@ python deployment/scripts/start_services.py
 ### **Development**
 - [System Architecture](development/architecture.md) - Complete system design
 - [Database Architecture](development/database.md) - Database design and implementation
-- [Database Setup](development/database-setup.md) - Step-by-step database setup guide
+- [Database Setup](development/database.md) - Step-by-step database setup guide
 - [Logging Architecture](development/logging.md) - Detailed logging strategy
 - [Testing Strategy](development/testing.md) - Comprehensive testing approach
 - [CI/CD Pipeline](development/ci-cd.md) - Continuous integration and deployment
@@ -212,7 +212,7 @@ LOG_RETENTION_DAYS=30
 - [User Documentation](https://nishantnayar.github.io/trading-system) (MkDocs)
 - [System Architecture](development/architecture.md)
 - [Database Architecture](development/database.md)
-- [Database Setup](development/database-setup.md)
+- [Database Setup](development/database.md)
 - [Logging Architecture](development/logging.md)
 - [Testing Strategy](development/testing.md)
 - [CI/CD Pipeline](development/ci-cd.md)
