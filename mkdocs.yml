@@ -60,7 +60,6 @@ nav:
   - Development:
     - System Architecture: development/architecture.md
     - Database Architecture: development/database.md
-    - Database Setup: development/database-setup.md
     - Logging Architecture: development/logging.md
     - Testing Strategy: development/testing.md
     - CI/CD Pipeline: development/ci-cd.md
