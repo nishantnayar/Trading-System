@@ -514,6 +514,70 @@ class DatabaseSecurity:
             })
 ```
 
+## Database Setup Options
+
+### Option 1: Python Script (Automated)
+Run the database setup script:
+
+```bash
+python scripts/setup_databases.py
+```
+
+This script will:
+- Create the `Prefect` database
+- Create service-specific schemas in `trading_system`
+- Configure Prefect to use PostgreSQL
+- Note: Prefect will automatically initialize its tables when the server starts
+
+### Option 2: SQL Scripts (Manual)
+For more control or if you prefer SQL, run the scripts manually:
+
+```bash
+# 1. Create databases and schemas
+psql -U postgres -h localhost -p 5432 -f scripts/01_create_databases.sql
+
+# 2. Create core tables
+psql -U postgres -h localhost -p 5432 -d trading_system -f scripts/02_create_core_tables.sql
+
+# 3. Create indexes
+psql -U postgres -h localhost -p 5432 -d trading_system -f scripts/03_create_indexes.sql
+
+# 4. Verify setup
+psql -U postgres -h localhost -p 5432 -d trading_system -f scripts/04_verify_setup.sql
+```
+
+The SQL scripts provide:
+- Simple, transparent database setup
+- Easy to modify and customize
+- Clear error messages
+- Step-by-step verification
+
+### What Gets Created
+
+#### Databases
+- `trading_system` - Main trading database
+- `Prefect` - Prefect orchestration database
+
+#### Schemas in trading_system
+- `data_ingestion` - Market data and quality logs
+- `strategy_engine` - Strategies, signals, and performance
+- `execution` - Orders, trades, and positions
+- `risk_management` - Risk limits and events
+- `analytics` - Portfolio and performance analytics
+- `notification` - Alert configurations and logs
+- `logging` - System and performance logs
+- `shared` - Common utilities and configuration
+
+#### Core Tables
+- **Market Data**: `market_data`, `data_quality_logs`
+- **Trading**: `orders`, `trades`, `positions`
+- **Strategy**: `strategies`, `strategy_signals`, `strategy_performance`
+- **Risk**: `risk_limits`, `risk_events`
+- **Analytics**: `portfolio_summary`, `performance_metrics`
+- **Notification**: `notification_configs`, `notification_logs`
+- **Logging**: `system_logs`, `performance_logs`
+- **Shared**: `audit_log`, `system_config`
+
 ## Implementation Strategy
 
 ### Database Architecture Decision: Separate Databases
