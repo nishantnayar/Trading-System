@@ -4,10 +4,13 @@ Reusable components for SQLAlchemy models
 """
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
-from sqlalchemy import Column, DateTime, func
+from sqlalchemy import Column, DateTime, String, func
 from sqlalchemy.ext.declarative import declared_attr
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql.schema import Table
 
 
 class TimestampMixin:
@@ -42,6 +45,9 @@ class UpdateTimestampMixin:
 
 class SerializerMixin:
     """Adds serialization methods to models"""
+
+    if TYPE_CHECKING:
+        __table__: "Table"
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -79,6 +85,9 @@ class SerializerMixin:
 
 class ReprMixin:
     """Adds helpful __repr__ method to models"""
+
+    if TYPE_CHECKING:
+        __table__: "Table"
 
     def __repr__(self) -> str:
         """
@@ -126,14 +135,14 @@ class SoftDeleteMixin:
 class VersionMixin:
     """Adds optimistic locking version field to models"""
 
-    version = Column(
+    version: int = Column(  # type: ignore[assignment]
         "version",
         nullable=False,
         default=1,
         comment="Version number for optimistic locking",
     )
 
-    def increment_version(self):
+    def increment_version(self) -> None:
         """Increment version number"""
         self.version += 1
 
@@ -141,15 +150,15 @@ class VersionMixin:
 class AuditMixin:
     """Adds audit fields to models"""
 
-    created_by = Column(
-        "created_by", nullable=True, comment="User who created the record"
+    created_by: Optional[str] = Column(  # type: ignore[assignment]
+        "created_by", String, nullable=True, comment="User who created the record"
     )
 
-    updated_by = Column(
-        "updated_by", nullable=True, comment="User who last updated the record"
+    updated_by: Optional[str] = Column(  # type: ignore[assignment]
+        "updated_by", String, nullable=True, comment="User who last updated the record"
     )
 
-    def set_audit_fields(self, user_id: str, is_update: bool = False):
+    def set_audit_fields(self, user_id: str, is_update: bool = False) -> None:
         """
         Set audit fields
 
@@ -185,29 +194,35 @@ class UUIDMixin:
 class NameMixin:
     """Adds name and description fields to models"""
 
-    name = Column("name", nullable=False, comment="Name of the record")
+    name: str = Column(  # type: ignore[assignment]
+        "name", String, nullable=False, comment="Name of the record"
+    )
 
-    description = Column(
-        "description", nullable=True, comment="Description of the record"
+    description: Optional[str] = Column(  # type: ignore[assignment]
+        "description", String, nullable=True, comment="Description of the record"
     )
 
 
 class StatusMixin:
     """Adds status field to models"""
 
-    status = Column(
-        "status", nullable=False, default="active", comment="Status of the record"
+    status: str = Column(  # type: ignore[assignment]
+        "status",
+        String,
+        nullable=False,
+        default="active",
+        comment="Status of the record",
     )
 
-    def activate(self):
+    def activate(self) -> None:
         """Activate the record"""
         self.status = "active"
 
-    def deactivate(self):
+    def deactivate(self) -> None:
         """Deactivate the record"""
         self.status = "inactive"
 
     @property
     def is_active(self) -> bool:
         """Check if record is active"""
-        return self.status == "active"
+        return self.status == "active"  # type: ignore[return-value]
