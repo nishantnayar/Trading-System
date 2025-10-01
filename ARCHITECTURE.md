@@ -287,7 +287,7 @@ Analytics Service ← Notification Service ← Redis ← PostgreSQL
 - **Structured Logging**: JSON format for analysis
 - **Log Levels**: DEBUG, INFO, WARNING, ERROR, CRITICAL
 - **Log Rotation**: Daily rotation, 30-day retention
-- **Detailed Architecture**: [LOGGING_ARCHITECTURE.md](docs/LOGGING_ARCHITECTURE.md)
+- **Detailed Architecture**: [Logging Architecture](docs/development/logging.md)
 
 ### Monitoring
 - **System Health**: Service status, database connections
