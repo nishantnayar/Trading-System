@@ -27,9 +27,10 @@ from src.config.database import get_engine
 # Create a simple test model
 class TestMarketData(Base, TimestampMixin, SerializerMixin, ReprMixin):
     """Test model for market data"""
+
     __tablename__ = "test_market_data"
-    __table_args__ = {'schema': 'data_ingestion'}
-    
+    __table_args__ = {"schema": "data_ingestion"}
+
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     symbol = Column(String(20), nullable=False)
     timestamp = Column(DateTime(timezone=True), nullable=False)
@@ -42,7 +43,7 @@ def test_database_connection():
     print("=" * 60)
     print("TEST 1: Database Connection")
     print("=" * 60)
-    
+
     try:
         engine = get_engine("trading")
         with engine.connect() as conn:
@@ -64,15 +65,19 @@ def test_schema_access():
     print("\n" + "=" * 60)
     print("TEST 2: Schema Access")
     print("=" * 60)
-    
+
     try:
         engine = get_engine("trading")
         with engine.connect() as conn:
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT schema_name 
                 FROM information_schema.schemata 
                 WHERE schema_name = 'data_ingestion'
-            """))
+            """
+                )
+            )
             row = result.fetchone()
             if row:
                 print(f"[PASS] Schema 'data_ingestion' is accessible")
@@ -90,26 +95,30 @@ def test_create_test_table():
     print("\n" + "=" * 60)
     print("TEST 3: Create Test Table")
     print("=" * 60)
-    
+
     try:
         engine = get_engine("trading")
-        
+
         # Drop table if exists
         with engine.connect() as conn:
             conn.execute(text("DROP TABLE IF EXISTS data_ingestion.test_market_data"))
             conn.commit()
-        
+
         # Create table using SQLAlchemy
         Base.metadata.create_all(engine, tables=[TestMarketData.__table__])
-        
+
         # Verify table exists
         with engine.connect() as conn:
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT table_name 
                 FROM information_schema.tables 
                 WHERE table_schema = 'data_ingestion' 
                 AND table_name = 'test_market_data'
-            """))
+            """
+                )
+            )
             row = result.fetchone()
             if row:
                 print("[PASS] Test table created successfully")
@@ -127,15 +136,15 @@ def test_transaction_insert():
     print("\n" + "=" * 60)
     print("TEST 4: Transaction Insert")
     print("=" * 60)
-    
+
     try:
         test_data = TestMarketData(
-            symbol='AAPL',
+            symbol="AAPL",
             timestamp=datetime.now(timezone.utc),
-            close_price=Decimal('150.25'),
-            volume=1000000
+            close_price=Decimal("150.25"),
+            volume=1000000,
         )
-        
+
         with db_transaction() as session:
             session.add(test_data)
             session.flush()  # Flush to get the ID
@@ -144,13 +153,13 @@ def test_transaction_insert():
             symbol = test_data.symbol
             price = test_data.close_price
             volume = test_data.volume
-        
+
         print(f"[PASS] Record inserted successfully with ID: {inserted_id}")
         print(f"   Symbol: {symbol}")
         print(f"   Price: ${price}")
         print(f"   Volume: {volume:,}")
         return True
-        
+
     except Exception as e:
         print(f"[FAIL] Insert failed: {e}")
         return False
@@ -161,19 +170,19 @@ def test_readonly_query():
     print("\n" + "=" * 60)
     print("TEST 5: Read-Only Query")
     print("=" * 60)
-    
+
     try:
         with db_readonly_session() as session:
             records = session.query(TestMarketData).all()
-            
+
         print(f"[PASS] Query executed successfully")
         print(f"   Found {len(records)} record(s)")
-        
+
         for record in records:
             print(f"   - {record.symbol} @ ${record.close_price} (ID: {record.id})")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"[FAIL] Query failed: {e}")
         return False
@@ -184,11 +193,11 @@ def test_serialization():
     print("\n" + "=" * 60)
     print("TEST 6: Model Serialization")
     print("=" * 60)
-    
+
     try:
         with db_readonly_session() as session:
             record = session.query(TestMarketData).first()
-            
+
         if record:
             # Test to_dict
             record_dict = record.to_dict()
@@ -196,16 +205,16 @@ def test_serialization():
             print(f"   Keys: {list(record_dict.keys())}")
             print(f"   Symbol: {record_dict['symbol']}")
             print(f"   Price: {record_dict['close_price']}")
-            
+
             # Test __repr__
             repr_str = repr(record)
             print(f"[PASS] __repr__ works: {repr_str}")
-            
+
             return True
         else:
             print("[FAIL] No record found to serialize")
             return False
-            
+
     except Exception as e:
         print(f"[FAIL] Serialization failed: {e}")
         return False
@@ -216,21 +225,21 @@ def test_transaction_update():
     print("\n" + "=" * 60)
     print("TEST 7: Transaction Update")
     print("=" * 60)
-    
+
     try:
         # Update the first record
         with db_transaction() as session:
             record = session.query(TestMarketData).first()
             if record:
                 old_price = record.close_price
-                record.close_price = Decimal('151.50')
+                record.close_price = Decimal("151.50")
                 new_price = record.close_price
-        
+
         print(f"[PASS] Record updated successfully")
         print(f"   Old Price: ${old_price}")
         print(f"   New Price: ${new_price}")
         return True
-        
+
     except Exception as e:
         print(f"[FAIL] Update failed: {e}")
         return False
@@ -241,33 +250,33 @@ def test_transaction_rollback():
     print("\n" + "=" * 60)
     print("TEST 8: Transaction Rollback")
     print("=" * 60)
-    
+
     try:
         # Count records before
         with db_readonly_session() as session:
             count_before = session.query(TestMarketData).count()
-        
+
         # Attempt to insert with error
         try:
             with db_transaction() as session:
                 test_data = TestMarketData(
-                    symbol='GOOGL',
+                    symbol="GOOGL",
                     timestamp=datetime.now(timezone.utc),
-                    close_price=Decimal('2800.00'),
-                    volume=500000
+                    close_price=Decimal("2800.00"),
+                    volume=500000,
                 )
                 session.add(test_data)
                 session.flush()
-                
+
                 # Simulate error
                 raise ValueError("Simulated error to test rollback")
         except ValueError:
             pass  # Expected error
-        
+
         # Count records after
         with db_readonly_session() as session:
             count_after = session.query(TestMarketData).count()
-        
+
         if count_before == count_after:
             print(f"[PASS] Transaction rolled back successfully")
             print(f"   Records before: {count_before}")
@@ -278,7 +287,7 @@ def test_transaction_rollback():
             print(f"   Records before: {count_before}")
             print(f"   Records after: {count_after}")
             return False
-            
+
     except Exception as e:
         print(f"[FAIL] Rollback test failed: {e}")
         return False
@@ -289,7 +298,7 @@ def test_duplicate_constraint():
     print("\n" + "=" * 60)
     print("TEST 9: Duplicate Constraint Handling")
     print("=" * 60)
-    
+
     try:
         # Get timestamp from existing record
         with db_readonly_session() as session:
@@ -297,28 +306,28 @@ def test_duplicate_constraint():
             if not existing_record:
                 print("[WARN]  No existing record to test duplicate constraint")
                 return True
-            
+
             test_timestamp = existing_record.timestamp
             test_symbol = existing_record.symbol
-        
+
         # Try to insert duplicate (if you have unique constraint)
         try:
             with db_transaction() as session:
                 duplicate_data = TestMarketData(
                     symbol=test_symbol,
                     timestamp=test_timestamp,
-                    close_price=Decimal('999.99'),
-                    volume=1
+                    close_price=Decimal("999.99"),
+                    volume=1,
                 )
                 session.add(duplicate_data)
         except IntegrityError as e:
             print(f"[PASS] Duplicate constraint caught correctly")
             print(f"   Error: {str(e)[:100]}...")
             return True
-        
+
         print("[WARN]  No duplicate constraint violation (constraint may not exist)")
         return True
-        
+
     except Exception as e:
         print(f"[FAIL] Duplicate constraint test failed: {e}")
         return False
@@ -329,24 +338,26 @@ def test_complex_query():
     print("\n" + "=" * 60)
     print("TEST 10: Complex Query")
     print("=" * 60)
-    
+
     try:
         with db_readonly_session() as session:
             # Query with filtering and ordering
-            records = session.query(TestMarketData)\
-                .filter(TestMarketData.symbol == 'AAPL')\
-                .order_by(TestMarketData.timestamp.desc())\
-                .limit(5)\
+            records = (
+                session.query(TestMarketData)
+                .filter(TestMarketData.symbol == "AAPL")
+                .order_by(TestMarketData.timestamp.desc())
+                .limit(5)
                 .all()
-        
+            )
+
         print(f"[PASS] Complex query executed successfully")
         print(f"   Found {len(records)} record(s)")
-        
+
         for record in records:
             print(f"   - {record.symbol}: ${record.close_price} at {record.timestamp}")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"[FAIL] Complex query failed: {e}")
         return False
@@ -357,16 +368,16 @@ def cleanup_test_table():
     print("\n" + "=" * 60)
     print("CLEANUP: Removing Test Table")
     print("=" * 60)
-    
+
     try:
         engine = get_engine("trading")
         with engine.connect() as conn:
             conn.execute(text("DROP TABLE IF EXISTS data_ingestion.test_market_data"))
             conn.commit()
-        
+
         print("[PASS] Test table removed successfully")
         return True
-        
+
     except Exception as e:
         print(f"[FAIL] Cleanup failed: {e}")
         return False
@@ -378,7 +389,7 @@ def main():
     print("SESSION MANAGEMENT INTEGRATION TESTS")
     print("=" * 60)
     print()
-    
+
     tests = [
         ("Database Connection", test_database_connection),
         ("Schema Access", test_schema_access),
@@ -391,10 +402,10 @@ def main():
         ("Duplicate Constraint", test_duplicate_constraint),
         ("Complex Query", test_complex_query),
     ]
-    
+
     passed = 0
     failed = 0
-    
+
     for test_name, test_func in tests:
         try:
             if test_func():
@@ -404,10 +415,10 @@ def main():
         except Exception as e:
             print(f"\n[FAIL] Unexpected error in {test_name}: {e}")
             failed += 1
-    
+
     # Cleanup
     cleanup_test_table()
-    
+
     # Summary
     print("\n" + "=" * 60)
     print("TEST SUMMARY")
@@ -417,7 +428,7 @@ def main():
     print(f"[FAIL] Failed: {failed}")
     print(f"Success Rate: {(passed/len(tests)*100):.1f}%")
     print("=" * 60)
-    
+
     if failed == 0:
         print("\n[SUCCESS] All tests passed! Session management is working correctly.")
         return True
@@ -429,4 +440,3 @@ def main():
 if __name__ == "__main__":
     success = main()
     sys.exit(0 if success else 1)
-

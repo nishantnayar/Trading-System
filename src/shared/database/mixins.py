@@ -11,116 +11,111 @@ from sqlalchemy.ext.declarative import declared_attr
 
 class TimestampMixin:
     """Adds created_at timestamp to models"""
-    
+
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
-        comment="Timestamp when record was created"
+        comment="Timestamp when record was created",
     )
 
 
 class UpdateTimestampMixin:
     """Adds created_at and updated_at timestamps to models"""
-    
+
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
-        comment="Timestamp when record was created"
+        comment="Timestamp when record was created",
     )
-    
+
     updated_at = Column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
-        comment="Timestamp when record was last updated"
+        comment="Timestamp when record was last updated",
     )
 
 
 class SerializerMixin:
     """Adds serialization methods to models"""
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert model instance to dictionary
-        
+
         Returns:
             Dictionary representation of the model
-            
+
         Example:
             market_data = MarketData(symbol='AAPL', price=150.0)
             data = market_data.to_dict()
             # {'symbol': 'AAPL', 'price': 150.0, ...}
         """
         return {
-            column.name: getattr(self, column.name)
-            for column in self.__table__.columns
+            column.name: getattr(self, column.name) for column in self.__table__.columns
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
         """
         Create model instance from dictionary
-        
+
         Args:
             data: Dictionary with model data
-            
+
         Returns:
             Model instance
-            
+
         Example:
             data = {'symbol': 'AAPL', 'price': 150.0}
             market_data = MarketData.from_dict(data)
         """
-        return cls(**{
-            key: value
-            for key, value in data.items()
-            if hasattr(cls, key)
-        })
+        return cls(**{key: value for key, value in data.items() if hasattr(cls, key)})
 
 
 class ReprMixin:
     """Adds helpful __repr__ method to models"""
-    
+
     def __repr__(self) -> str:
         """
         String representation of model instance
-        
+
         Returns:
             String representation showing primary key values
-            
+
         Example:
             Order(id=1, order_id='ORD123') -> "Order(id=1)"
         """
         class_name = self.__class__.__name__
         primary_keys = []
-        
+
         for key in self.__table__.primary_key.columns:
             value = getattr(self, key.name)
             primary_keys.append(f"{key.name}={value}")
-        
+
         return f"{class_name}({', '.join(primary_keys)})"
 
 
 class SoftDeleteMixin:
     """Adds soft delete functionality to models"""
-    
+
     deleted_at = Column(
         DateTime(timezone=True),
         nullable=True,
-        comment="Timestamp when record was soft deleted (NULL = active)"
+        comment="Timestamp when record was soft deleted (NULL = active)",
     )
-    
+
     def soft_delete(self):
         """Mark record as deleted without removing from database"""
         self.deleted_at = datetime.now()
-    
+
     def restore(self):
         """Restore a soft-deleted record"""
         self.deleted_at = None
-    
+
     @property
     def is_deleted(self) -> bool:
         """Check if record is soft deleted"""
@@ -129,14 +124,14 @@ class SoftDeleteMixin:
 
 class VersionMixin:
     """Adds optimistic locking version field to models"""
-    
+
     version = Column(
-        'version',
+        "version",
         nullable=False,
         default=1,
-        comment="Version number for optimistic locking"
+        comment="Version number for optimistic locking",
     )
-    
+
     def increment_version(self):
         """Increment version number"""
         self.version += 1
@@ -144,23 +139,19 @@ class VersionMixin:
 
 class AuditMixin:
     """Adds audit fields to models"""
-    
+
     created_by = Column(
-        'created_by',
-        nullable=True,
-        comment="User who created the record"
+        "created_by", nullable=True, comment="User who created the record"
     )
-    
+
     updated_by = Column(
-        'updated_by',
-        nullable=True,
-        comment="User who last updated the record"
+        "updated_by", nullable=True, comment="User who last updated the record"
     )
-    
+
     def set_audit_fields(self, user_id: str, is_update: bool = False):
         """
         Set audit fields
-        
+
         Args:
             user_id: ID of the user performing the action
             is_update: Whether this is an update (True) or create (False)
@@ -174,55 +165,47 @@ class AuditMixin:
 
 class UUIDMixin:
     """Adds UUID primary key to models"""
-    
+
     @declared_attr
     def id(cls):
         from sqlalchemy.dialects.postgresql import UUID
         from sqlalchemy import Column
         import uuid
+
         return Column(
             UUID(as_uuid=True),
             primary_key=True,
             default=uuid.uuid4,
-            comment="Unique identifier"
+            comment="Unique identifier",
         )
 
 
 class NameMixin:
     """Adds name and description fields to models"""
-    
-    name = Column(
-        'name',
-        nullable=False,
-        comment="Name of the record"
-    )
-    
+
+    name = Column("name", nullable=False, comment="Name of the record")
+
     description = Column(
-        'description',
-        nullable=True,
-        comment="Description of the record"
+        "description", nullable=True, comment="Description of the record"
     )
 
 
 class StatusMixin:
     """Adds status field to models"""
-    
+
     status = Column(
-        'status',
-        nullable=False,
-        default='active',
-        comment="Status of the record"
+        "status", nullable=False, default="active", comment="Status of the record"
     )
-    
+
     def activate(self):
         """Activate the record"""
-        self.status = 'active'
-    
+        self.status = "active"
+
     def deactivate(self):
         """Deactivate the record"""
-        self.status = 'inactive'
-    
+        self.status = "inactive"
+
     @property
     def is_active(self) -> bool:
         """Check if record is active"""
-        return self.status == 'active'
+        return self.status == "active"
