@@ -4,7 +4,8 @@ Reusable components for SQLAlchemy models
 """
 
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from sqlalchemy import Column, DateTime, func
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -168,9 +169,10 @@ class UUIDMixin:
 
     @declared_attr
     def id(cls):
-        from sqlalchemy.dialects.postgresql import UUID
-        from sqlalchemy import Column
         import uuid
+
+        from sqlalchemy import Column
+        from sqlalchemy.dialects.postgresql import UUID
 
         return Column(
             UUID(as_uuid=True),

@@ -5,23 +5,23 @@ Verifies that the database base infrastructure works with PostgreSQL
 """
 
 import sys
-from pathlib import Path
 from datetime import datetime, timezone
 from decimal import Decimal
+from pathlib import Path
 
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
-from sqlalchemy import Column, String, BigInteger, DateTime, Numeric, text
+from sqlalchemy import BigInteger, Column, DateTime, Numeric, String, text
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 # Load environment variables
 load_dotenv()
 
-from src.shared.database.base import Base, db_transaction, db_readonly_session
-from src.shared.database.mixins import TimestampMixin, SerializerMixin, ReprMixin
 from src.config.database import get_engine
+from src.shared.database.base import Base, db_readonly_session, db_transaction
+from src.shared.database.mixins import ReprMixin, SerializerMixin, TimestampMixin
 
 
 # Create a simple test model

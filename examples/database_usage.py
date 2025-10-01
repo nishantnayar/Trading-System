@@ -5,9 +5,10 @@ Demonstrates how to use the database base functionality
 
 from datetime import datetime, timezone
 from decimal import Decimal
+
 from src.shared.database.base import (
-    db_transaction,
     db_readonly_session,
+    db_transaction,
     execute_in_transaction,
     execute_readonly,
 )

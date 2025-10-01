@@ -2,11 +2,12 @@
 Unit tests for database base functionality
 """
 
-import pytest
 from unittest.mock import Mock, patch
-from sqlalchemy.exc import IntegrityError, OperationalError, DataError, ProgrammingError
 
-from src.shared.database.base import db_transaction, db_readonly_session, get_session
+import pytest
+from sqlalchemy.exc import DataError, IntegrityError, OperationalError, ProgrammingError
+
+from src.shared.database.base import db_readonly_session, db_transaction, get_session
 
 
 class TestDatabaseBase:
