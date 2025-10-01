@@ -138,31 +138,39 @@ trading-system/
 
 ### Code Quality
 
-The project uses modern Python development tools:
+The project uses modern Python development tools with pre-configured settings:
 
-- **Black** - Code formatting
-- **Flake8** - Linting
-- **isort** - Import sorting
-- **mypy** - Type checking
-- **pre-commit** - Git hooks
+- **Black** - Code formatting (88 character line length)
+- **isort** - Import sorting (Black-compatible profile)
+- **Flake8** - Linting and style checks
+- **mypy** - Type checking and static analysis
+- **pre-commit** - Git hooks for automated checks
+
+**Configuration Files:**
+- `.isort.cfg` - Import sorting configuration (Black-compatible)
+- `pytest.ini` - Test configuration with markers
+- All tools work together seamlessly
 
 Setup development environment:
 ```bash
 # Install pre-commit hooks
 pre-commit install
 
-# Format code
-black src/ tests/
+# Format code (Black)
+black .
 
-# Sort imports
-isort src/ tests/
+# Sort imports (isort)
+isort .
 
-# Lint code
-flake8 src/ tests/
+# Lint code (Flake8)
+flake8 .
 
-# Type check
+# Type check (mypy)
 mypy src/
 ```
+
+**Automated in CI/CD:**
+All code quality checks run automatically on every push and pull request.
 
 ### Testing
 
@@ -302,7 +310,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 | Resource | Description | Link |
 |----------|-------------|------|
 | 📚 **Architecture** | Detailed system architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| 📋 **Logging Architecture** | Comprehensive logging design | [LOGGING_ARCHITECTURE.md](docs/LOGGING_ARCHITECTURE.md) |
+| 🗄️ **Database** | Database architecture & session management | [docs/development/database.md](docs/development/database.md) |
+| 📋 **Logging** | Comprehensive logging design | [docs/development/logging.md](docs/development/logging.md) |
+| 🧪 **Testing** | Testing strategy and guidelines | [docs/development/testing.md](docs/development/testing.md) |
 | 📖 **User Documentation** | Complete user and developer docs | [MkDocs](https://nishantnayar.github.io/Trading-System/) |
 | 🐛 **Issues** | Report bugs and request features | [GitHub Issues](https://github.com/nishantnayar/trading-system/issues) |
 | 💬 **Discussions** | Community discussions and Q&A | [GitHub Discussions](https://github.com/nishantnayar/trading-system/discussions) |

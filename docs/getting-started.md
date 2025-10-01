@@ -348,6 +348,29 @@ tail -f logs/strategy_engine.log
 - **Run tests**: Ensure all tests pass
 - **Code quality**: Use the built-in code quality tools
 
+#### Code Quality Tools
+
+The project uses automated code quality tools:
+
+```bash
+# Format code with Black
+black .
+
+# Sort imports with isort
+isort .
+
+# Check linting with Flake8
+flake8 .
+
+# Type checking with mypy
+mypy src/
+```
+
+**Configuration:**
+- `.isort.cfg` - isort configuration (Black-compatible)
+- `pytest.ini` - pytest and linting configuration
+- All tools are pre-configured to work together
+
 ### 4. Production Deployment
 
 - **Security**: Review security settings

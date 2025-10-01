@@ -178,27 +178,66 @@ A production-grade algorithmic trading system designed for local deployment, foc
 
 ## Data Architecture
 
+> **📊 Detailed Database Documentation**: For comprehensive database architecture, session management, and implementation details, see [Database Architecture](docs/development/database.md).
+
 ### Database Design
 
-**PostgreSQL Tables**:
-```sql
--- Market Data
-market_data (symbol, timestamp, open, high, low, close, volume)
-
--- Trading
-orders (order_id, symbol, side, quantity, price, status, timestamp)
-trades (trade_id, order_id, symbol, quantity, price, timestamp)
-positions (symbol, quantity, avg_price, unrealized_pnl)
-
--- Strategy
-strategies (strategy_id, name, parameters, status, created_at)
-strategy_signals (signal_id, strategy_id, symbol, signal, timestamp)
-strategy_performance (strategy_id, date, returns, sharpe_ratio)
-
--- System
-system_logs (log_id, service, level, message, timestamp)
-risk_events (event_id, type, severity, message, timestamp)
+**Two-Database Strategy:**
 ```
+┌─────────────────────────────────────────────────────────┐
+│                PostgreSQL Instance                      │
+├─────────────────────────────────────────────────────────┤
+│  trading_system database  │  Prefect database          │
+│  ├── data_ingestion       │  ├── public schema         │
+│  ├── strategy_engine      │  │   ├── flow_runs         │
+│  ├── execution            │  │   ├── task_runs         │
+│  ├── risk_management      │  │   ├── deployments       │
+│  ├── analytics            │  │   └── (other Prefect)   │
+│  ├── notification         │                            │
+│  ├── logging              │                            │
+│  └── shared               │                            │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Core PostgreSQL Tables**:
+```sql
+-- Data Ingestion Schema
+data_ingestion.market_data (symbol, timestamp, open, high, low, close, volume)
+data_ingestion.data_quality_logs (symbol, check_type, status, message)
+
+-- Execution Schema
+execution.orders (order_id, symbol, side, quantity, price, status, timestamp)
+execution.trades (trade_id, order_id, symbol, quantity, price, timestamp)
+execution.positions (symbol, quantity, avg_price, unrealized_pnl)
+
+-- Strategy Engine Schema
+strategy_engine.strategies (strategy_id, name, parameters, status, created_at)
+strategy_engine.strategy_signals (signal_id, strategy_id, symbol, signal, timestamp)
+strategy_engine.strategy_performance (strategy_id, date, returns, sharpe_ratio)
+
+-- Risk Management Schema
+risk_management.risk_limits (account_id, limit_type, limit_value)
+risk_management.risk_events (event_id, type, severity, message, timestamp)
+
+-- Analytics Schema
+analytics.portfolio_summary (account_id, symbol, total_value, pnl)
+analytics.performance_metrics (strategy, date, returns, sharpe_ratio)
+
+-- Logging Schema
+logging.system_logs (log_id, service, level, message, timestamp)
+logging.performance_logs (service, operation, execution_time_ms)
+
+-- Shared Schema
+shared.audit_log (user_id, table_name, operation, old_values, new_values)
+shared.system_config (config_key, config_value, description)
+```
+
+**SQLAlchemy ORM:**
+- Declarative base for all models
+- Automated session management with context managers
+- Transaction support with automatic commit/rollback
+- Read-only sessions for optimized analytics
+- Comprehensive error handling and logging
 
 **Redis Usage**:
 - Cached market data (recent bars)
@@ -292,8 +331,13 @@ isort .
 flake8 .
 
 # Type checking
-mypy .
+mypy src/
 ```
+
+**Configuration Files:**
+- `.isort.cfg` - Import sorting configuration (Black-compatible)
+- `pytest.ini` - Test configuration with markers
+- All tools pre-configured to work together seamlessly
 
 ### Testing Strategy
 - **Unit Tests**: Individual service functions
