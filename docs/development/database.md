@@ -514,6 +514,423 @@ class DatabaseSecurity:
             })
 ```
 
+## SQLAlchemy ORM and Session Management
+
+### Overview
+
+The trading system uses SQLAlchemy ORM (Object-Relational Mapping) to interact with PostgreSQL. This provides a Pythonic interface to the database while maintaining type safety and preventing SQL injection attacks.
+
+### Declarative Base
+
+All database models inherit from a common declarative base:
+
+```python
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+
+# All models inherit from Base
+class MarketData(Base):
+    __tablename__ = "market_data"
+    __table_args__ = {'schema': 'data_ingestion'}
+    # ... column definitions
+```
+
+**Purpose:**
+- Provides metadata registry for all tables
+- Enables ORM mapping between Python classes and database tables
+- Tracks relationships and foreign keys
+- Provides query interface
+
+### Session Management Design
+
+#### Automated Session Management
+
+The system uses **context managers** for automatic session lifecycle management:
+
+```python
+# Write operations
+with db_transaction() as session:
+    order = Order(symbol='AAPL', quantity=100)
+    session.add(order)
+    # Auto-commit on success, auto-rollback on error
+
+# Read operations
+with db_readonly_session() as session:
+    results = session.query(MarketData).filter_by(symbol='AAPL').all()
+```
+
+#### Two Session Types
+
+**1. Transaction Session (`db_transaction`)**
+
+For write operations that modify data:
+
+```python
+@contextmanager
+def db_transaction() -> Generator[Session, None, None]:
+    """
+    Database transaction context manager with automatic commit/rollback
+    
+    Features:
+    - Automatic commit on success
+    - Automatic rollback on error
+    - Connection pooling
+    - Error logging
+    - Always closes session
+    
+    Usage:
+        with db_transaction() as session:
+            order = Order(symbol='AAPL', quantity=100)
+            session.add(order)
+    
+    Use cases:
+    - Creating orders, trades, positions
+    - Updating risk limits
+    - Recording strategy signals
+    - Any data modification
+    """
+```
+
+**2. Read-Only Session (`db_readonly_session`)**
+
+For read operations that don't modify data:
+
+```python
+@contextmanager
+def db_readonly_session() -> Generator[Session, None, None]:
+    """
+    Read-only database session for analytics and reporting
+    
+    Features:
+    - No write operations allowed
+    - Optimized for read performance
+    - No transaction overhead
+    - Connection pooling
+    
+    Usage:
+        with db_readonly_session() as session:
+            data = session.query(MarketData).filter(...).all()
+    
+    Use cases:
+    - Analytics queries
+    - Dashboard data
+    - Reporting
+    - Backtesting
+    """
+```
+
+**Performance Benefits of Read-Only Sessions:**
+- No Write-Ahead Log (WAL) overhead
+- Reduced locking overhead
+- PostgreSQL can optimize query execution
+- Lower resource consumption
+- Can leverage read replicas (future scaling)
+
+#### Schema Handling
+
+Schemas are specified in model definitions using `__table_args__`:
+
+```python
+class MarketData(Base):
+    __tablename__ = "market_data"
+    __table_args__ = {'schema': 'data_ingestion'}  # Explicit schema
+    
+    id = Column(BigInteger, primary_key=True)
+    symbol = Column(String(20), nullable=False)
+    # ...
+```
+
+**Benefits:**
+- Schema is explicit in code
+- No connection string magic
+- Works with automated session management
+- Maintains schema isolation
+
+#### Error Handling Strategy
+
+The session manager implements comprehensive error handling:
+
+```python
+try:
+    yield session
+    session.commit()
+    logger.debug("Transaction committed successfully")
+    
+except IntegrityError as e:
+    session.rollback()
+    logger.error(f"Database integrity error: {e}")
+    raise  # Constraint violations, duplicate keys
+    
+except OperationalError as e:
+    session.rollback()
+    logger.error(f"Database operational error: {e}")
+    raise  # Connection issues, timeouts
+    
+except DataError as e:
+    session.rollback()
+    logger.error(f"Database data error: {e}")
+    raise  # Invalid data types, out of range
+    
+except Exception as e:
+    session.rollback()
+    logger.error(f"Unexpected database error: {e}")
+    raise
+    
+finally:
+    session.close()  # Always close
+```
+
+**Error Categories:**
+- **IntegrityError** - Constraint violations, duplicate keys
+- **OperationalError** - Connection problems, timeouts
+- **DataError** - Invalid data types, out of range values
+- **ProgrammingError** - SQL syntax errors
+
+**Error Handling Benefits:**
+- Centralized error logging (all DB errors captured)
+- Categorized errors for different handling strategies
+- Exceptions re-raised for caller to handle
+- Stack traces preserved for debugging
+- Monitoring and alerting ready
+
+#### Connection Pooling
+
+Connection pooling is configured in `src/config/database.py`:
+
+```python
+engine = create_engine(
+    database_url,
+    poolclass=QueuePool,
+    pool_size=10,         # Keep 10 connections open
+    max_overflow=20,      # Allow 20 more if needed
+    pool_timeout=30,      # Wait 30s for available connection
+    pool_recycle=3600     # Recycle connections after 1 hour
+)
+```
+
+**Benefits:**
+- Reuses existing connections (faster)
+- Prevents connection exhaustion
+- Automatic connection management
+- Configurable pool size per workload
+
+### Usage Examples
+
+#### Example 1: Create Order (Write Operation)
+
+```python
+from src.services.execution.models import Order, OrderSide
+from src.shared.database.base import db_transaction
+
+def create_order(symbol: str, quantity: int, price: float):
+    """Create a new trading order"""
+    with db_transaction() as session:
+        order = Order(
+            order_id=generate_id(),
+            account_id='ACC123',
+            symbol=symbol,
+            quantity=quantity,
+            price=price,
+            side=OrderSide.BUY,
+            status=OrderStatus.PENDING
+        )
+        session.add(order)
+        # Auto-commit on success
+        return order.order_id
+```
+
+#### Example 2: Query Market Data (Read Operation)
+
+```python
+from src.services.data_ingestion.models import MarketData
+from src.shared.database.base import db_readonly_session
+from datetime import datetime, timedelta
+
+def get_market_history(symbol: str, days: int):
+    """Get historical market data"""
+    with db_readonly_session() as session:
+        cutoff = datetime.now() - timedelta(days=days)
+        return session.query(MarketData)\
+            .filter(MarketData.symbol == symbol)\
+            .filter(MarketData.timestamp >= cutoff)\
+            .order_by(MarketData.timestamp.desc())\
+            .all()
+```
+
+#### Example 3: Complex Transaction (Multiple Operations)
+
+```python
+from src.shared.database.base import db_transaction
+
+def execute_trade(order_id: str, execution_price: float):
+    """Execute a trade and update related records"""
+    with db_transaction() as session:
+        # 1. Get and update order
+        order = session.query(Order).filter_by(order_id=order_id).first()
+        if not order:
+            raise ValueError(f"Order {order_id} not found")
+        
+        order.status = OrderStatus.FILLED
+        order.updated_at = datetime.now(timezone.utc)
+        
+        # 2. Create trade record
+        trade = Trade(
+            trade_id=generate_id(),
+            order_id=order_id,
+            account_id=order.account_id,
+            symbol=order.symbol,
+            quantity=order.quantity,
+            price=execution_price,
+            executed_at=datetime.now(timezone.utc)
+        )
+        session.add(trade)
+        
+        # 3. Update or create position
+        position = session.query(Position).filter_by(
+            account_id=order.account_id,
+            symbol=order.symbol
+        ).first()
+        
+        if position:
+            # Update existing position
+            position.quantity += order.quantity
+            position.avg_price = calculate_avg_price(position, order)
+            position.last_updated = datetime.now(timezone.utc)
+        else:
+            # Create new position
+            position = Position(
+                account_id=order.account_id,
+                symbol=order.symbol,
+                quantity=order.quantity,
+                avg_price=execution_price
+            )
+            session.add(position)
+        
+        # All operations committed together or all rolled back
+        return trade.trade_id
+```
+
+#### Example 4: Analytics Query (Aggregation)
+
+```python
+from src.shared.database.base import db_readonly_session
+from sqlalchemy import func
+
+def get_portfolio_summary(account_id: str):
+    """Get aggregated portfolio metrics"""
+    with db_readonly_session() as session:
+        summary = session.query(
+            Position.symbol,
+            Position.quantity,
+            Position.avg_price,
+            Position.unrealized_pnl,
+            func.sum(Position.market_value).label('total_value')
+        )\
+        .filter(Position.account_id == account_id)\
+        .filter(Position.quantity > 0)\
+        .group_by(Position.symbol)\
+        .all()
+        
+        return summary
+```
+
+### Design Principles
+
+| Principle | Implementation | Benefit |
+|-----------|----------------|---------|
+| **Automation** | Context managers | Prevents connection leaks |
+| **Separation** | Read/Write sessions | Performance optimization |
+| **Explicitness** | Schema in models | Clear and maintainable |
+| **Simplicity** | Single database | No distributed transactions |
+| **Observability** | Error logging | Monitoring and debugging |
+| **Safety** | Auto-rollback | Data consistency |
+| **Efficiency** | Connection pooling | Resource optimization |
+
+### Transaction Isolation
+
+The system uses PostgreSQL's default isolation level:
+
+- **Isolation Level**: READ COMMITTED
+- **Behavior**: Queries see only committed data
+- **Concurrency**: High (minimal locking)
+- **Use Case**: Suitable for most trading operations
+
+For operations requiring stronger guarantees:
+
+```python
+from sqlalchemy import text
+
+with db_transaction() as session:
+    # Set higher isolation level if needed
+    session.execute(text("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE"))
+    # Your operations here
+```
+
+### Best Practices
+
+**DO:**
+- ✅ Use `db_transaction()` for all write operations
+- ✅ Use `db_readonly_session()` for analytics and reporting
+- ✅ Keep transactions short and focused
+- ✅ Handle exceptions at the application level
+- ✅ Use connection pooling (already configured)
+- ✅ Specify schema in model definitions
+
+**DON'T:**
+- ❌ Mix read and write sessions (use write session if needed)
+- ❌ Keep transactions open for long periods
+- ❌ Catch and ignore database errors
+- ❌ Create sessions manually (use context managers)
+- ❌ Use distributed transactions (not needed)
+- ❌ Modify read-only session data
+
+### Advanced Features
+
+#### Manual Session Management (Advanced)
+
+For cases requiring explicit control:
+
+```python
+from src.shared.database.base import get_session
+
+def advanced_operation():
+    """Advanced use case with manual session management"""
+    session = get_session()
+    try:
+        # Your operations
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+```
+
+⚠️ **Warning**: Manual session management requires careful handling. Prefer context managers.
+
+#### Nested Transactions (Savepoints)
+
+For complex operations requiring partial rollback:
+
+```python
+with db_transaction() as session:
+    order = Order(...)
+    session.add(order)
+    
+    # Create savepoint
+    savepoint = session.begin_nested()
+    try:
+        # Risky operation
+        risky_update()
+        savepoint.commit()
+    except Exception:
+        # Rollback to savepoint, main transaction continues
+        savepoint.rollback()
+```
+
+---
+
 ## Database Setup Options
 
 ### Option 1: Python Script (Automated)
