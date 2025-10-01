@@ -3,9 +3,13 @@ Database Base Configuration
 Provides SQLAlchemy declarative base and session management
 """
 
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.exc import IntegrityError, OperationalError, DataError, ProgrammingError
+from sqlalchemy.orm import declarative_base, Session, sessionmaker
+from sqlalchemy.exc import (
+    IntegrityError,
+    OperationalError,
+    DataError,
+    ProgrammingError,
+)
 from contextlib import contextmanager
 from typing import Generator
 from loguru import logger
