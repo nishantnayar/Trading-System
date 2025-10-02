@@ -308,14 +308,14 @@ class TestLoggingIntegration:
         # Verify logging configuration is working (files may not exist in CI)
         # The important thing is that logging doesn't crash and messages are processed
         logger.info("Integration test completed successfully")
-        
+
         # Check if log directory exists (it should be created by the logging setup)
         logs_dir = Path("logs")
         if logs_dir.exists():
             # If logs directory exists, verify it has some log files
             log_files = list(logs_dir.glob("*.log"))
             assert len(log_files) > 0, "No log files found in logs directory"
-            
+
             # Verify at least one log file has content
             has_content = any(f.stat().st_size > 0 for f in log_files)
             assert has_content, "No log files have content"
