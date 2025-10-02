@@ -4,9 +4,9 @@ FastAPI routes for the trading system web interface.
 
 from datetime import datetime
 
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, Request  # type: ignore
+from fastapi.responses import HTMLResponse  # type: ignore
+from fastapi.templating import Jinja2Templates  # type: ignore
 
 router = APIRouter()
 templates = Jinja2Templates(directory="src/web/templates")

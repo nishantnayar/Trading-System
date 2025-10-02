@@ -134,7 +134,7 @@ def format_list_response_with_timestamps(
     return [format_api_response_with_timestamps(item) for item in data]
 
 
-def get_current_time_info() -> Dict[str, str]:
+def get_current_time_info() -> Dict[str, Any]:
     """
     Get current time information in all relevant timezones
 

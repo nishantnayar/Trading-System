@@ -25,11 +25,12 @@ class TimestampMixin:
         comment="Timestamp when record was created (UTC)",
     )
 
-    def set_created_at(self, dt: datetime = None):
+    def set_created_at(self, dt: Optional[datetime] = None):
         """Set created_at timestamp in UTC"""
         if dt is None:
             dt = datetime.now()
-        self.created_at = ensure_utc_timestamp(dt)
+        # Use setattr to avoid mypy type checking issues with SQLAlchemy Column assignment
+        setattr(self, 'created_at', ensure_utc_timestamp(dt))
 
 
 class UpdateTimestampMixin(TimestampMixin):
@@ -43,11 +44,12 @@ class UpdateTimestampMixin(TimestampMixin):
         comment="Timestamp when record was last updated (UTC)",
     )
 
-    def set_updated_at(self, dt: datetime = None):
+    def set_updated_at(self, dt: Optional[datetime] = None):
         """Set updated_at timestamp in UTC"""
         if dt is None:
             dt = datetime.now()
-        self.updated_at = ensure_utc_timestamp(dt)
+        # Use setattr to avoid mypy type checking issues with SQLAlchemy Column assignment
+        setattr(self, 'updated_at', ensure_utc_timestamp(dt))
 
 
 class SerializerMixin:

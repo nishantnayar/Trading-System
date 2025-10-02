@@ -10,9 +10,9 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI  # type: ignore
+from fastapi.staticfiles import StaticFiles  # type: ignore
+from fastapi.templating import Jinja2Templates  # type: ignore
 
 from src.web.api.routes import router
 
@@ -32,6 +32,6 @@ app.mount("/static", StaticFiles(directory="src/web/static"), name="static")
 templates = Jinja2Templates(directory="src/web/templates")
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # type: ignore
 
     uvicorn.run(app, host="0.0.0.0", port=8001)
