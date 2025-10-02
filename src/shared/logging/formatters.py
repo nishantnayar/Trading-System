@@ -8,6 +8,8 @@ from typing import Any
 from typing import Any as LogRecord
 from typing import Dict, Optional
 
+from src.shared.utils.timezone import format_timestamp_for_logging, ensure_utc_timestamp
+
 
 def format_log_record(record: LogRecord) -> Dict[str, Any]:
     """
@@ -19,8 +21,13 @@ def format_log_record(record: LogRecord) -> Dict[str, Any]:
     Returns:
         Dict: Formatted log record
     """
+    # Ensure timestamp is timezone-aware and format for logging
+    timestamp = ensure_utc_timestamp(record["time"])
+    formatted_timestamp = format_timestamp_for_logging(timestamp)
+    
     formatted_record = {
-        "timestamp": record["time"].isoformat(),
+        "timestamp": timestamp.isoformat(),
+        "timestamp_display": formatted_timestamp,
         "level": record["level"].name,
         "message": record["message"],
         "module": record["name"],
@@ -115,9 +122,11 @@ def format_for_database(record: LogRecord) -> Dict[str, Any]:
     Returns:
         Dict: Database-formatted record
     """
-    # Base record
+    # Base record with timezone-aware timestamp
+    timestamp = ensure_utc_timestamp(record["time"])
+    
     db_record = {
-        "timestamp": record["time"],
+        "timestamp": timestamp,
         "level": record["level"].name,
         "message": record["message"],
         "service": record["extra"].get("service", "unknown"),
@@ -191,7 +200,7 @@ def format_performance_log(
         "log_type": "performance",
         "operation": operation,
         "execution_time_ms": execution_time_ms,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": ensure_utc_timestamp(datetime.now()).isoformat(),
     }
 
     if memory_usage_mb is not None:
@@ -227,7 +236,7 @@ def format_trading_log(
         "side": side,
         "quantity": quantity,
         "price": price,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": ensure_utc_timestamp(datetime.now()).isoformat(),
     }
 
     # Add any additional metadata

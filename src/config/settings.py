@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     log_retention_days: int = Field(default=30, alias="LOG_RETENTION_DAYS")
     log_rotation_size: str = Field(default="10MB", alias="LOG_ROTATION_SIZE")
 
+    # Timezone Configuration
+    default_timezone: str = Field(default="UTC", alias="DEFAULT_TIMEZONE")
+    user_timezone: str = Field(default="America/Chicago", alias="USER_TIMEZONE")
+    trading_timezone: str = Field(default="America/New_York", alias="TRADING_TIMEZONE")
+    vendor_timezone: str = Field(default="UTC", alias="VENDOR_TIMEZONE")
+
     # Email Configuration (Optional)
     smtp_host: Optional[str] = Field(default=None, alias="SMTP_HOST")
     smtp_port: Optional[int] = Field(default=None, alias="SMTP_PORT")

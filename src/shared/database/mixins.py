@@ -9,38 +9,45 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 from sqlalchemy import Column, DateTime, String, func
 from sqlalchemy.ext.declarative import declared_attr
 
+from src.shared.utils.timezone import ensure_utc_timestamp
+
 if TYPE_CHECKING:
     from sqlalchemy.sql.schema import Table
 
 
 class TimestampMixin:
-    """Adds created_at timestamp to models"""
+    """Adds timezone-aware created_at timestamp to models"""
 
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
-        comment="Timestamp when record was created",
+        comment="Timestamp when record was created (UTC)",
     )
 
+    def set_created_at(self, dt: datetime = None):
+        """Set created_at timestamp in UTC"""
+        if dt is None:
+            dt = datetime.now()
+        self.created_at = ensure_utc_timestamp(dt)
 
-class UpdateTimestampMixin:
-    """Adds created_at and updated_at timestamps to models"""
 
-    created_at = Column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-        comment="Timestamp when record was created",
-    )
+class UpdateTimestampMixin(TimestampMixin):
+    """Adds timezone-aware created_at and updated_at timestamps to models"""
 
     updated_at = Column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
-        comment="Timestamp when record was last updated",
+        comment="Timestamp when record was last updated (UTC)",
     )
+
+    def set_updated_at(self, dt: datetime = None):
+        """Set updated_at timestamp in UTC"""
+        if dt is None:
+            dt = datetime.now()
+        self.updated_at = ensure_utc_timestamp(dt)
 
 
 class SerializerMixin:
@@ -115,12 +122,12 @@ class SoftDeleteMixin:
     deleted_at = Column(
         DateTime(timezone=True),
         nullable=True,
-        comment="Timestamp when record was soft deleted (NULL = active)",
+        comment="Timestamp when record was soft deleted (NULL = active, UTC)",
     )
 
     def soft_delete(self):
         """Mark record as deleted without removing from database"""
-        self.deleted_at = datetime.now()
+        self.deleted_at = ensure_utc_timestamp(datetime.now())
 
     def restore(self):
         """Restore a soft-deleted record"""
