@@ -8,7 +8,7 @@ from typing import Any
 from typing import Any as LogRecord
 from typing import Dict, Optional
 
-from src.shared.utils.timezone import format_timestamp_for_logging, ensure_utc_timestamp
+from src.shared.utils.timezone import ensure_utc_timestamp, format_timestamp_for_logging
 
 
 def format_log_record(record: LogRecord) -> Dict[str, Any]:
@@ -24,7 +24,7 @@ def format_log_record(record: LogRecord) -> Dict[str, Any]:
     # Ensure timestamp is timezone-aware and format for logging
     timestamp = ensure_utc_timestamp(record["time"])
     formatted_timestamp = format_timestamp_for_logging(timestamp)
-    
+
     formatted_record = {
         "timestamp": timestamp.isoformat(),
         "timestamp_display": formatted_timestamp,
@@ -124,7 +124,7 @@ def format_for_database(record: LogRecord) -> Dict[str, Any]:
     """
     # Base record with timezone-aware timestamp
     timestamp = ensure_utc_timestamp(record["time"])
-    
+
     db_record = {
         "timestamp": timestamp,
         "level": record["level"].name,
