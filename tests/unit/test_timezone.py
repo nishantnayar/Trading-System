@@ -222,11 +222,11 @@ class TestTradingUtilities:
 
     def test_get_last_market_close(self):
         """Test last market close calculation"""
-        # Test on weekday after market close
-        after_close = datetime(2024, 1, 15, 20, 0, 0, tzinfo=UTC)
+        # Test on weekday after market close (9 PM UTC = 4 PM EST)
+        after_close = datetime(2024, 1, 15, 21, 0, 0, tzinfo=UTC)
         last_close = get_last_market_close(after_close)
 
-        # Should be same day at 4:00 PM EST
+        # Should be same day at 4:00 PM EST (Monday)
         eastern_last = to_eastern(last_close)
         assert eastern_last.hour == 16
         assert eastern_last.minute == 0
@@ -234,8 +234,8 @@ class TestTradingUtilities:
 
     def test_get_trading_day(self):
         """Test trading day calculation"""
-        # Test during market hours
-        market_time = datetime(2024, 1, 15, 14, 0, 0, tzinfo=UTC)
+        # Test during market hours (2:30 PM UTC = 9:30 AM EST)
+        market_time = datetime(2024, 1, 15, 14, 30, 0, tzinfo=UTC)
         trading_day = get_trading_day(market_time)
 
         assert trading_day == date(2024, 1, 15)
@@ -437,8 +437,15 @@ class TestConvenienceFunctions:
         status = get_market_status(market_open)
         assert status == "open"
 
-        # Market closed
-        market_closed = datetime(2024, 1, 15, 22, 0, 0, tzinfo=UTC)  # 5:00 PM EST
+        # After hours (between 4 PM and 8 PM EST)
+        after_hours = datetime(2024, 1, 15, 22, 0, 0, tzinfo=UTC)  # 5:00 PM EST
+        status = get_market_status(after_hours)
+        assert status == "after_hours"
+
+        # Market closed (after after-hours)
+        market_closed = datetime(
+            2024, 1, 16, 2, 0, 0, tzinfo=UTC
+        )  # 9:00 PM EST (next day)
         status = get_market_status(market_closed)
         assert status == "closed"
 
@@ -455,7 +462,7 @@ class TestErrorHandling:
         """Test TimezoneError exception"""
         with pytest.raises(TimezoneError):
             # This should raise an error for invalid timezone conversion
-            to_utc(datetime(2024, 1, 15, 14, 30, 0), None)
+            normalize_vendor_timestamp("invalid-timestamp")
 
     def test_invalid_vendor_timestamp(self):
         """Test invalid vendor timestamp handling"""
