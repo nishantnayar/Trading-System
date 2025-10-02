@@ -30,7 +30,7 @@ class TimestampMixin:
         if dt is None:
             dt = datetime.now()
         # Use setattr to avoid mypy type checking issues with SQLAlchemy Column assignment
-        setattr(self, 'created_at', ensure_utc_timestamp(dt))
+        setattr(self, "created_at", ensure_utc_timestamp(dt))
 
 
 class UpdateTimestampMixin(TimestampMixin):
@@ -49,7 +49,7 @@ class UpdateTimestampMixin(TimestampMixin):
         if dt is None:
             dt = datetime.now()
         # Use setattr to avoid mypy type checking issues with SQLAlchemy Column assignment
-        setattr(self, 'updated_at', ensure_utc_timestamp(dt))
+        setattr(self, "updated_at", ensure_utc_timestamp(dt))
 
 
 class SerializerMixin:
