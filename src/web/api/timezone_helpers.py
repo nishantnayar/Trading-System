@@ -120,7 +120,7 @@ def format_api_response_with_timestamps(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def format_list_response_with_timestamps(
-    data: List[Dict[str, Any]]
+    data: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
     """
     Format list response with timezone-aware timestamps
