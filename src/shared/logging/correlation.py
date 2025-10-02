@@ -1,11 +1,11 @@
 """
 Correlation ID management for tracking related operations
 """
-import uuid
-import threading
-from contextlib import contextmanager
-from typing import Optional, Generator
 
+import threading
+import uuid
+from contextlib import contextmanager
+from typing import Generator, Optional
 
 # Thread-local storage for correlation IDs
 _correlation_context = threading.local()
@@ -14,7 +14,7 @@ _correlation_context = threading.local()
 def generate_correlation_id() -> str:
     """
     Generate a new correlation ID
-    
+
     Returns:
         str: New correlation ID
     """
@@ -24,17 +24,17 @@ def generate_correlation_id() -> str:
 def get_correlation_id() -> Optional[str]:
     """
     Get current correlation ID from thread-local storage
-    
+
     Returns:
         Optional[str]: Current correlation ID or None
     """
-    return getattr(_correlation_context, 'correlation_id', None)
+    return getattr(_correlation_context, "correlation_id", None)
 
 
 def set_correlation_id(correlation_id: str) -> None:
     """
     Set correlation ID in thread-local storage
-    
+
     Args:
         correlation_id: Correlation ID to set
     """
@@ -45,28 +45,30 @@ def clear_correlation_id() -> None:
     """
     Clear correlation ID from thread-local storage
     """
-    if hasattr(_correlation_context, 'correlation_id'):
-        delattr(_correlation_context, 'correlation_id')
+    if hasattr(_correlation_context, "correlation_id"):
+        delattr(_correlation_context, "correlation_id")
 
 
 @contextmanager
-def correlation_context(correlation_id: Optional[str] = None) -> Generator[str, None, None]:
+def correlation_context(
+    correlation_id: Optional[str] = None,
+) -> Generator[str, None, None]:
     """
     Context manager for correlation ID tracking
-    
+
     Args:
         correlation_id: Optional correlation ID (generates new one if not provided)
-        
+
     Yields:
         str: The correlation ID being used
     """
     # Generate new correlation ID if not provided
     if correlation_id is None:
         correlation_id = generate_correlation_id()
-    
+
     # Store previous correlation ID
     previous_correlation_id = get_correlation_id()
-    
+
     try:
         # Set new correlation ID
         set_correlation_id(correlation_id)
@@ -82,25 +84,28 @@ def correlation_context(correlation_id: Optional[str] = None) -> Generator[str, 
 def with_correlation_id(correlation_id: str):
     """
     Decorator to add correlation ID to function calls
-    
+
     Args:
         correlation_id: Correlation ID to use
-        
+
     Returns:
         Decorator function
     """
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             with correlation_context(correlation_id):
                 return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
 def get_correlation_context() -> dict:
     """
     Get current correlation context
-    
+
     Returns:
         dict: Current correlation context
     """
@@ -113,10 +118,10 @@ def get_correlation_context() -> dict:
 def format_correlation_message(message: str) -> str:
     """
     Format message with correlation ID
-    
+
     Args:
         message: Base message
-        
+
     Returns:
         str: Message with correlation ID
     """
