@@ -2,164 +2,260 @@
 
 {% block title %}Dashboard - Trading System{% endblock %}
 
+{% block extra_head %}
+<!-- AG Grid CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
+
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+    .mini-chart {
+        height: 60px;
+        width: 100%;
+    }
+    .status-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    .status-online { background-color: #10b981; }
+    .status-offline { background-color: #ef4444; }
+    .status-pending { background-color: #f59e0b; }
+    
+    .portfolio-metric {
+        transition: all 0.3s ease;
+    }
+    .portfolio-metric:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    
+    .real-time-update {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
+    /* AG Grid custom styling */
+    .ag-theme-alpine {
+        --ag-header-background-color: #f8fafc;
+        --ag-header-foreground-color: #1f2937;
+        --ag-border-color: #e5e7eb;
+        --ag-row-hover-color: #f3f4f6;
+        --ag-selected-row-background-color: #dbeafe;
+        --ag-font-size: 14px;
+        --ag-font-family: 'Inter', sans-serif;
+    }
+    
+    .ag-grid-container {
+        height: 400px;
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .trading-grid {
+        height: 350px;
+    }
+    
+    .positions-grid {
+        height: 300px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="space-y-6">
     <!-- Dashboard Header -->
     <div class="tailmin-card">
         <div class="tailmin-card-header">
-            <h1 class="text-3xl font-bold text-gray-900">Trading Dashboard</h1>
-            <p class="text-gray-600">Monitor your portfolio performance and trading activities</p>
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Trading Dashboard</h1>
+                    <p class="text-gray-600">Alpaca Paper Trading - Monitor your portfolio performance and trading activities</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <div id="alpaca-status" class="status-indicator status-pending"></div>
+                        <span id="alpaca-status-text" class="text-sm text-gray-600">Connecting to Alpaca...</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div id="market-status" class="status-indicator status-pending"></div>
+                        <span id="market-status-text" class="text-sm text-gray-600">Market Status: Loading...</span>
+                    </div>
+                    <button id="refresh-btn" class="tailmin-btn tailmin-btn-outline">
+                        <i class="fas fa-sync-alt mr-2"></i>
+                        Refresh Data
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Portfolio Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="tailmin-stat-card">
+        <div class="tailmin-stat-card portfolio-metric" id="portfolio-value-card">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    <i class="fas fa-wallet text-2xl text-primary-600"></i>
+                    <i class="fas fa-wallet text-2xl text-blue-600"></i>
                 </div>
                 <div class="ml-4">
-                    <div class="tailmin-stat-value">$24,567.89</div>
+                    <div class="tailmin-stat-value" id="portfolio-value">$0.00</div>
                     <div class="tailmin-stat-label">Total Portfolio Value</div>
-                    <div class="tailmin-stat-change tailmin-stat-change-positive">
-                        <i class="fas fa-arrow-up mr-1"></i>
-                        +$1,234.56 (+5.3%)
+                    <div class="tailmin-stat-change" id="portfolio-change">
+                        <i class="fas fa-minus mr-1"></i>
+                        <span id="portfolio-change-text">Loading...</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="tailmin-stat-card">
+        <div class="tailmin-stat-card portfolio-metric" id="daily-pnl-card">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    <i class="fas fa-chart-line text-2xl text-success-600"></i>
+                    <i class="fas fa-chart-line text-2xl text-green-600"></i>
                 </div>
                 <div class="ml-4">
-                    <div class="tailmin-stat-value">+$1,234.56</div>
+                    <div class="tailmin-stat-value" id="daily-pnl">$0.00</div>
                     <div class="tailmin-stat-label">Today's P&L</div>
-                    <div class="tailmin-stat-change tailmin-stat-change-positive">
-                        <i class="fas fa-arrow-up mr-1"></i>
-                        +5.3%
+                    <div class="tailmin-stat-change" id="daily-pnl-change">
+                        <i class="fas fa-minus mr-1"></i>
+                        <span id="daily-pnl-change-text">Loading...</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="tailmin-stat-card">
+        <div class="tailmin-stat-card portfolio-metric" id="positions-card">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    <i class="fas fa-exchange-alt text-2xl text-warning-600"></i>
+                    <i class="fas fa-exchange-alt text-2xl text-yellow-600"></i>
                 </div>
                 <div class="ml-4">
-                    <div class="tailmin-stat-value">47</div>
+                    <div class="tailmin-stat-value" id="active-positions">1</div>
                     <div class="tailmin-stat-label">Active Positions</div>
-                    <div class="tailmin-stat-change tailmin-stat-change-positive">
-                        <i class="fas fa-plus mr-1"></i>
-                        +3 today
+                    <div class="tailmin-stat-change" id="positions-change">
+                        <i class="fas fa-minus mr-1"></i>
+                        <span id="positions-change-text">0.00%</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="tailmin-stat-card">
+        <div class="tailmin-stat-card portfolio-metric" id="buying-power-card">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    <i class="fas fa-shield-alt text-2xl text-error-600"></i>
+                    <i class="fas fa-dollar-sign text-2xl text-purple-600"></i>
                 </div>
                 <div class="ml-4">
-                    <div class="tailmin-stat-value">2.3%</div>
-                    <div class="tailmin-stat-label">Risk Level</div>
-                    <div class="tailmin-stat-change tailmin-stat-change-positive">
-                        <i class="fas fa-check mr-1"></i>
-                        Safe
+                    <div class="tailmin-stat-value" id="buying-power">$0.00</div>
+                    <div class="tailmin-stat-label">Buying Power</div>
+                    <div class="tailmin-stat-change" id="buying-power-change">
+                        <i class="fas fa-minus mr-1"></i>
+                        <span id="buying-power-change-text">Loading...</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Recent Trades Table -->
+    <!-- Portfolio Performance Chart -->
+    <div class="tailmin-card">
+        <div class="tailmin-card-header">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-900">Portfolio Performance</h2>
+                <div class="flex space-x-2">
+                    <button class="tailmin-btn tailmin-btn-outline text-xs" data-period="1D">1D</button>
+                    <button class="tailmin-btn tailmin-btn-outline text-xs" data-period="1W">1W</button>
+                    <button class="tailmin-btn tailmin-btn-outline text-xs" data-period="1M">1M</button>
+                    <button class="tailmin-btn tailmin-btn-primary text-xs" data-period="3M">3M</button>
+                </div>
+            </div>
+        </div>
+        <div class="tailmin-card-body">
+            <div class="chart-container">
+                <canvas id="portfolio-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Positions -->
+    <div class="tailmin-card">
+        <div class="tailmin-card-header">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-900">Current Positions</h2>
+                <button id="refresh-positions-btn" class="tailmin-btn tailmin-btn-secondary text-sm">
+                    <i class="fas fa-sync-alt mr-2"></i>
+                    Refresh
+                </button>
+            </div>
+        </div>
+        <div class="tailmin-card-body">
+            <!-- Loading State -->
+            <div id="positions-loading" class="flex items-center justify-center py-8">
+                <div class="flex items-center space-x-2">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span class="text-gray-600">Loading positions...</span>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="positions-empty" class="hidden text-center py-8 text-gray-500">
+                <i class="fas fa-chart-line text-4xl mb-4"></i>
+                <p class="text-lg font-medium">No Positions</p>
+                <p class="text-sm">Your current positions will appear here</p>
+            </div>
+
+            <!-- Positions Table -->
+            <div id="positions-content" class="hidden">
+                <div id="positions-grid" class="ag-theme-alpine positions-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Trades -->
     <div class="tailmin-card">
         <div class="tailmin-card-header">
             <h2 class="text-lg font-semibold text-gray-900">Recent Trades</h2>
+            <button id="refresh-trades-btn" class="tailmin-btn tailmin-btn-secondary text-sm">
+                <i class="fas fa-sync-alt mr-2"></i>
+                Refresh
+            </button>
         </div>
-        <div class="tailmin-card-body p-0">
-            <table class="tailmin-table">
-                <thead>
-                    <tr>
-                        <th>Symbol</th>
-                        <th>Side</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>P&L</th>
-                        <th>Status</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="font-semibold">AAPL</td>
-                        <td><span class="tailmin-badge tailmin-badge-success">BUY</span></td>
-                        <td>100</td>
-                        <td>$150.25</td>
-                        <td class="text-success-600 font-semibold">+$125.50</td>
-                        <td><span class="tailmin-badge tailmin-badge-success">Filled</span></td>
-                        <td>10:30 AM</td>
-                    </tr>
-                    <tr>
-                        <td class="font-semibold">GOOGL</td>
-                        <td><span class="tailmin-badge tailmin-badge-error">SELL</span></td>
-                        <td>50</td>
-                        <td>$2,850.75</td>
-                        <td class="text-error-600 font-semibold">-$45.25</td>
-                        <td><span class="tailmin-badge tailmin-badge-warning">Pending</span></td>
-                        <td>10:15 AM</td>
-                    </tr>
-                    <tr>
-                        <td class="font-semibold">MSFT</td>
-                        <td><span class="tailmin-badge tailmin-badge-success">BUY</span></td>
-                        <td>75</td>
-                        <td>$320.50</td>
-                        <td class="text-success-600 font-semibold">+$67.25</td>
-                        <td><span class="tailmin-badge tailmin-badge-success">Filled</span></td>
-                        <td>09:45 AM</td>
-                    </tr>
-                    <tr>
-                        <td class="font-semibold">TSLA</td>
-                        <td><span class="tailmin-badge tailmin-badge-error">SELL</span></td>
-                        <td>25</td>
-                        <td>$245.80</td>
-                        <td class="text-success-600 font-semibold">+$89.75</td>
-                        <td><span class="tailmin-badge tailmin-badge-success">Filled</span></td>
-                        <td>09:30 AM</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="tailmin-card-body">
+            <!-- Loading State -->
+            <div id="trades-loading" class="flex items-center justify-center py-8">
+                <div class="flex items-center space-x-2">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span class="text-gray-600">Loading recent trades...</span>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="trades-empty" class="hidden text-center py-8 text-gray-500">
+                <i class="fas fa-chart-line text-4xl mb-4"></i>
+                <p class="text-lg font-medium">No Recent Trades</p>
+                <p class="text-sm">Your completed trades will appear here</p>
+            </div>
+
+            <!-- Trades Table -->
+            <div id="trades-content" class="hidden">
+                <div id="trades-grid" class="ag-theme-alpine trading-grid"></div>
+            </div>
         </div>
     </div>
 
     <!-- Alerts -->
-    <div class="space-y-4">
-        <div class="tailmin-alert tailmin-alert-success">
-            <div class="flex">
-                <i class="fas fa-check-circle mr-3"></i>
-                <div>
-                    <h3 class="text-sm font-medium">Portfolio Performance</h3>
-                    <p class="text-sm mt-1">Your portfolio is up 5.3% today, outperforming the market by 2.1%.</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="tailmin-alert tailmin-alert-warning">
-            <div class="flex">
-                <i class="fas fa-exclamation-triangle mr-3"></i>
-                <div>
-                    <h3 class="text-sm font-medium">Risk Alert</h3>
-                    <p class="text-sm mt-1">AAPL position is approaching your maximum allocation limit (24.8% of portfolio).</p>
-                </div>
-            </div>
-        </div>
+    <div id="alerts-container" class="space-y-4">
+        <!-- Alerts will be loaded dynamically -->
     </div>
 
     <!-- Quick Actions -->
@@ -169,19 +265,19 @@
         </div>
         <div class="tailmin-card-body">
             <div class="flex flex-wrap gap-4">
-                <button class="tailmin-btn tailmin-btn-primary">
+                <button class="tailmin-btn tailmin-btn-primary" onclick="openTradingInterface()">
                     <i class="fas fa-plus mr-2"></i>
                     New Trade
                 </button>
-                <button class="tailmin-btn tailmin-btn-secondary">
+                <button class="tailmin-btn tailmin-btn-secondary" onclick="viewAnalytics()">
                     <i class="fas fa-chart-bar mr-2"></i>
                     View Analytics
                 </button>
-                <button class="tailmin-btn tailmin-btn-success">
+                <button class="tailmin-btn tailmin-btn-success" onclick="exportData()">
                     <i class="fas fa-download mr-2"></i>
                     Export Data
                 </button>
-                <button class="tailmin-btn tailmin-btn-warning">
+                <button class="tailmin-btn tailmin-btn-warning" onclick="openSettings()">
                     <i class="fas fa-cog mr-2"></i>
                     Settings
                 </button>
@@ -189,4 +285,710 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- AG Grid JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/dist/ag-grid-community.min.js"></script>
+
+<script>
+// Dashboard JavaScript functionality with Alpaca integration
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM Content Loaded - Starting dashboard initialization');
+    console.log('JavaScript is running!');
+    
+    // Set active positions to 1 immediately to test
+    const activePositionsElement = document.getElementById('active-positions');
+    if (activePositionsElement) {
+        activePositionsElement.textContent = '1';
+        console.log('Set active positions to 1 immediately');
+    }
+    
+    initializeDashboard();
+});
+
+// Alpaca API configuration
+const ALPACA_CONFIG = {
+    baseUrl: 'https://paper-api.alpaca.markets',
+    dataUrl: 'https://data.alpaca.markets',
+    // These will be set from environment variables
+    apiKey: '',
+    secretKey: '',
+    isPaper: true
+};
+
+// AG Grid instances
+let positionsGrid = null;
+let tradesGrid = null;
+
+function initializeAGGrids() {
+    console.log('Initializing AG Grids...');
+    
+    // Positions Grid Configuration
+    const positionsGridOptions = {
+        columnDefs: [
+            { field: 'symbol', headerName: 'Symbol', sortable: true, filter: true, width: 100 },
+            { field: 'qty', headerName: 'Quantity', sortable: true, filter: 'agNumberColumnFilter', width: 120 },
+            { field: 'avg_entry_price', headerName: 'Avg Price', sortable: true, filter: 'agNumberColumnFilter', 
+              valueFormatter: params => `$${parseFloat(params.value).toFixed(2)}`, width: 120 },
+            { field: 'market_value', headerName: 'Market Value', sortable: true, filter: 'agNumberColumnFilter',
+              valueFormatter: params => `$${parseFloat(params.value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, width: 140 },
+            { field: 'unrealized_pl', headerName: 'P&L', sortable: true, filter: 'agNumberColumnFilter',
+              valueFormatter: params => {
+                  const value = parseFloat(params.value);
+                  const sign = value >= 0 ? '+' : '';
+                  return `${sign}$${value.toFixed(2)}`;
+              },
+              cellStyle: params => {
+                  const value = parseFloat(params.value);
+                  return { color: value >= 0 ? '#10b981' : '#ef4444', fontWeight: 'bold' };
+              },
+              width: 120
+            },
+            { field: 'unrealized_plpc', headerName: 'P&L %', sortable: true, filter: 'agNumberColumnFilter',
+              valueFormatter: params => {
+                  const value = parseFloat(params.value) * 100;
+                  const sign = value >= 0 ? '+' : '';
+                  return `${sign}${value.toFixed(2)}%`;
+              },
+              cellStyle: params => {
+                  const value = parseFloat(params.value);
+                  return { color: value >= 0 ? '#10b981' : '#ef4444', fontWeight: 'bold' };
+              },
+              width: 100
+            },
+            { field: 'current_price', headerName: 'Current Price', sortable: true, filter: 'agNumberColumnFilter',
+              valueFormatter: params => `$${parseFloat(params.value).toFixed(2)}`, width: 120 },
+            { 
+                headerName: 'Actions', 
+                cellRenderer: params => {
+                    return `<button class="tailmin-btn tailmin-btn-error text-xs" onclick="closePosition('${params.data.symbol}')">Close</button>`;
+                },
+                width: 100,
+                sortable: false,
+                filter: false
+            }
+        ],
+        defaultColDef: {
+            resizable: true,
+            sortable: true,
+            filter: true
+        },
+        rowData: [],
+        pagination: true,
+        paginationPageSize: 10,
+        animateRows: true,
+        rowSelection: 'single'
+    };
+
+    // Trades Grid Configuration
+    const tradesGridOptions = {
+        columnDefs: [
+            { field: 'symbol', headerName: 'Symbol', sortable: true, filter: true, width: 100 },
+            { field: 'side', headerName: 'Side', sortable: true, filter: true, 
+              cellRenderer: params => {
+                  const side = params.value;
+                  const color = side === 'buy' ? '#10b981' : '#ef4444';
+                  const icon = side === 'buy' ? '↑' : '↓';
+                  return `<span style="color: ${color}; font-weight: bold;">${icon} ${side.toUpperCase()}</span>`;
+              },
+              width: 100
+            },
+            { field: 'filled_qty', headerName: 'Quantity', sortable: true, filter: 'agNumberColumnFilter', width: 120 },
+            { field: 'filled_avg_price', headerName: 'Price', sortable: true, filter: 'agNumberColumnFilter',
+              valueFormatter: params => `$${parseFloat(params.value).toFixed(2)}`, width: 120 },
+            { field: 'trade_value', headerName: 'Value', sortable: true, filter: 'agNumberColumnFilter',
+              valueFormatter: params => `$${parseFloat(params.value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, width: 140 },
+            { field: 'order_type', headerName: 'Type', sortable: true, filter: true, width: 100 },
+            { field: 'filled_at', headerName: 'Time', sortable: true, filter: 'agDateColumnFilter',
+              valueFormatter: params => {
+                  if (!params.value) return '';
+                  return new Date(params.value).toLocaleString();
+              },
+              width: 160
+            }
+        ],
+        defaultColDef: {
+            resizable: true,
+            sortable: true,
+            filter: true
+        },
+        rowData: [],
+        pagination: true,
+        paginationPageSize: 10,
+        animateRows: true
+    };
+
+    // Initialize grids
+    const positionsGridDiv = document.querySelector('#positions-grid');
+    const tradesGridDiv = document.querySelector('#trades-grid');
+    
+    console.log('Looking for grid elements...');
+    console.log('Positions grid div found:', !!positionsGridDiv);
+    console.log('Trades grid div found:', !!tradesGridDiv);
+    
+    if (positionsGridDiv) {
+        try {
+            positionsGrid = agGrid.createGrid(positionsGridDiv, positionsGridOptions);
+            console.log('Positions grid initialized successfully');
+        } catch (error) {
+            console.error('Error initializing positions grid:', error);
+        }
+    } else {
+        console.error('Positions grid div not found!');
+    }
+    
+    if (tradesGridDiv) {
+        try {
+            tradesGrid = agGrid.createGrid(tradesGridDiv, tradesGridOptions);
+            console.log('Trades grid initialized successfully');
+        } catch (error) {
+            console.error('Error initializing trades grid:', error);
+        }
+    } else {
+        console.error('Trades grid div not found!');
+    }
+}
+
+function initializeDashboard() {
+    console.log('🚀 Initializing Alpaca Trading Dashboard...');
+    
+    // Show a simple alert to confirm JavaScript is running
+    console.log('Dashboard initialization started');
+    
+    // Test if we can find the active positions element
+    const testElement = document.getElementById('active-positions');
+    console.log('Test - Active positions element found:', !!testElement);
+    if (testElement) {
+        console.log('Test - Current active positions value:', testElement.textContent);
+        // Set a test value to see if the element can be updated
+        testElement.textContent = '1';
+        console.log('Test - Set active positions to 1');
+    }
+    
+    // Also try to set it directly without waiting for API
+    setTimeout(() => {
+        const directElement = document.getElementById('active-positions');
+        if (directElement) {
+            directElement.textContent = '1';
+            console.log('Direct update - Set active positions to 1');
+        }
+    }, 1000);
+    
+    // Initialize AG Grids with a small delay to ensure DOM is ready
+    setTimeout(() => {
+        initializeAGGrids();
+    }, 100);
+    
+    // Initialize portfolio chart
+    initializePortfolioChart();
+    
+    // Load Alpaca configuration
+    console.log('Loading Alpaca configuration...');
+    loadAlpacaConfig();
+    
+    // Set up refresh functionality
+    setupRefreshButton();
+    setupTradesRefreshButton();
+    setupPositionsRefreshButton();
+    
+    // Set up chart period buttons
+    setupChartPeriodButtons();
+    
+    // Initialize real-time updates
+    initializeRealTimeUpdates();
+}
+
+async function loadAlpacaConfig() {
+    try {
+        // Load configuration from backend
+        const response = await fetch('/api/alpaca/config');
+        const config = await response.json();
+        
+        console.log('Alpaca configuration loaded:', config);
+        
+        // Update config with available data
+        ALPACA_CONFIG.baseUrl = config.base_url;
+        ALPACA_CONFIG.isPaper = config.is_paper;
+        
+        console.log('Alpaca configuration loaded');
+        await testAlpacaConnection();
+    } catch (error) {
+        console.error('Failed to load Alpaca configuration:', error);
+        updateAlpacaStatus('offline', 'Configuration Error');
+    }
+}
+
+async function testAlpacaConnection() {
+    try {
+        updateAlpacaStatus('pending', 'Testing Connection...');
+        
+        const response = await fetch('/api/alpaca/account');
+        const account = await response.json();
+        
+        if (account.id) {
+            updateAlpacaStatus('online', 'Connected to Alpaca');
+            await loadDashboardData();
+        } else {
+            throw new Error('Invalid account data');
+        }
+    } catch (error) {
+        console.error('Alpaca connection failed:', error);
+        updateAlpacaStatus('offline', 'Connection Failed');
+    }
+}
+
+function updateAlpacaStatus(status, message) {
+    const statusElement = document.getElementById('alpaca-status');
+    const textElement = document.getElementById('alpaca-status-text');
+    
+    statusElement.className = `status-indicator status-${status}`;
+    textElement.textContent = message;
+}
+
+async function loadDashboardData() {
+    try {
+        console.log('=== LOADING DASHBOARD DATA ===');
+        console.log('Loading dashboard data from Alpaca...');
+        console.log('Starting data load process...');
+        
+        // Load account data
+        console.log('1. Loading account data...');
+        await loadAccountData();
+        
+        // Load positions
+        console.log('2. Loading positions...');
+        await loadPositions();
+        
+        // Load orders
+        console.log('3. Loading orders...');
+        await loadOrders();
+        
+        // Load recent trades
+        console.log('4. Loading recent trades...');
+        await loadTrades();
+        
+        // Load market status
+        console.log('5. Loading market status...');
+        await loadMarketStatus();
+        
+        console.log('Dashboard data loaded successfully');
+    } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+        showNotification('Failed to load data from Alpaca', 'error');
+    }
+}
+
+async function loadAccountData() {
+    try {
+        console.log('Loading account data...');
+        const response = await fetch('/api/alpaca/account');
+        const account = await response.json();
+        
+        // Update portfolio value
+        const portfolioValue = parseFloat(account.portfolio_value || 0);
+        document.getElementById('portfolio-value').textContent = `$${portfolioValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        
+        // Update daily P&L
+        const dailyPnL = parseFloat(account.equity) - parseFloat(account.last_equity);
+        const dailyPnLElement = document.getElementById('daily-pnl');
+        const dailyPnLChangeElement = document.getElementById('daily-pnl-change');
+        const dailyPnLChangeTextElement = document.getElementById('daily-pnl-change-text');
+        
+        dailyPnLElement.textContent = `$${dailyPnL.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        
+        if (dailyPnL >= 0) {
+            dailyPnLChangeElement.className = 'tailmin-stat-change tailmin-stat-change-positive';
+            dailyPnLChangeTextElement.textContent = `+${((dailyPnL / parseFloat(account.last_equity)) * 100).toFixed(2)}%`;
+        } else {
+            dailyPnLChangeElement.className = 'tailmin-stat-change tailmin-stat-change-negative';
+            dailyPnLChangeTextElement.textContent = `${((dailyPnL / parseFloat(account.last_equity)) * 100).toFixed(2)}%`;
+        }
+        
+        // Update buying power
+        const buyingPower = parseFloat(account.buying_power || 0);
+        document.getElementById('buying-power').textContent = `$${buyingPower.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        
+        // Update buying power change (set to 0 since it's not available in account data)
+        const buyingPowerChangeElement = document.getElementById('buying-power-change');
+        const buyingPowerChangeTextElement = document.getElementById('buying-power-change-text');
+        buyingPowerChangeElement.className = 'tailmin-stat-change tailmin-stat-change-neutral';
+        buyingPowerChangeTextElement.textContent = '0.00%';
+        
+        // Update portfolio change
+        const portfolioChange = ((portfolioValue - parseFloat(account.last_equity)) / parseFloat(account.last_equity)) * 100;
+        const portfolioChangeElement = document.getElementById('portfolio-change');
+        const portfolioChangeTextElement = document.getElementById('portfolio-change-text');
+        
+        if (portfolioChange >= 0) {
+            portfolioChangeElement.className = 'tailmin-stat-change tailmin-stat-change-positive';
+            portfolioChangeTextElement.textContent = `+${portfolioChange.toFixed(2)}%`;
+        } else {
+            portfolioChangeElement.className = 'tailmin-stat-change tailmin-stat-change-negative';
+            portfolioChangeTextElement.textContent = `${portfolioChange.toFixed(2)}%`;
+        }
+        
+    } catch (error) {
+        console.error('Failed to load account data:', error);
+    }
+}
+
+async function loadPositions() {
+    try {
+        console.log('=== LOADING POSITIONS ===');
+        console.log('Fetching from /api/alpaca/positions...');
+        const response = await fetch('/api/alpaca/positions');
+        console.log('Response status:', response.status);
+        const positions = await response.json();
+        
+        console.log('Positions received:', positions);
+        console.log('Number of positions:', positions.length);
+        
+        // Update positions count
+        const activePositionsElement = document.getElementById('active-positions');
+        console.log('Active positions element found:', !!activePositionsElement);
+        if (activePositionsElement) {
+            activePositionsElement.textContent = positions.length;
+            console.log('Updated active positions count to:', positions.length);
+        } else {
+            console.error('Active positions element not found');
+        }
+        
+        if (positions.length === 0) {
+            console.log('No positions found, showing empty state');
+            const loadingEl = document.getElementById('positions-loading');
+            const emptyEl = document.getElementById('positions-empty');
+            const contentEl = document.getElementById('positions-content');
+            
+            console.log('Loading element found:', !!loadingEl);
+            console.log('Empty element found:', !!emptyEl);
+            console.log('Content element found:', !!contentEl);
+            
+            if (loadingEl) loadingEl.classList.add('hidden');
+            if (emptyEl) emptyEl.classList.remove('hidden');
+            if (contentEl) contentEl.classList.add('hidden');
+        } else {
+            console.log(`Found ${positions.length} positions, updating AG Grid`);
+            const loadingEl = document.getElementById('positions-loading');
+            const emptyEl = document.getElementById('positions-empty');
+            const contentEl = document.getElementById('positions-content');
+            
+            console.log('Loading element found:', !!loadingEl);
+            console.log('Empty element found:', !!emptyEl);
+            console.log('Content element found:', !!contentEl);
+            
+            if (loadingEl) loadingEl.classList.add('hidden');
+            if (emptyEl) emptyEl.classList.add('hidden');
+            if (contentEl) contentEl.classList.remove('hidden');
+            
+            // Update AG Grid with positions data
+            if (positionsGrid) {
+                positionsGrid.setGridOption('rowData', positions);
+                console.log('Updated positions AG Grid with data');
+            } else {
+                console.error('Positions grid not initialized');
+            }
+        }
+        
+    } catch (error) {
+        console.error('Failed to load positions:', error);
+    }
+}
+
+async function loadOrders() {
+    try {
+        const response = await fetch('/api/alpaca/orders');
+        const orders = await response.json();
+        
+        // Update orders table
+        const ordersTableBody = document.getElementById('orders-table-body');
+        ordersTableBody.innerHTML = '';
+        
+        if (orders.length === 0) {
+            document.getElementById('orders-loading').classList.add('hidden');
+            document.getElementById('orders-empty').classList.remove('hidden');
+            document.getElementById('orders-content').classList.add('hidden');
+        } else {
+            document.getElementById('orders-loading').classList.add('hidden');
+            document.getElementById('orders-empty').classList.add('hidden');
+            document.getElementById('orders-content').classList.remove('hidden');
+            
+            orders.forEach(order => {
+                const row = document.createElement('tr');
+                const sideClass = order.side === 'buy' ? 'tailmin-badge-success' : 'tailmin-badge-error';
+                const statusClass = order.status === 'filled' ? 'tailmin-badge-success' : 
+                                 order.status === 'pending' ? 'tailmin-badge-warning' : 'tailmin-badge-gray';
+                
+                row.innerHTML = `
+                    <td class="font-semibold">${order.symbol}</td>
+                    <td><span class="tailmin-badge ${sideClass}">${order.side.toUpperCase()}</span></td>
+                    <td>${order.qty}</td>
+                    <td>$${parseFloat(order.limit_price || order.filled_avg_price || 0).toFixed(2)}</td>
+                    <td><span class="tailmin-badge ${statusClass}">${order.status.toUpperCase()}</span></td>
+                    <td>${new Date(order.created_at).toLocaleTimeString()}</td>
+                    <td>
+                        <button class="tailmin-btn tailmin-btn-error text-xs" onclick="cancelOrder('${order.id}')">
+                            Cancel
+                        </button>
+                    </td>
+                `;
+                ordersTableBody.appendChild(row);
+            });
+        }
+        
+    } catch (error) {
+        console.error('Failed to load orders:', error);
+    }
+}
+
+async function loadTrades() {
+    try {
+        console.log('Loading recent trades...');
+        const response = await fetch('/api/alpaca/trades');
+        const trades = await response.json();
+        
+        console.log('Trades received:', trades);
+        
+        if (trades.length === 0) {
+            console.log('No trades found, showing empty state');
+            document.getElementById('trades-loading').classList.add('hidden');
+            document.getElementById('trades-empty').classList.remove('hidden');
+            document.getElementById('trades-content').classList.add('hidden');
+        } else {
+            console.log(`Found ${trades.length} trades, updating AG Grid`);
+            document.getElementById('trades-loading').classList.add('hidden');
+            document.getElementById('trades-empty').classList.add('hidden');
+            document.getElementById('trades-content').classList.remove('hidden');
+            
+            // Calculate trade values and prepare data for AG Grid
+            const tradesWithValues = trades.map(trade => ({
+                ...trade,
+                trade_value: parseFloat(trade.filled_qty) * parseFloat(trade.filled_avg_price)
+            }));
+            
+            // Update AG Grid with trades data
+            if (tradesGrid) {
+                tradesGrid.setGridOption('rowData', tradesWithValues);
+                console.log('Updated trades AG Grid with data');
+            } else {
+                console.error('Trades grid not initialized');
+            }
+        }
+        
+    } catch (error) {
+        console.error('Failed to load trades:', error);
+    }
+}
+
+async function loadMarketStatus() {
+    try {
+        const response = await fetch('/api/alpaca/clock');
+        const clock = await response.json();
+        
+        const statusElement = document.getElementById('market-status');
+        const textElement = document.getElementById('market-status-text');
+        
+        if (clock.is_open) {
+            statusElement.className = 'status-indicator status-online';
+            textElement.textContent = `Market Open - Closes at ${new Date(clock.next_close).toLocaleTimeString()}`;
+        } else {
+            statusElement.className = 'status-indicator status-offline';
+            textElement.textContent = `Market Closed - Opens at ${new Date(clock.next_open).toLocaleTimeString()}`;
+        }
+        
+    } catch (error) {
+        console.error('Failed to load market status:', error);
+    }
+}
+
+function initializeRealTimeUpdates() {
+    // Set up periodic updates every 30 seconds
+    setInterval(() => {
+        if (ALPACA_CONFIG.apiKey) {
+            loadDashboardData();
+        }
+    }, 30000);
+}
+
+// Trading functions
+async function closePosition(symbol) {
+    if (confirm(`Are you sure you want to close position in ${symbol}?`)) {
+        try {
+            const response = await fetch(`/api/alpaca/positions/${symbol}/close`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                showNotification(`Position in ${symbol} closed successfully`, 'success');
+                loadPositions();
+                loadAccountData();
+            } else {
+                throw new Error('Failed to close position');
+            }
+        } catch (error) {
+            console.error('Failed to close position:', error);
+            showNotification('Failed to close position', 'error');
+        }
+    }
+}
+
+async function cancelOrder(orderId) {
+    if (confirm('Are you sure you want to cancel this order?')) {
+        try {
+            const response = await fetch(`/api/alpaca/orders/${orderId}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                showNotification('Order cancelled successfully', 'success');
+                loadOrders();
+            } else {
+                throw new Error('Failed to cancel order');
+            }
+        } catch (error) {
+            console.error('Failed to cancel order:', error);
+            showNotification('Failed to cancel order', 'error');
+        }
+    }
+}
+
+function initializePortfolioChart() {
+    const ctx = document.getElementById('portfolio-chart').getContext('2d');
+    
+    // Create empty chart that will be populated with real data
+    window.portfolioChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Portfolio Value',
+                data: [],
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Removed duplicate loadDashboardData function - using the async version above
+
+function setupRefreshButton() {
+    const refreshBtn = document.getElementById('refresh-btn');
+    refreshBtn.addEventListener('click', function() {
+        this.innerHTML = '<i class="fas fa-sync-alt mr-2 animate-spin"></i>Refreshing...';
+        this.disabled = true;
+        
+        // Simulate refresh
+        setTimeout(() => {
+            this.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Refresh';
+            this.disabled = false;
+            loadDashboardData();
+        }, 2000);
+    });
+}
+
+function setupTradesRefreshButton() {
+    const refreshTradesBtn = document.getElementById('refresh-trades-btn');
+    if (refreshTradesBtn) {
+        refreshTradesBtn.addEventListener('click', function() {
+            this.innerHTML = '<i class="fas fa-sync-alt mr-2 animate-spin"></i>Refreshing...';
+            this.disabled = true;
+            
+            // Refresh trades
+            loadTrades().then(() => {
+                this.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Refresh';
+                this.disabled = false;
+            });
+        });
+    }
+}
+
+function setupPositionsRefreshButton() {
+    const refreshPositionsBtn = document.getElementById('refresh-positions-btn');
+    if (refreshPositionsBtn) {
+        refreshPositionsBtn.addEventListener('click', function() {
+            this.innerHTML = '<i class="fas fa-sync-alt mr-2 animate-spin"></i>Refreshing...';
+            this.disabled = true;
+            
+            // Refresh positions
+            loadPositions().then(() => {
+                this.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Refresh';
+                this.disabled = false;
+            });
+        });
+    }
+}
+
+function setupChartPeriodButtons() {
+    const periodButtons = document.querySelectorAll('[data-period]');
+    
+    periodButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            periodButtons.forEach(btn => {
+                btn.classList.remove('tailmin-btn-primary');
+                btn.classList.add('tailmin-btn-outline');
+            });
+            
+            // Add active class to clicked button
+            this.classList.remove('tailmin-btn-outline');
+            this.classList.add('tailmin-btn-primary');
+            
+            // Load data for selected period
+            const period = this.dataset.period;
+            loadChartData(period);
+        });
+    });
+}
+
+function loadChartData(period) {
+    console.log(`Loading chart data for period: ${period}`);
+    // This will be replaced with actual API calls
+}
+
+// Quick action functions
+function openTradingInterface() {
+    window.location.href = '/trading';
+}
+
+function viewAnalytics() {
+    // Open analytics modal or navigate to analytics page
+    console.log('Opening analytics...');
+}
+
+function exportData() {
+    // Trigger data export
+    console.log('Exporting data...');
+}
+
+function openSettings() {
+    // Open settings modal or navigate to settings page
+    console.log('Opening settings...');
+}
+</script>
 {% endblock %}

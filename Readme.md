@@ -60,6 +60,90 @@ This system uses a **microservices architecture** with **Prefect orchestration**
 
 > **Note**: Alpaca paper trading account is free and recommended for testing
 
+### Alpaca API Setup
+
+#### 1. Get Alpaca Paper Trading Credentials
+
+1. Go to [Alpaca Paper Trading Dashboard](https://app.alpaca.markets/paper/dashboard/overview)
+2. Sign up for a free account if you don't have one
+3. Go to **API Keys** section
+4. Generate new API keys for paper trading
+5. Copy your **API Key** and **Secret Key**
+
+#### 2. Set Up Environment Variables
+
+Create a `.env` file in the project root with your credentials:
+
+```bash
+# Alpaca Trading API (Paper Trading)
+ALPACA_API_KEY=your_actual_api_key_here
+ALPACA_SECRET_KEY=your_actual_secret_key_here
+ALPACA_BASE_URL=https://paper-api.alpaca.markets
+ALPACA_DATA_URL=https://data.alpaca.markets
+
+# Database Configuration (if using database features)
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password_here
+TRADING_DB_NAME=trading_system
+
+# Redis Configuration (if using Redis features)
+REDIS_URL=redis://localhost:6379/0
+
+# Application Configuration
+DEBUG=true
+LOG_LEVEL=INFO
+```
+
+#### 3. Alpaca API Features Available
+
+- **Real-time Portfolio Data** - Live account balance and P&L
+- **Live Positions** - Current holdings with real-time P&L
+- **Order Management** - View and cancel open orders
+- **Market Status** - Real-time market open/closed status
+- **Trading Interface** - Place new orders (coming soon)
+
+#### 4. API Endpoints
+
+The following API endpoints are available:
+
+- `GET /api/alpaca/account` - Get account information
+- `GET /api/alpaca/positions` - Get all positions
+- `GET /api/alpaca/orders` - Get orders
+- `GET /api/alpaca/clock` - Get market clock
+- `POST /api/alpaca/positions/{symbol}/close` - Close a position
+- `DELETE /api/alpaca/orders/{order_id}` - Cancel an order
+
+#### 5. Security Notes
+
+- Never commit your `.env` file to version control
+- Use paper trading credentials for testing
+- The system is configured for paper trading by default
+- All trades are simulated and use virtual money
+
+#### 6. Troubleshooting
+
+**Common Issues:**
+
+1. **"Alpaca credentials not found"**
+   - Make sure your `.env` file exists and has the correct variable names
+   - Check that the credentials are valid
+
+2. **"Connection failed"**
+   - Verify your API keys are correct
+   - Check your internet connection
+   - Ensure you're using paper trading credentials
+
+3. **"API Error"**
+   - Check if your account is active
+   - Verify the API keys have the correct permissions
+
+**Getting Help:**
+- Check the console logs for detailed error messages
+- Verify your Alpaca account status in the dashboard
+- Test your credentials by accessing the dashboard at `http://localhost:8002/dashboard`
+
 ### Installation
 
 <details>

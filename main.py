@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from src.web.api.alpaca_routes import router as alpaca_router
 from src.web.api.routes import router
 
 app = FastAPI(
@@ -24,6 +25,7 @@ app = FastAPI(
 
 # Include API routes
 app.include_router(router)
+app.include_router(alpaca_router, prefix="/api/alpaca")
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="src/web/static"), name="static")
@@ -34,4 +36,4 @@ templates = Jinja2Templates(directory="src/web/templates")
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8001)
+    uvicorn.run(app, host="127.0.0.1", port=8002)

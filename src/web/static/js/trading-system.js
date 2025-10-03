@@ -91,6 +91,7 @@ function hideLoadingState(element, originalContent) {
     element.innerHTML = originalContent;
 }
 
+
 /**
  * Add notification system for future use
  */

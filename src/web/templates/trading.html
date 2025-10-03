@@ -2,23 +2,428 @@
 
 {% block title %}Trading - Trading System{% endblock %}
 
+{% block extra_head %}
+<style>
+    .order-form {
+        max-width: 500px;
+    }
+    .price-input {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    .quantity-input {
+        font-size: 1.25rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="space-y-6">
     <!-- Trading Header -->
-    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Trading Interface</h1>
-        <p class="text-gray-600">Execute trades and manage your positions</p>
+    <div class="tailmin-card">
+        <div class="tailmin-card-header">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Trading Interface</h1>
+                    <p class="text-gray-600">Execute trades and manage your positions</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="status-online"></div>
+                        <span class="text-sm text-gray-600">Market Open</span>
+                    </div>
+                    <button id="market-status-btn" class="tailmin-btn tailmin-btn-outline">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Market Info
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Coming Soon -->
-    <div class="bg-gradient-to-r from-green-600 to-teal-700 rounded-xl shadow-lg p-12 text-center">
-        <i class="fas fa-exchange-alt text-6xl text-white mb-6"></i>
-        <h2 class="text-3xl font-bold text-white mb-4">Trading Interface Coming Soon</h2>
-        <p class="text-green-100 text-lg mb-6">Advanced trading tools and order management will be available here.</p>
-        <div class="inline-flex items-center px-6 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full text-white font-semibold">
-            <i class="fas fa-clock mr-2"></i>
-            Under Development
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Order Form -->
+        <div class="lg:col-span-1">
+            <div class="tailmin-card">
+                <div class="tailmin-card-header">
+                    <h2 class="text-lg font-semibold text-gray-900">Place Order</h2>
+                </div>
+                <div class="tailmin-card-body">
+                    <form id="order-form" class="space-y-4">
+                        <!-- Symbol Input -->
+                        <div>
+                            <label for="symbol" class="block text-sm font-medium text-gray-700 mb-2">Symbol</label>
+                            <div class="relative">
+                                <input type="text" id="symbol" name="symbol" 
+                                       class="tailmin-input" 
+                                       placeholder="e.g., AAPL" 
+                                       required>
+                                <button type="button" id="lookup-symbol" 
+                                        class="absolute right-2 top-2 text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div id="symbol-info" class="hidden mt-2 text-sm text-gray-600"></div>
+                        </div>
+
+                        <!-- Order Type -->
+                        <div>
+                            <label for="order-type" class="block text-sm font-medium text-gray-700 mb-2">Order Type</label>
+                            <select id="order-type" name="order_type" class="tailmin-select">
+                                <option value="market">Market Order</option>
+                                <option value="limit">Limit Order</option>
+                                <option value="stop">Stop Order</option>
+                                <option value="stop_limit">Stop Limit Order</option>
+                            </select>
+                        </div>
+
+                        <!-- Side -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Side</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" id="buy-btn" 
+                                        class="tailmin-btn tailmin-btn-success order-side-btn active">
+                                    <i class="fas fa-arrow-up mr-2"></i>Buy
+                                </button>
+                                <button type="button" id="sell-btn" 
+                                        class="tailmin-btn tailmin-btn-error order-side-btn">
+                                    <i class="fas fa-arrow-down mr-2"></i>Sell
+                                </button>
+                            </div>
+                            <input type="hidden" id="side" name="side" value="buy">
+                        </div>
+
+                        <!-- Quantity -->
+                        <div>
+                            <label for="quantity" class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                            <input type="number" id="quantity" name="quantity" 
+                                   class="tailmin-input quantity-input" 
+                                   placeholder="0" 
+                                   min="1" 
+                                   required>
+                        </div>
+
+                        <!-- Price (for limit orders) -->
+                        <div id="price-field" class="hidden">
+                            <label for="price" class="block text-sm font-medium text-gray-700 mb-2">Price</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-500">$</span>
+                                <input type="number" id="price" name="price" 
+                                       class="tailmin-input price-input pl-8" 
+                                       placeholder="0.00" 
+                                       step="0.01" 
+                                       min="0">
+                            </div>
+                        </div>
+
+                        <!-- Stop Price (for stop orders) -->
+                        <div id="stop-price-field" class="hidden">
+                            <label for="stop-price" class="block text-sm font-medium text-gray-700 mb-2">Stop Price</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-500">$</span>
+                                <input type="number" id="stop-price" name="stop_price" 
+                                       class="tailmin-input pl-8" 
+                                       placeholder="0.00" 
+                                       step="0.01" 
+                                       min="0">
+                            </div>
+                        </div>
+
+                        <!-- Time in Force -->
+                        <div>
+                            <label for="time-in-force" class="block text-sm font-medium text-gray-700 mb-2">Time in Force</label>
+                            <select id="time-in-force" name="time_in_force" class="tailmin-select">
+                                <option value="day">Day</option>
+                                <option value="gtc">Good Till Canceled</option>
+                                <option value="ioc">Immediate or Cancel</option>
+                                <option value="fok">Fill or Kill</option>
+                            </select>
+                        </div>
+
+                        <!-- Order Summary -->
+                        <div id="order-summary" class="bg-gray-50 rounded-lg p-4 hidden">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Order Summary</h3>
+                            <div class="space-y-1 text-sm">
+                                <div class="flex justify-between">
+                                    <span>Symbol:</span>
+                                    <span id="summary-symbol" class="font-medium">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Side:</span>
+                                    <span id="summary-side" class="font-medium">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Quantity:</span>
+                                    <span id="summary-quantity" class="font-medium">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Type:</span>
+                                    <span id="summary-type" class="font-medium">--</span>
+                                </div>
+                                <div id="summary-price-row" class="flex justify-between hidden">
+                                    <span>Price:</span>
+                                    <span id="summary-price" class="font-medium">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" id="submit-order" 
+                                class="w-full tailmin-btn tailmin-btn-primary">
+                            <i class="fas fa-paper-plane mr-2"></i>
+                            Place Order
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Positions and Orders -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Current Positions -->
+            <div class="tailmin-card">
+                <div class="tailmin-card-header">
+                    <h2 class="text-lg font-semibold text-gray-900">Current Positions</h2>
+                </div>
+                <div class="tailmin-card-body p-0">
+                    <div id="positions-loading" class="flex items-center justify-center py-8">
+                        <div class="loading-spinner w-8 h-8"></div>
+                        <span class="ml-2 text-gray-600">Loading positions...</span>
+                    </div>
+                    <div id="positions-content" class="hidden">
+                        <table class="tailmin-table">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Quantity</th>
+                                    <th>Avg Price</th>
+                                    <th>Market Value</th>
+                                    <th>P&L</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="positions-table-body">
+                                <!-- Positions will be loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="positions-empty" class="hidden text-center py-8 text-gray-500">
+                        <i class="fas fa-chart-line text-4xl mb-4"></i>
+                        <p>No positions found</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Open Orders -->
+            <div class="tailmin-card">
+                <div class="tailmin-card-header">
+                    <h2 class="text-lg font-semibold text-gray-900">Open Orders</h2>
+                </div>
+                <div class="tailmin-card-body p-0">
+                    <div id="orders-loading" class="flex items-center justify-center py-8">
+                        <div class="loading-spinner w-8 h-8"></div>
+                        <span class="ml-2 text-gray-600">Loading orders...</span>
+                    </div>
+                    <div id="orders-content" class="hidden">
+                        <table class="tailmin-table">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Side</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Status</th>
+                                    <th>Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-table-body">
+                                <!-- Orders will be loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="orders-empty" class="hidden text-center py-8 text-gray-500">
+                        <i class="fas fa-list text-4xl mb-4"></i>
+                        <p>No open orders</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Trading interface JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    initializeTradingInterface();
+});
+
+function initializeTradingInterface() {
+    setupOrderForm();
+    loadPositions();
+    loadOrders();
+    setupOrderTypeHandlers();
+    setupSideButtons();
+}
+
+function setupOrderForm() {
+    const form = document.getElementById('order-form');
+    const orderTypeSelect = document.getElementById('order-type');
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitOrder();
+    });
+    
+    // Update order summary on input change
+    ['symbol', 'quantity', 'price', 'stop-price'].forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('input', updateOrderSummary);
+        }
+    });
+    
+    orderTypeSelect.addEventListener('change', handleOrderTypeChange);
+}
+
+function setupOrderTypeHandlers() {
+    const orderTypeSelect = document.getElementById('order-type');
+    const priceField = document.getElementById('price-field');
+    const stopPriceField = document.getElementById('stop-price-field');
+    
+    orderTypeSelect.addEventListener('change', function() {
+        const orderType = this.value;
+        
+        // Show/hide price fields based on order type
+        if (orderType === 'market') {
+            priceField.classList.add('hidden');
+            stopPriceField.classList.add('hidden');
+        } else if (orderType === 'limit') {
+            priceField.classList.remove('hidden');
+            stopPriceField.classList.add('hidden');
+        } else if (orderType === 'stop' || orderType === 'stop_limit') {
+            priceField.classList.toggle('hidden', orderType === 'stop');
+            stopPriceField.classList.remove('hidden');
+        }
+        
+        updateOrderSummary();
+    });
+}
+
+function setupSideButtons() {
+    const buyBtn = document.getElementById('buy-btn');
+    const sellBtn = document.getElementById('sell-btn');
+    const sideInput = document.getElementById('side');
+    
+    buyBtn.addEventListener('click', function() {
+        buyBtn.classList.add('active');
+        sellBtn.classList.remove('active');
+        sideInput.value = 'buy';
+        updateOrderSummary();
+    });
+    
+    sellBtn.addEventListener('click', function() {
+        sellBtn.classList.add('active');
+        buyBtn.classList.remove('active');
+        sideInput.value = 'sell';
+        updateOrderSummary();
+    });
+}
+
+function updateOrderSummary() {
+    const symbol = document.getElementById('symbol').value;
+    const side = document.getElementById('side').value;
+    const quantity = document.getElementById('quantity').value;
+    const orderType = document.getElementById('order-type').value;
+    const price = document.getElementById('price').value;
+    
+    if (symbol && quantity) {
+        document.getElementById('summary-symbol').textContent = symbol.toUpperCase();
+        document.getElementById('summary-side').textContent = side.toUpperCase();
+        document.getElementById('summary-quantity').textContent = quantity;
+        document.getElementById('summary-type').textContent = orderType.toUpperCase();
+        
+        if (price && orderType !== 'market') {
+            document.getElementById('summary-price').textContent = '$' + price;
+            document.getElementById('summary-price-row').classList.remove('hidden');
+        } else {
+            document.getElementById('summary-price-row').classList.add('hidden');
+        }
+        
+        document.getElementById('order-summary').classList.remove('hidden');
+    } else {
+        document.getElementById('order-summary').classList.add('hidden');
+    }
+}
+
+function submitOrder() {
+    const form = document.getElementById('order-form');
+    const formData = new FormData(form);
+    const orderData = Object.fromEntries(formData);
+    
+    console.log('Submitting order:', orderData);
+    
+    // Show loading state
+    const submitBtn = document.getElementById('submit-order');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Placing Order...';
+    submitBtn.disabled = true;
+    
+    // Simulate API call
+    setTimeout(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        
+        // Show success message
+        showNotification('Order placed successfully!', 'success');
+        
+        // Reset form
+        form.reset();
+        document.getElementById('order-summary').classList.add('hidden');
+        document.getElementById('buy-btn').classList.add('active');
+        document.getElementById('sell-btn').classList.remove('active');
+        document.getElementById('side').value = 'buy';
+        
+        // Reload positions and orders
+        loadPositions();
+        loadOrders();
+    }, 2000);
+}
+
+function loadPositions() {
+    // Simulate loading positions
+    setTimeout(() => {
+        document.getElementById('positions-loading').classList.add('hidden');
+        document.getElementById('positions-empty').classList.remove('hidden');
+    }, 1000);
+}
+
+function loadOrders() {
+    // Simulate loading orders
+    setTimeout(() => {
+        document.getElementById('orders-loading').classList.add('hidden');
+        document.getElementById('orders-empty').classList.remove('hidden');
+    }, 1000);
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'warning' ? 'bg-yellow-500 text-black' :
+        'bg-blue-500 text-white'
+    }`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+</script>
 {% endblock %}

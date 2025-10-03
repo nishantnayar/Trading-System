@@ -14,6 +14,7 @@ from fastapi import FastAPI  # type: ignore
 from fastapi.staticfiles import StaticFiles  # type: ignore
 from fastapi.templating import Jinja2Templates  # type: ignore
 
+from src.web.api.alpaca_routes import router as alpaca_router
 from src.web.api.routes import router
 
 app = FastAPI(
@@ -24,6 +25,7 @@ app = FastAPI(
 
 # Include API routes
 app.include_router(router)
+app.include_router(alpaca_router)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="src/web/static"), name="static")
