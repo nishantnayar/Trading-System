@@ -106,7 +106,9 @@ def run_web_api_tests() -> bool:
         "--tb=short",
         "--maxfail=50",  # Allow many failures
     ]
-    return run_command(cmd, "Web API Tests (expected failures until endpoints implemented)")
+    return run_command(
+        cmd, "Web API Tests (expected failures until endpoints implemented)"
+    )
 
 
 def check_test_environment() -> bool:
