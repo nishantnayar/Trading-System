@@ -7,6 +7,7 @@ pytest-xdist>=3.0.0
 
 # Web Framework (for API tests)
 fastapi>=0.100.0
+httpx>=0.24.0
 
 # Database Testing
 pytest-postgresql>=5.0.0
