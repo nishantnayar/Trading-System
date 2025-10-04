@@ -50,38 +50,89 @@
   --error-900: #7f1d1d;
 }
 
-/* Base Card Component */
+/* Base Button Styles */
+.tailmin-btn {
+  @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200;
+}
+
+.tailmin-btn:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* Button Variants */
+.tailmin-btn-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+}
+
+.tailmin-btn-secondary {
+  @apply bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500;
+}
+
+.tailmin-btn-success {
+  @apply bg-green-600 text-white hover:bg-green-700 focus:ring-green-500;
+}
+
+.tailmin-btn-error {
+  @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+}
+
+.tailmin-btn-warning {
+  @apply bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500;
+}
+
+/* Input Styles */
+.tailmin-input {
+  @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors duration-200;
+}
+
+.tailmin-input:focus {
+  @apply ring-2 ring-blue-500 border-blue-500;
+}
+
+/* Card Components */
 .tailmin-card {
-  @apply bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden;
+  @apply bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 transition-all duration-200;
+}
+
+.tailmin-card:hover {
+  @apply shadow-md;
 }
 
 .tailmin-card-header {
-  @apply px-6 py-4 border-b border-gray-100;
+  @apply px-4 py-5 sm:px-6 border-b border-gray-200 bg-gray-50;
 }
 
 .tailmin-card-body {
-  @apply px-6 py-4;
+  @apply px-4 py-5 sm:p-6;
 }
 
 .tailmin-card-footer {
-  @apply px-6 py-4 border-t border-gray-100 bg-gray-50;
+  @apply px-4 py-3 sm:px-6 border-t border-gray-200 bg-gray-50;
 }
 
-/* Stat Cards */
-.tailmin-stat-card {
-  @apply bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1;
+/* Stat Components */
+.tailmin-stat {
+  @apply bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 transition-all duration-200;
+}
+
+.tailmin-stat:hover {
+  @apply shadow-md transform -translate-y-1;
+}
+
+.tailmin-stat-header {
+  @apply px-4 py-5 sm:px-6;
 }
 
 .tailmin-stat-value {
-  @apply text-2xl font-bold text-gray-900;
+  @apply text-3xl font-bold text-gray-900;
 }
 
 .tailmin-stat-label {
-  @apply text-sm text-gray-600 font-medium;
+  @apply text-sm font-medium text-gray-500 truncate;
 }
 
 .tailmin-stat-change {
-  @apply text-sm font-medium mt-1;
+  @apply text-sm font-medium flex items-center;
 }
 
 .tailmin-stat-change-positive {
@@ -93,41 +144,96 @@
 }
 
 .tailmin-stat-change-neutral {
-  @apply text-gray-600;
+  @apply text-gray-500;
 }
 
-/* Buttons */
-.tailmin-btn {
-  @apply inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+/* Navigation Components */
+.tailmin-nav {
+  @apply bg-white shadow-sm border-b border-gray-200;
 }
 
-.tailmin-btn-primary {
-  @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-sm hover:shadow-md;
+.tailmin-nav-item {
+  @apply px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200;
 }
 
-.tailmin-btn-secondary {
-  @apply bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500 shadow-sm hover:shadow-md;
+.tailmin-nav-item:hover {
+  @apply bg-gray-100 text-gray-900;
 }
 
-.tailmin-btn-success {
-  @apply bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 shadow-sm hover:shadow-md;
+.tailmin-nav-item-active {
+  @apply bg-blue-100 text-blue-700;
 }
 
-.tailmin-btn-warning {
-  @apply bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500 shadow-sm hover:shadow-md;
+/* Form Components */
+.tailmin-form-group {
+  @apply mb-4;
 }
 
-.tailmin-btn-error {
-  @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm hover:shadow-md;
+.tailmin-form-label {
+  @apply block text-sm font-medium text-gray-700 mb-1;
 }
 
-.tailmin-btn-outline {
-  @apply border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-blue-500;
+.tailmin-form-error {
+  @apply mt-1 text-sm text-red-600;
 }
 
-/* Badges */
+.tailmin-form-help {
+  @apply mt-1 text-sm text-gray-500;
+}
+
+/* Alert Components */
+.tailmin-alert {
+  @apply p-4 rounded-md border;
+}
+
+.tailmin-alert-success {
+  @apply bg-green-50 border-green-200 text-green-800;
+}
+
+.tailmin-alert-error {
+  @apply bg-red-50 border-red-200 text-red-800;
+}
+
+.tailmin-alert-warning {
+  @apply bg-yellow-50 border-yellow-200 text-yellow-800;
+}
+
+.tailmin-alert-info {
+  @apply bg-blue-50 border-blue-200 text-blue-800;
+}
+
+/* Table Components */
+.tailmin-table {
+  @apply min-w-full divide-y divide-gray-200;
+}
+
+.tailmin-table-header {
+  @apply bg-gray-50;
+}
+
+.tailmin-table-header-cell {
+  @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+}
+
+.tailmin-table-body {
+  @apply bg-white divide-y divide-gray-200;
+}
+
+.tailmin-table-row {
+  @apply hover:bg-gray-50 transition-colors duration-150;
+}
+
+.tailmin-table-cell {
+  @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+}
+
+/* Badge Components */
 .tailmin-badge {
   @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.tailmin-badge-primary {
+  @apply bg-blue-100 text-blue-800;
 }
 
 .tailmin-badge-success {
@@ -142,209 +248,151 @@
   @apply bg-red-100 text-red-800;
 }
 
-.tailmin-badge-info {
-  @apply bg-blue-100 text-blue-800;
-}
-
 .tailmin-badge-gray {
   @apply bg-gray-100 text-gray-800;
 }
 
-/* Alerts */
-.tailmin-alert {
-  @apply rounded-lg p-4 border;
+/* Progress Components */
+.tailmin-progress {
+  @apply w-full bg-gray-200 rounded-full h-2;
 }
 
-.tailmin-alert-success {
-  @apply bg-green-50 border-green-200 text-green-800;
+.tailmin-progress-bar {
+  @apply bg-blue-600 h-2 rounded-full transition-all duration-300;
 }
 
-.tailmin-alert-warning {
-  @apply bg-yellow-50 border-yellow-200 text-yellow-800;
+/* Modal Components */
+.tailmin-modal-overlay {
+  @apply fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50;
 }
 
-.tailmin-alert-error {
-  @apply bg-red-50 border-red-200 text-red-800;
+.tailmin-modal {
+  @apply relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white;
 }
 
-.tailmin-alert-info {
-  @apply bg-blue-50 border-blue-200 text-blue-800;
+.tailmin-modal-header {
+  @apply flex justify-between items-center pb-3 border-b;
 }
 
-/* Tables */
-.tailmin-table {
-  @apply min-w-full divide-y divide-gray-200;
+.tailmin-modal-title {
+  @apply text-lg font-semibold text-gray-900;
 }
 
-.tailmin-table thead {
-  @apply bg-gray-50;
+.tailmin-modal-close {
+  @apply text-gray-400 hover:text-gray-600 cursor-pointer;
 }
 
-.tailmin-table th {
-  @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+.tailmin-modal-body {
+  @apply py-4;
 }
 
-.tailmin-table td {
-  @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+.tailmin-modal-footer {
+  @apply flex justify-end space-x-2 pt-3 border-t;
 }
 
-.tailmin-table tbody tr:nth-child(even) {
-  @apply bg-gray-50;
+/* Responsive Grid System */
+.tailmin-grid {
+  @apply grid grid-cols-1 gap-4;
 }
 
-.tailmin-table tbody tr:hover {
-  @apply bg-blue-50;
+@screen sm {
+  .tailmin-grid {
+    @apply grid-cols-2 gap-4;
+  }
 }
 
-/* Form Elements */
-.tailmin-input {
-  @apply block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+@screen md {
+  .tailmin-grid {
+    @apply grid-cols-3 gap-6;
+  }
 }
 
-.tailmin-select {
-  @apply block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+@screen lg {
+  .tailmin-grid {
+    @apply grid-cols-4 gap-6;
+  }
 }
 
-.tailmin-textarea {
-  @apply block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+@screen xl {
+  .tailmin-grid {
+    @apply grid-cols-5 gap-6;
+  }
 }
 
-/* Trading Specific Components */
-.trading-card {
-  @apply bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300;
+/* Animation Utilities */
+.tailmin-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
 }
 
-.price-positive {
-  @apply text-green-600 font-semibold;
+.tailmin-slide-up {
+  animation: slideUp 0.3s ease-out;
 }
 
-.price-negative {
-  @apply text-red-600 font-semibold;
+.tailmin-bounce-in {
+  animation: bounceIn 0.5s ease-out;
 }
 
-.price-neutral {
-  @apply text-gray-600 font-semibold;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* Chart Container */
-.chart-container {
-  @apply bg-white rounded-xl shadow-lg border border-gray-100 p-6;
-  height: 400px;
-}
-
-/* Loading States */
-.loading-skeleton {
-  @apply animate-pulse bg-gray-200 rounded;
-}
-
-.loading-spinner {
-  @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
-}
-
-/* Animations */
-@keyframes fadeInUp {
-  from {
+@keyframes slideUp {
+  from { 
     opacity: 0;
     transform: translateY(20px);
   }
-  to {
+  to { 
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.fade-in-up {
-  animation: fadeInUp 0.5s ease-out;
-}
-
-@keyframes slideInRight {
-  from {
+@keyframes bounceIn {
+  0% {
     opacity: 0;
-    transform: translateX(20px);
+    transform: scale(0.3);
   }
-  to {
+  50% {
     opacity: 1;
-    transform: translateX(0);
+    transform: scale(1.05);
   }
-}
-
-.slide-in-right {
-  animation: slideInRight 0.3s ease-out;
-}
-
-
-/* Responsive Utilities */
-@media (max-width: 640px) {
-  .tailmin-card {
-    @apply mx-2;
+  70% {
+    transform: scale(0.9);
   }
-  
-  .tailmin-stat-card {
-    @apply p-4;
-  }
-  
-  .tailmin-table {
-    @apply text-xs;
-  }
-  
-  .tailmin-table th,
-  .tailmin-table td {
-    @apply px-2 py-2;
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
 /* Custom Scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
+.tailmin-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
+.tailmin-scrollbar::-webkit-scrollbar-track {
   @apply bg-gray-100 rounded-full;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full;
+.tailmin-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded-full;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
+.tailmin-scrollbar::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
 }
 
-/* Trading Grid Layout */
-.trading-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+/* Focus States */
+.tailmin-focus {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
 }
 
-@media (max-width: 768px) {
-  .trading-grid {
-    grid-template-columns: 1fr;
-  }
+/* Loading States */
+.tailmin-loading {
+  @apply animate-pulse;
 }
 
-/* Status Indicators */
-.status-online {
-  @apply w-2 h-2 bg-green-400 rounded-full animate-pulse;
-}
-
-.status-offline {
-  @apply w-2 h-2 bg-red-400 rounded-full;
-}
-
-.status-warning {
-  @apply w-2 h-2 bg-yellow-400 rounded-full animate-pulse;
-}
-
-/* Portfolio Performance Indicators */
-.performance-positive {
-  @apply text-green-600 bg-green-50 border-green-200;
-}
-
-.performance-negative {
-  @apply text-red-600 bg-red-50 border-red-200;
-}
-
-.performance-neutral {
-  @apply text-gray-600 bg-gray-50 border-gray-200;
+.tailmin-spinner {
+  @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
 }

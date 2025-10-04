@@ -6,34 +6,66 @@
 <!-- AG Grid CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+    /* Professional Dashboard Enhancements */
+    .dashboard-container {
+        background: linear-gradient(to bottom right, #f8fafc, #eff6ff);
+        min-height: 100vh;
+        padding: 1rem;
+    }
+    
     .chart-container {
         position: relative;
         height: 300px;
         width: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     }
+    
     .mini-chart {
         height: 60px;
         width: 100%;
     }
+    
     .status-indicator {
         display: inline-block;
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
         margin-right: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        animation: pulse-glow 2s infinite;
     }
-    .status-online { background-color: #10b981; }
-    .status-offline { background-color: #ef4444; }
-    .status-pending { background-color: #f59e0b; }
+    
+    .status-online { 
+        background-color: #10b981;
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+    }
+    .status-offline { 
+        background-color: #ef4444;
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    }
+    .status-pending { 
+        background-color: #f59e0b;
+        box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+    }
     
     .portfolio-metric {
         transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     }
+    
     .portfolio-metric:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
     }
     
     .real-time-update {
@@ -45,35 +77,328 @@
         50% { opacity: 0.7; }
     }
     
-    /* AG Grid custom styling */
-    .ag-theme-alpine {
-        --ag-header-background-color: #f8fafc;
-        --ag-header-foreground-color: #1f2937;
-        --ag-border-color: #e5e7eb;
-        --ag-row-hover-color: #f3f4f6;
-        --ag-selected-row-background-color: #dbeafe;
-        --ag-font-size: 14px;
-        --ag-font-family: 'Inter', sans-serif;
+    @keyframes pulse-glow {
+        0%, 100% { 
+            opacity: 1;
+            transform: scale(1);
+        }
+        50% { 
+            opacity: 0.8;
+            transform: scale(1.1);
+        }
     }
     
-    .ag-grid-container {
+    .dashboard-header {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .stat-label {
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.875rem;
+    }
+    
+    .stat-change {
+        display: flex;
+        align-items: center;
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .stat-change.positive {
+        color: #10b981;
+    }
+    
+    .stat-change.negative {
+        color: #ef4444;
+    }
+    
+    .stat-change.neutral {
+        color: #6b7280;
+    }
+    
+    .tables-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .table-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .table-header {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .table-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .refresh-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .refresh-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+    }
+    
+    .table-content {
+        padding: 1.5rem;
+        min-height: 400px;
+    }
+    
+    /* Enhanced AG Grid Styling */
+    .ag-theme-alpine {
         height: 400px;
         width: 100%;
-        margin-top: 1rem;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     }
     
-    .trading-grid {
-        height: 350px;
+    .ag-theme-alpine .ag-root-wrapper {
+        border: none;
+        border-radius: 12px;
     }
     
-    .positions-grid {
-        height: 300px;
+    .ag-theme-alpine .ag-header {
+        background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+        border-bottom: 2px solid #e2e8f0;
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    .ag-theme-alpine .ag-header-cell-label {
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.75rem;
+    }
+    
+    .ag-theme-alpine .ag-row {
+        border-bottom: 1px solid #f1f5f9;
+        transition: all 0.2s ease;
+    }
+    
+    .ag-theme-alpine .ag-row:hover {
+        background-color: #f8fafc;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .ag-theme-alpine .ag-row-selected {
+        background-color: #dbeafe;
+        border-left: 4px solid #3b82f6;
+    }
+    
+    .ag-theme-alpine .ag-cell {
+        border-right: 1px solid #f1f5f9;
+        padding: 12px 16px;
+        font-size: 0.875rem;
+    }
+    
+    /* Loading States */
+    .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem;
+        color: #6b7280;
+    }
+    
+    .loading-spinner {
+        width: 2rem;
+        height: 2rem;
+        border: 3px solid #e5e7eb;
+        border-top: 3px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1rem;
+    }
+    
+    .loading-text {
+        font-size: 1rem;
+        font-weight: 500;
+    }
+    
+    /* Empty States */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem;
+        color: #9ca3af;
+        text-align: center;
+    }
+    
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .empty-text {
+        font-size: 1.125rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .empty-subtext {
+        font-size: 0.875rem;
+        opacity: 0.7;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 0.5rem;
+        }
+        
+        .dashboard-header {
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .tables-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+        }
+        
+        .table-header {
+            padding: 1rem;
+        }
+        
+        .table-content {
+            padding: 1rem;
+        }
+    }
+    
+    /* Animations */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .fade-in-up {
+        animation: fadeInUp 0.6s ease-out;
+    }
+    
+    /* Performance Indicators */
+    .performance-indicator {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #374151;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+    }
+    
+    .performance-indicator.connected {
+        color: #10b981;
+    }
+    
+    .performance-indicator.disconnected {
+        color: #ef4444;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="dashboard-container">
     <!-- Dashboard Header -->
     <div class="tailmin-card">
         <div class="tailmin-card-header">
@@ -190,14 +515,14 @@
     <!-- Current Positions -->
     <div class="tailmin-card">
         <div class="tailmin-card-header">
-            <div class="flex justify-between items-center">
+                <div class="flex justify-between items-center">
                 <h2 class="text-lg font-semibold text-gray-900">Current Positions</h2>
                 <button id="refresh-positions-btn" class="tailmin-btn tailmin-btn-secondary text-sm">
                     <i class="fas fa-sync-alt mr-2"></i>
-                    Refresh
-                </button>
-            </div>
+                        Refresh
+                    </button>
         </div>
+    </div>
         <div class="tailmin-card-body">
             <!-- Loading State -->
             <div id="positions-loading" class="flex items-center justify-center py-8">
@@ -208,18 +533,18 @@
             </div>
 
             <!-- Empty State -->
-            <div id="positions-empty" class="hidden text-center py-8 text-gray-500">
+                <div id="positions-empty" class="hidden text-center py-8 text-gray-500">
                 <i class="fas fa-chart-line text-4xl mb-4"></i>
                 <p class="text-lg font-medium">No Positions</p>
                 <p class="text-sm">Your current positions will appear here</p>
-            </div>
+                </div>
 
             <!-- Positions Table -->
             <div id="positions-content" class="hidden">
                 <div id="positions-grid" class="ag-theme-alpine positions-grid"></div>
             </div>
+            </div>
         </div>
-    </div>
 
     <!-- Recent Trades -->
     <div class="tailmin-card">
@@ -227,8 +552,8 @@
             <h2 class="text-lg font-semibold text-gray-900">Recent Trades</h2>
             <button id="refresh-trades-btn" class="tailmin-btn tailmin-btn-secondary text-sm">
                 <i class="fas fa-sync-alt mr-2"></i>
-                Refresh
-            </button>
+                        Refresh
+                    </button>
         </div>
         <div class="tailmin-card-body">
             <!-- Loading State -->
@@ -316,10 +641,6 @@ const ALPACA_CONFIG = {
     secretKey: '',
     isPaper: true
 };
-
-// AG Grid instances
-let positionsGrid = null;
-let tradesGrid = null;
 
 function initializeAGGrids() {
     console.log('Initializing AG Grids...');
@@ -895,8 +1216,6 @@ function initializePortfolioChart() {
     });
 }
 
-// Removed duplicate loadDashboardData function - using the async version above
-
 function setupRefreshButton() {
     const refreshBtn = document.getElementById('refresh-btn');
     refreshBtn.addEventListener('click', function() {
@@ -989,6 +1308,37 @@ function exportData() {
 function openSettings() {
     // Open settings modal or navigate to settings page
     console.log('Opening settings...');
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'warning' ? 'bg-yellow-500 text-black' :
+        'bg-blue-500 text-white'
+    }`;
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation' : 'info'}-circle mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Auto remove after 4 seconds
+    setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 4000);
 }
 </script>
 {% endblock %}
