@@ -425,7 +425,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Happy Trading! 📈**
 
-Made with ❤️ by [Nishant Nayar](https://github.com/nishantnayar)
+Developed by [Nishant Nayar](https://github.com/nishantnayar)
 
 [![GitHub](https://img.shields.io/badge/GitHub-nishantnayar-black?style=flat-square&logo=github)](https://github.com/nishantnayar)
 [![Email](https://img.shields.io/badge/Email-nishant.nayar@hotmail.com-blue?style=flat-square&logo=mail)](mailto:nishant.nayar@hotmail.com)
