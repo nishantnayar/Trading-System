@@ -41,6 +41,15 @@ class Settings(BaseSettings):
         default="https://data.alpaca.markets", alias="ALPACA_DATA_URL"
     )
 
+    # Polygon.io API Configuration
+    polygon_api_key: str = Field(default="", alias="POLYGON_API_KEY")
+    polygon_base_url: str = Field(
+        default="https://api.polygon.io", alias="POLYGON_BASE_URL"
+    )
+    polygon_data_delay_minutes: int = Field(
+        default=15, alias="POLYGON_DATA_DELAY_MINUTES"
+    )
+
     # Prefect Configuration
     prefect_api_url: str = Field(
         default="http://localhost:4200", alias="PREFECT_API_URL"

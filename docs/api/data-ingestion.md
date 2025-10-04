@@ -9,8 +9,14 @@ The Data Ingestion Service is a critical component of the trading system respons
 - **Alpaca Markets** (Real-time trading data and account information)
 
 **Hybrid Strategy:**
-- **Polygon.io**: Historical data, backtesting, strategy development
+- **Polygon.io**: Historical data, backtesting, strategy development, symbol management
 - **Alpaca**: Real-time trading, position management, order execution
+
+**Symbol Management:**
+- **Database-driven symbol tracking** with automatic delisting detection
+- **100 initial symbols** configured for data collection
+- **Active/delisted status tracking** to avoid unnecessary API calls
+- **Data ingestion status monitoring** per symbol and date
 
 **Future Data Sources:**
 - Alpha Vantage (Real-time data alternative)
@@ -287,6 +293,38 @@ class PolygonRateLimiter:
 -- Data Ingestion Schema
 CREATE SCHEMA data_ingestion;
 
+-- Symbols Management Table
+CREATE TABLE data_ingestion.symbols (
+    symbol VARCHAR(10) PRIMARY KEY,
+    name VARCHAR(255),
+    exchange VARCHAR(50),
+    sector VARCHAR(100),
+    market_cap BIGINT,
+    status VARCHAR(20) DEFAULT 'active', -- active, delisted, suspended
+    added_date TIMESTAMP DEFAULT NOW(),
+    last_updated TIMESTAMP DEFAULT NOW()
+);
+
+-- Delisted Symbols Tracking
+CREATE TABLE data_ingestion.delisted_symbols (
+    symbol VARCHAR(10) PRIMARY KEY,
+    delist_date DATE,
+    last_price DECIMAL(10,2),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Data Ingestion Status Tracking
+CREATE TABLE data_ingestion.symbol_data_status (
+    symbol VARCHAR(10),
+    date DATE,
+    data_source VARCHAR(50), -- 'polygon', 'alpaca'
+    status VARCHAR(20), -- 'success', 'failed', 'no_data'
+    error_message TEXT,
+    last_attempt TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (symbol, date, data_source)
+);
+
 -- Market Data Table
 CREATE TABLE data_ingestion.market_data (
     id SERIAL PRIMARY KEY,
@@ -323,6 +361,8 @@ CREATE TABLE data_ingestion.provider_config (
 );
 
 -- Create indexes
+CREATE INDEX idx_symbols_status ON data_ingestion.symbols(status);
+CREATE INDEX idx_symbol_data_status_symbol_date ON data_ingestion.symbol_data_status(symbol, date);
 CREATE INDEX idx_market_data_symbol_timestamp ON data_ingestion.market_data(symbol, timestamp);
 CREATE INDEX idx_market_data_timestamp ON data_ingestion.market_data(timestamp);
 CREATE INDEX idx_data_quality_logs_timestamp ON data_ingestion.data_quality_logs(timestamp);
@@ -746,10 +786,21 @@ async def data_ingestion_health_check():
 
 3. **Run Database Migrations**
    ```bash
+   # Create database schemas and tables
    python scripts/setup_databases.py
+   
+   # Create symbol management tables
+   python scripts/05_create_symbol_tables.sql
    ```
 
-4. **Start Data Ingestion**
+4. **Populate Initial Symbols**
+   ```bash
+   # The system is configured with 100 initial symbols
+   # Symbol management is handled by the SymbolService class
+   # Automatic delisting detection is enabled
+   ```
+
+5. **Start Data Ingestion**
    ```bash
    # Start Prefect server
    prefect server start
@@ -761,11 +812,20 @@ async def data_ingestion_health_check():
    prefect deployment create alpaca_trading_flows.py
    ```
 
-5. **Monitor Progress**
+6. **Monitor Progress**
    - **Historical Data**: Check Prefect UI for Polygon.io backfill flows
    - **Real-Time Trading**: Monitor Alpaca account and order flows
+   - **Symbol Management**: Track active/delisted symbols in database
    - **Data Quality**: Review logs for both data sources
    - **Database**: Verify data in PostgreSQL for both sources
+
+### Symbol Management Features
+
+- **Automatic Delisting Detection**: System automatically detects and marks delisted symbols
+- **Data Ingestion Status Tracking**: Monitor success/failure of data collection per symbol
+- **100 Initial Symbols**: Pre-configured symbol universe for data collection
+- **Database-Driven Management**: All symbol operations go through the database
+- **No Delisting Reason Tracking**: Simplified approach focusing on active/inactive status
 
 ## Troubleshooting
 

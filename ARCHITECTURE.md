@@ -45,24 +45,31 @@ A production-grade algorithmic trading system designed for local deployment, foc
 ## Microservices Architecture
 
 ### 1. Data Ingestion Service
-**Purpose**: Collect market data from Alpaca API
+**Purpose**: Collect market data from multiple sources (Polygon.io + Alpaca)
 
 **Components**:
-- Alpaca API client
+- Polygon.io client (historical data)
+- Alpaca API client (real-time trading)
+- Symbol management system
 - Data validation (Pydantic models)
-- Prefect flows for hourly ingestion
+- Prefect flows for data ingestion
 - Data quality checks
 - Error handling and retry logic
 
 **Responsibilities**:
-- Fetch hourly market data (OHLCV)
+- Fetch historical market data from Polygon.io (end-of-day)
+- Fetch real-time trading data from Alpaca
+- Manage symbol universe (active/delisted tracking)
 - Validate data integrity
 - Store raw data in PostgreSQL
 - Cache frequently accessed data in Redis
 - Publish data events to message queue
+- Automatic delisting detection
 
 **Prefect Flows**:
-- `fetch_market_data`: Hourly data collection
+- `fetch_historical_data`: Polygon.io end-of-day data collection
+- `fetch_realtime_data`: Alpaca real-time trading data
+- `detect_delisted_symbols`: Automatic delisting detection
 - `validate_data_quality`: Data validation pipeline
 - `archive_old_data`: Data lifecycle management
 
@@ -203,6 +210,9 @@ A production-grade algorithmic trading system designed for local deployment, foc
 ```sql
 -- Data Ingestion Schema
 data_ingestion.market_data (symbol, timestamp, open, high, low, close, volume)
+data_ingestion.symbols (symbol, name, exchange, sector, market_cap, status)
+data_ingestion.delisted_symbols (symbol, delist_date, last_price, notes)
+data_ingestion.symbol_data_status (symbol, date, data_source, status, error_message)
 data_ingestion.data_quality_logs (symbol, check_type, status, message)
 
 -- Execution Schema
@@ -382,10 +392,15 @@ class Settings(BaseSettings):
     postgres_url: str
     redis_url: str
     
-    # Alpaca API
+    # Alpaca API (Real-time Trading)
     alpaca_api_key: str
     alpaca_secret_key: str
     alpaca_base_url: str = "https://paper-api.alpaca.markets"
+    
+    # Polygon.io API (Historical Data)
+    polygon_api_key: str
+    polygon_base_url: str = "https://api.polygon.io"
+    polygon_data_delay_minutes: int = 15
     
     # Prefect
     prefect_api_url: str = "http://localhost:4200"
