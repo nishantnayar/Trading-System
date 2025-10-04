@@ -1,0 +1,98 @@
+{# Card Component Macros
+Usage:
+{% from 'components/card_macro.html' import stat_card, feature_card, info_card %}
+
+{{ stat_card(
+    icon='fas fa-wallet',
+    title='Total Portfolio Value',
+    value='$0.00',
+    description='Loading...',
+    color='blue',
+    value_id='portfolio-value',
+    description_id='portfolio-change-text'
+) }}
+
+{{ feature_card(
+    icon='fas fa-database',
+    title='Data Ingestion',
+    description='Real-time market data processing and storage',
+    color='green'
+) }}
+
+{{ info_card(
+    title='System Status',
+    content='All systems operational',
+    color='green'
+) }}
+#}
+
+{# Color mapping for gradients and text colors #}
+{% set color_config = {
+    'blue': {'gradient': 'from-blue-500 to-blue-600', 'text': 'text-blue-600'},
+    'green': {'gradient': 'from-green-500 to-green-600', 'text': 'text-green-600'},
+    'red': {'gradient': 'from-red-500 to-red-600', 'text': 'text-red-600'},
+    'yellow': {'gradient': 'from-yellow-500 to-orange-500', 'text': 'text-orange-600'},
+    'purple': {'gradient': 'from-purple-500 to-purple-600', 'text': 'text-purple-600'},
+    'indigo': {'gradient': 'from-indigo-500 to-indigo-600', 'text': 'text-indigo-600'},
+    'pink': {'gradient': 'from-pink-500 to-pink-600', 'text': 'text-pink-600'},
+    'gray': {'gradient': 'from-gray-500 to-gray-600', 'text': 'text-gray-600'}
+} %}
+
+{# Stat Card - for displaying metrics with values #}
+{% macro stat_card(icon='fas fa-chart-line', title='Card Title', value='0', description='', color='blue', value_id=None, description_id=None, extra_classes='') %}
+<div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-6 border border-gray-100 {{ extra_classes }}">
+    <div class="w-12 h-12 bg-gradient-to-r {{ color_config[color]['gradient'] }} rounded-lg flex items-center justify-center mb-4">
+        <i class="{{ icon }} text-white text-xl"></i>
+    </div>
+    <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ title }}</h3>
+    {% if value_id %}
+        <div class="text-2xl font-bold {{ color_config[color]['text'] }} mb-1" id="{{ value_id }}">{{ value }}</div>
+    {% else %}
+        <div class="text-2xl font-bold {{ color_config[color]['text'] }} mb-1">{{ value }}</div>
+    {% endif %}
+    {% if description_id %}
+        <div class="text-sm text-gray-600" id="{{ description_id }}">{{ description }}</div>
+    {% else %}
+        <div class="text-sm text-gray-600">{{ description }}</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# Feature Card - for displaying features without values #}
+{% macro feature_card(icon='fas fa-chart-line', title='Feature Title', description='Feature description', color='blue', extra_classes='') %}
+<div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-6 border border-gray-100 {{ extra_classes }}">
+    <div class="w-12 h-12 bg-gradient-to-r {{ color_config[color]['gradient'] }} rounded-lg flex items-center justify-center mb-4">
+        <i class="{{ icon }} text-white text-xl"></i>
+    </div>
+    <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ title }}</h3>
+    <p class="text-gray-600 text-sm">{{ description }}</p>
+</div>
+{% endmacro %}
+
+{# Info Card - for displaying information without icons #}
+{% macro info_card(title='Info Title', content='Information content', color='blue', extra_classes='') %}
+<div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-6 border border-gray-100 {{ extra_classes }}">
+    <h3 class="text-lg font-semibold {{ color_config[color]['text'] }} mb-3">{{ title }}</h3>
+    <div class="text-gray-600">{{ content | safe }}</div>
+</div>
+{% endmacro %}
+
+{# Large Stat Card - for prominent metrics #}
+{% macro large_stat_card(icon='fas fa-chart-line', title='Metric Title', value='0', subtitle='', color='blue', value_id=None, extra_classes='') %}
+<div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-8 border border-gray-100 {{ extra_classes }}">
+    <div class="flex items-center justify-between mb-4">
+        <div class="w-16 h-16 bg-gradient-to-r {{ color_config[color]['gradient'] }} rounded-xl flex items-center justify-center">
+            <i class="{{ icon }} text-white text-2xl"></i>
+        </div>
+        {% if subtitle %}
+            <span class="text-sm text-gray-500">{{ subtitle }}</span>
+        {% endif %}
+    </div>
+    <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ title }}</h3>
+    {% if value_id %}
+        <div class="text-4xl font-bold {{ color_config[color]['text'] }}" id="{{ value_id }}">{{ value }}</div>
+    {% else %}
+        <div class="text-4xl font-bold {{ color_config[color]['text'] }}">{{ value }}</div>
+    {% endif %}
+</div>
+{% endmacro %}

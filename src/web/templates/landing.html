@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'components/card_macro.html' import feature_card %}
 
 {% block content %}
         <!-- Hero Section -->
@@ -22,41 +23,33 @@
 
         <!-- Features Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <!-- Data Ingestion -->
-            <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-6 border border-gray-100">
-                <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center mb-4">
-                    <i class="fas fa-database text-white text-xl"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Data Ingestion</h3>
-                <p class="text-gray-600 text-sm">Real-time market data processing and storage</p>
-            </div>
+            {{ feature_card(
+                icon='fas fa-database',
+                title='Data Ingestion',
+                description='Real-time market data processing and storage',
+                color='green'
+            ) }}
 
-            <!-- Strategy Engine -->
-            <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-6 border border-gray-100">
-                <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mb-4">
-                    <i class="fas fa-cogs text-white text-xl"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Strategy Engine</h3>
-                <p class="text-gray-600 text-sm">Advanced algorithmic trading strategies</p>
-            </div>
+            {{ feature_card(
+                icon='fas fa-cogs',
+                title='Strategy Engine',
+                description='Advanced algorithmic trading strategies',
+                color='blue'
+            ) }}
 
-            <!-- Risk Management -->
-            <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-6 border border-gray-100">
-                <div class="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-lg flex items-center justify-center mb-4">
-                    <i class="fas fa-shield-alt text-white text-xl"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Risk Management</h3>
-                <p class="text-gray-600 text-sm">Portfolio protection and risk controls</p>
-            </div>
+            {{ feature_card(
+                icon='fas fa-shield-alt',
+                title='Risk Management',
+                description='Portfolio protection and risk controls',
+                color='red'
+            ) }}
 
-            <!-- Execution -->
-            <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-6 border border-gray-100">
-                <div class="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center mb-4">
-                    <i class="fas fa-bolt text-white text-xl"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Execution</h3>
-                <p class="text-gray-600 text-sm">High-speed trade execution engine</p>
-            </div>
+            {{ feature_card(
+                icon='fas fa-bolt',
+                title='Execution',
+                description='High-speed trade execution engine',
+                color='yellow'
+            ) }}
         </div>
 
         <!-- System Overview -->
