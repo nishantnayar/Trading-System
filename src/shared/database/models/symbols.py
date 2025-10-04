@@ -40,9 +40,14 @@ class Symbol(Base):
     status = Column(String(20), default="active", nullable=False)
 
     # Timestamps
-    added_date = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    added_date = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
     last_updated = Column(
-        DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
 
     def __repr__(self) -> str:
@@ -74,7 +79,9 @@ class DelistedSymbol(Base):
     notes = Column(Text, nullable=True)
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
 
     def __repr__(self) -> str:
         return f"<DelistedSymbol(symbol='{self.symbol}', delist_date='{self.delist_date}')>"
@@ -96,7 +103,9 @@ class SymbolDataStatus(Base):
     error_message = Column(Text, nullable=True)
 
     # Timestamps
-    last_attempt = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    last_attempt = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
 
     def __repr__(self) -> str:
         return f"<SymbolDataStatus(symbol='{self.symbol}', date='{self.date}', status='{self.status}')>"

@@ -167,7 +167,8 @@ class PolygonClient:
                 share_class_figi=details.share_class_figi,
                 last_updated_utc=(
                     parse_datetime(str(getattr(details, "last_updated_utc", None)))
-                    if hasattr(details, "last_updated_utc") and getattr(details, "last_updated_utc", None)
+                    if hasattr(details, "last_updated_utc")
+                    and getattr(details, "last_updated_utc", None)
                     else None
                 ),
             )
