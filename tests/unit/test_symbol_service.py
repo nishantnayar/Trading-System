@@ -275,55 +275,61 @@ class TestSymbolService:
         """Test updating existing symbol data status"""
         mock_existing = Mock(spec=SymbolDataStatus)
 
-        with patch.object(
-            symbol_service, "get_symbol_data_status", return_value=mock_existing
-        ):
-            with patch(
-                "src.services.data_ingestion.symbols.db_transaction"
-            ) as mock_transaction:
-                mock_session = Mock(spec=Session)
-                mock_transaction.return_value.__enter__.return_value = mock_session
+        with patch(
+            "src.services.data_ingestion.symbols.db_transaction"
+        ) as mock_transaction:
+            mock_session = Mock(spec=Session)
+            mock_result = Mock()
+            mock_result.scalar_one_or_none.return_value = mock_existing
+            mock_session.execute.return_value = mock_result
+            mock_transaction.return_value.__enter__.return_value = mock_session
 
-                result = await symbol_service.update_symbol_data_status(
-                    symbol="AAPL",
-                    date=date.today(),
-                    data_source="polygon",
-                    status="success",
-                    error_message=None,
-                )
+            result = await symbol_service.update_symbol_data_status(
+                symbol="AAPL",
+                date=date.today(),
+                data_source="polygon",
+                status="success",
+                error_message=None,
+            )
 
-                assert result == mock_existing
-                assert mock_existing.status == "success"
-                mock_session.commit.assert_called_once()
-                mock_session.refresh.assert_called_once()
+            assert result == mock_existing
+            assert mock_existing.status == "success"
+            mock_session.commit.assert_called_once()
+            mock_session.refresh.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_update_symbol_data_status_new(self, symbol_service):
         """Test creating new symbol data status"""
-        with patch.object(symbol_service, "get_symbol_data_status", return_value=None):
-            with patch(
-                "src.services.data_ingestion.symbols.db_transaction"
-            ) as mock_transaction:
-                mock_session = Mock(spec=Session)
-                mock_new_status = Mock(spec=SymbolDataStatus)
-                mock_session.add.return_value = mock_new_status
-                mock_transaction.return_value.__enter__.return_value = mock_session
+        with patch(
+            "src.services.data_ingestion.symbols.db_transaction"
+        ) as mock_transaction:
+            mock_session = Mock(spec=Session)
+            mock_result = Mock()
+            mock_result.scalar_one_or_none.return_value = None  # No existing status
+            mock_session.execute.return_value = mock_result
+            mock_transaction.return_value.__enter__.return_value = mock_session
 
-                result = await symbol_service.update_symbol_data_status(
-                    symbol="AAPL",
-                    date=date.today(),
-                    data_source="polygon",
-                    status="success",
-                )
+            # Create a real SymbolDataStatus instance instead of mocking the class
+            from src.shared.database.models.symbols import SymbolDataStatus
 
-                # Check that a new status was created and returned
-                assert result is not None
-                assert hasattr(result, "symbol")
-                assert hasattr(result, "date")
-                assert hasattr(result, "status")
-                mock_session.add.assert_called_once()
-                mock_session.commit.assert_called_once()
-                mock_session.refresh.assert_called_once()
+            test_date = date.today()
+
+            result = await symbol_service.update_symbol_data_status(
+                symbol="AAPL",
+                date=test_date,
+                data_source="polygon",
+                status="success",
+            )
+
+            # Check that a new status was created and returned
+            assert isinstance(result, SymbolDataStatus)
+            assert result.symbol == "AAPL"
+            assert result.date == test_date
+            assert result.data_source == "polygon"
+            assert result.status == "success"
+            mock_session.add.assert_called_once()
+            mock_session.commit.assert_called_once()
+            mock_session.refresh.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_symbols_needing_data(self, symbol_service):
