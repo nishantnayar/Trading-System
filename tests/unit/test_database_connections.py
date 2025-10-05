@@ -5,7 +5,7 @@ Unit tests for database connections and configuration
 import pytest
 from sqlalchemy import text
 
-from config.database import get_database_config, get_engine, get_prefect_engine
+from src.config.database import get_database_config, get_engine
 
 
 @pytest.mark.unit
@@ -49,12 +49,22 @@ class TestDatabaseConnections:
         assert "Prefect" in url
         assert "localhost" in url
 
-    def test_prefect_async_db_url_generation(self, db_config):
-        """Test Prefect async database URL generation"""
-        url = db_config.prefect_async_db_url
-        assert "postgresql+asyncpg://" in url
-        assert "Prefect" in url
-        assert "localhost" in url
+    def test_get_engine_function(self, db_config):
+        """Test get_engine convenience function"""
+        trading_engine = get_engine("trading")
+        prefect_engine = get_engine("prefect")
+
+        # Test trading engine
+        with trading_engine.connect() as conn:
+            result = conn.execute(text("SELECT current_database()"))
+            db_name = result.fetchone()[0]
+            assert db_config.trading_db_name in db_name
+
+        # Test prefect engine
+        with prefect_engine.connect() as conn:
+            result = conn.execute(text("SELECT current_database()"))
+            db_name = result.fetchone()[0]
+            assert "Prefect" in db_name
 
 
 @pytest.mark.unit

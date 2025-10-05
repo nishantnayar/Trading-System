@@ -3,6 +3,7 @@ Database Model Mixins
 Reusable components for SQLAlchemy models
 """
 
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
@@ -187,8 +188,6 @@ class UUIDMixin:
 
     @declared_attr
     def id(cls) -> "Column[uuid.UUID]":
-        import uuid
-
         from sqlalchemy import Column
         from sqlalchemy.dialects.postgresql import UUID
 
