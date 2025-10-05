@@ -83,13 +83,13 @@ async def example_direct_usage():
 async def example_batch_loading():
     """Example of batch loading multiple symbols"""
     print("\n=== Batch Loading Example ===")
-    
+
     loader = HistoricalDataLoader(batch_size=50, requests_per_minute=2)
-    
+
     # Load data for multiple symbols with error handling
     symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA"]
     print(f"\nLoading daily data for {len(symbols)} symbols...")
-    
+
     for i, symbol in enumerate(symbols, 1):
         try:
             print(f"Loading {symbol} ({i}/{len(symbols)})...")
@@ -100,12 +100,13 @@ async def example_batch_loading():
         except Exception as e:
             print(f"✗ Error loading {symbol} data: {e}")
 
+
 async def example_incremental_loading():
     """Example of incremental loading"""
     print("\n=== Incremental Loading Example ===")
-    
+
     loader = HistoricalDataLoader(batch_size=50, requests_per_minute=2)
-    
+
     # First load - full load
     print("\nFirst load (full): Loading 30 days of data...")
     try:
@@ -115,7 +116,7 @@ async def example_incremental_loading():
         print(f"✓ Full load: {records_count} records loaded")
     except Exception as e:
         print(f"✗ Error in full load: {e}")
-    
+
     # Second load - incremental (should load only new data)
     print("\nSecond load (incremental): Loading only new data...")
     try:
@@ -137,7 +138,7 @@ async def main():
 
     # Run batch loading example
     await example_batch_loading()
-    
+
     # Run incremental loading example
     await example_incremental_loading()
 

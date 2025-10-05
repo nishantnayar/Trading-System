@@ -2,7 +2,7 @@
 """
 Populate delisted_symbols table from existing delisted symbols in symbols table
 
-This script transfers delisted symbols from the main symbols table to the 
+This script transfers delisted symbols from the main symbols table to the
 dedicated delisted_symbols table for better historical tracking.
 """
 
