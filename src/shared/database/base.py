@@ -4,7 +4,9 @@ Provides SQLAlchemy declarative base and session management
 """
 
 from contextlib import contextmanager
-from typing import Generator
+from typing import Any, Callable, Generator, TypeVar
+
+T = TypeVar("T")
 
 from loguru import logger
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError, ProgrammingError
@@ -158,7 +160,7 @@ def get_session() -> Session:
 
 
 # Convenience functions for common operations
-def execute_in_transaction(func, *args, **kwargs):
+def execute_in_transaction(func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
     """
     Execute a function within a database transaction
 
@@ -182,7 +184,7 @@ def execute_in_transaction(func, *args, **kwargs):
         return func(session, *args, **kwargs)
 
 
-def execute_readonly(func, *args, **kwargs):
+def execute_readonly(func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
     """
     Execute a function within a read-only database session
 

@@ -5,7 +5,9 @@ Correlation ID management for tracking related operations
 import threading
 import uuid
 from contextlib import contextmanager
-from typing import Generator, Optional
+from typing import Any, Callable, Generator, Optional, TypeVar
+
+F = TypeVar("F", bound=Callable[..., Any])
 
 # Thread-local storage for correlation IDs
 _correlation_context = threading.local()
@@ -81,7 +83,7 @@ def correlation_context(
             clear_correlation_id()
 
 
-def with_correlation_id(correlation_id: str):
+def with_correlation_id(correlation_id: str) -> Callable[[F], F]:
     """
     Decorator to add correlation ID to function calls
 
@@ -92,12 +94,12 @@ def with_correlation_id(correlation_id: str):
         Decorator function
     """
 
-    def decorator(func):
-        def wrapper(*args, **kwargs):
+    def decorator(func: F) -> F:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             with correlation_context(correlation_id):
                 return func(*args, **kwargs)
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     return decorator
 

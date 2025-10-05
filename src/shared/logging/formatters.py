@@ -152,10 +152,10 @@ def format_for_file(record: LogRecord) -> str:
         str: Formatted log string
     """
     # Use the default Loguru format
-    return record["message"]
+    return str(record["message"])
 
 
-def create_structured_message(message: str, **kwargs) -> str:
+def create_structured_message(message: str, **kwargs: Any) -> str:
     """
     Create structured log message with metadata
 
@@ -182,7 +182,7 @@ def format_performance_log(
     operation: str,
     execution_time_ms: float,
     memory_usage_mb: Optional[float] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> Dict[str, Any]:
     """
     Format performance log entry
@@ -213,7 +213,7 @@ def format_performance_log(
 
 
 def format_trading_log(
-    trade_id: str, symbol: str, side: str, quantity: float, price: float, **kwargs
+    trade_id: str, symbol: str, side: str, quantity: float, price: float, **kwargs: Any
 ) -> Dict[str, Any]:
     """
     Format trading log entry

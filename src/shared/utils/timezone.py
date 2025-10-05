@@ -423,7 +423,7 @@ def format_for_database(dt: datetime) -> datetime:
 
 
 # 5. Logging and Display
-def log_with_timezone(message: str, level: str, tz: Optional[ZoneInfo] = None):
+def log_with_timezone(message: str, level: str, tz: Optional[ZoneInfo] = None) -> None:
     """
     Log message with timezone context
 

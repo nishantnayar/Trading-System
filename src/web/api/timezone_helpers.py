@@ -31,7 +31,7 @@ class TimestampResponse(BaseModel):
     timestamp_trading: str
 
     @classmethod
-    def from_datetime(cls, dt: datetime):
+    def from_datetime(cls, dt: datetime) -> "TimestampResponse":
         """
         Create TimestampResponse from datetime
 

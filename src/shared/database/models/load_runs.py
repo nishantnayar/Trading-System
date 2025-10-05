@@ -91,7 +91,7 @@ class LoadRun(Base):
         last_date = getattr(self, "last_successful_date", None)
         if last_date is None:
             return 999  # Large number if no date
-        return (reference_date - last_date).days
+        return int((reference_date - last_date).days)
 
     def needs_backfill(self, max_gap_days: int = 7) -> bool:
         """Check if this symbol needs backfill due to large gap"""

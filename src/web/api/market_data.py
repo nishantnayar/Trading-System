@@ -50,7 +50,7 @@ class SymbolInfo(BaseModel):
 
 
 @router.get("/stats", response_model=MarketDataStats)
-async def get_market_data_stats():
+async def get_market_data_stats() -> MarketDataStats:
     """Get market data statistics"""
     try:
         with db_transaction() as session:
@@ -63,12 +63,12 @@ async def get_market_data_stats():
             )
 
             # Date range
-            date_range_query = session.execute(
+            date_range_result = session.execute(
                 select(
                     func.min(MarketData.timestamp).label("min_date"),
                     func.max(MarketData.timestamp).label("max_date"),
                 )
-            ).first()
+            ).fetchone()
 
             # Latest update
             latest_update = session.scalar(select(func.max(MarketData.created_at)))
@@ -78,13 +78,13 @@ async def get_market_data_stats():
                 symbols_count=symbols_count or 0,
                 date_range={
                     "min_date": (
-                        date_range_query.min_date.isoformat()
-                        if date_range_query.min_date
+                        date_range_result.min_date.isoformat()
+                        if date_range_result and date_range_result.min_date
                         else None
                     ),
                     "max_date": (
-                        date_range_query.max_date.isoformat()
-                        if date_range_query.max_date
+                        date_range_result.max_date.isoformat()
+                        if date_range_result and date_range_result.max_date
                         else None
                     ),
                 },
@@ -98,7 +98,7 @@ async def get_market_data_stats():
 
 
 @router.get("/symbols", response_model=List[SymbolInfo])
-async def get_available_symbols():
+async def get_available_symbols() -> List[SymbolInfo]:
     """Get list of available symbols with their data counts"""
     try:
         with db_transaction() as session:
@@ -121,10 +121,22 @@ async def get_available_symbols():
                 symbols_data.append(
                     SymbolInfo(
                         symbol=row.symbol,
-                        name=symbol_info.name if symbol_info else None,
-                        exchange=symbol_info.exchange if symbol_info else None,
-                        sector=symbol_info.sector if symbol_info else None,
-                        status=symbol_info.status if symbol_info else "unknown",
+                        name=(
+                            str(symbol_info.name)
+                            if symbol_info and symbol_info.name
+                            else None
+                        ),
+                        exchange=(
+                            str(symbol_info.exchange)
+                            if symbol_info and symbol_info.exchange
+                            else None
+                        ),
+                        sector=(
+                            str(symbol_info.sector)
+                            if symbol_info and symbol_info.sector
+                            else None
+                        ),
+                        status=str(symbol_info.status) if symbol_info else "unknown",
                         record_count=row.record_count,
                     )
                 )
@@ -148,7 +160,7 @@ async def get_market_data(
     end_date: Optional[datetime] = Query(
         default=None, description="End date (ISO format)"
     ),
-):
+) -> List[MarketDataResponse]:
     """Get market data for a specific symbol"""
     try:
         symbol = symbol.upper()
@@ -197,7 +209,7 @@ async def get_market_data(
 
 
 @router.get("/data/{symbol}/latest", response_model=MarketDataResponse)
-async def get_latest_market_data(symbol: str):
+async def get_latest_market_data(symbol: str) -> MarketDataResponse:
     """Get the latest market data for a specific symbol"""
     try:
         symbol = symbol.upper()
@@ -239,7 +251,7 @@ async def get_latest_market_data(symbol: str):
 
 
 @router.get("/data/{symbol}/count")
-async def get_market_data_count(symbol: str):
+async def get_market_data_count(symbol: str) -> dict:
     """Get the count of market data records for a specific symbol"""
     try:
         symbol = symbol.upper()
@@ -258,7 +270,7 @@ async def get_market_data_count(symbol: str):
 
 
 @router.get("/data/{symbol}/ohlc", response_model=dict)
-async def get_ohlc_summary(symbol: str):
+async def get_ohlc_summary(symbol: str) -> dict:
     """Get OHLC summary for a specific symbol"""
     try:
         symbol = symbol.upper()

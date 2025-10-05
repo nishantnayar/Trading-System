@@ -4,9 +4,11 @@ Performance tracking decorators and utilities
 
 import functools
 import time
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, TypeVar
 
-import psutil  # type: ignore
+F = TypeVar("F", bound=Callable[..., Any])
+
+import psutil
 from loguru import logger
 
 from .correlation import get_correlation_context
@@ -14,7 +16,7 @@ from .correlation import get_correlation_context
 
 def log_performance(
     track_memory: bool = False, track_args: bool = False, log_level: str = "INFO"
-) -> Callable:
+) -> Callable[[F], F]:
     """
     Decorator to log function execution time and optionally memory usage
 
@@ -27,9 +29,9 @@ def log_performance(
         Decorator function
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Get function metadata
             func_name = f"{func.__module__}.{func.__name__}"
             start_time = time.time()
@@ -107,7 +109,7 @@ def log_performance(
                 logger.error(f"Performance (ERROR): {func_name}", **error_data)
                 raise
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -124,9 +126,9 @@ def track_execution_time(operation_name: str, log_level: str = "INFO") -> Callab
         Decorator function
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.time()
 
             try:
@@ -167,7 +169,7 @@ def track_execution_time(operation_name: str, log_level: str = "INFO") -> Callab
                 logger.error(f"Execution time (ERROR): {operation_name}", **error_data)
                 raise
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -183,9 +185,9 @@ def log_memory_usage(operation_name: str) -> Callable:
         Decorator function
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             process = psutil.Process()
             memory_before = process.memory_info().rss / 1024 / 1024  # MB
 
@@ -225,7 +227,7 @@ def log_memory_usage(operation_name: str) -> Callable:
                 logger.error(f"Memory usage (ERROR): {operation_name}", **error_data)
                 raise
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -242,9 +244,9 @@ def log_database_query(query_name: str, log_level: str = "DEBUG") -> Callable:
         Decorator function
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.time()
 
             try:
@@ -283,6 +285,6 @@ def log_database_query(query_name: str, log_level: str = "DEBUG") -> Callable:
                 logger.error(f"Database query (ERROR): {query_name}", **error_data)
                 raise
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     return decorator
