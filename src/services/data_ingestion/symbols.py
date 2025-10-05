@@ -176,8 +176,16 @@ class SymbolService:
         symbol = symbol.upper()
 
         with db_transaction() as session:
-            # Check if status already exists
-            existing = await self.get_symbol_data_status(symbol, date, data_source)
+            # Check if status already exists within this session
+            stmt = select(SymbolDataStatus).where(
+                and_(
+                    SymbolDataStatus.symbol == symbol,
+                    SymbolDataStatus.date == date,
+                    SymbolDataStatus.data_source == data_source,
+                )
+            )
+            result = session.execute(stmt)
+            existing = result.scalar_one_or_none()
 
             if existing:
                 # Update existing

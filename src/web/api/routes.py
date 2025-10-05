@@ -64,6 +64,19 @@ async def strategies_page(request: Request):
     )
 
 
+@router.get("/analysis", response_class=HTMLResponse)
+async def analysis_page(request: Request):
+    """Market analysis page with interactive charts."""
+    return templates.TemplateResponse(
+        "analysis.html",
+        {
+            "request": request,
+            "page_title": "Market Analysis - Trading System",
+            "current_time": datetime.now().strftime("%B %d, %Y at %H:%M:%S"),
+        },
+    )
+
+
 @router.get("/profile", response_class=HTMLResponse)
 async def profile_page(request: Request):
     """Author profile page."""

@@ -3,7 +3,7 @@ Polygon.io API Client
 """
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from dateutil.parser import parse as parse_datetime
@@ -109,7 +109,9 @@ class PolygonClient:
                 try:
                     bar = PolygonAggregateBar(
                         ticker=ticker,
-                        timestamp=datetime.fromtimestamp(agg.timestamp / 1000),
+                        timestamp=datetime.fromtimestamp(
+                            agg.timestamp / 1000, tz=timezone.utc
+                        ).astimezone(),
                         open=float(agg.open),
                         high=float(agg.high),
                         low=float(agg.low),
