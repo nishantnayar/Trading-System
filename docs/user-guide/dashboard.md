@@ -4,10 +4,50 @@ This guide covers the main dashboard interface and the reusable card components 
 
 ## Features
 
-- Real-time monitoring
-- Strategy management
-- Performance metrics
-- Reusable card components for consistent styling
+- **Real-time Portfolio Monitoring**: Live account balance, positions, and P&L tracking
+- **Market Data Analytics**: Interactive charts and market data visualization with Plotly
+- **Strategy Management**: Configure and monitor trading strategies
+- **Performance Metrics**: Comprehensive performance tracking and analytics
+- **Order Management**: View and manage open orders and trade history
+- **System Health**: Monitor service status and system performance
+- **Reusable Card Components**: Consistent styling and user experience
+
+## Dashboard Pages
+
+### 1. Main Dashboard (`/dashboard`)
+The primary dashboard provides an overview of your trading system:
+- **Portfolio Summary**: Account balance, buying power, and portfolio value
+- **Position Overview**: Current holdings with unrealized P&L
+- **Order Status**: Open orders and recent trade history
+- **Market Status**: Real-time market clock and trading hours
+- **System Health**: Service status indicators
+
+### 2. Trading Interface (`/trading`)
+Interactive trading interface for order management:
+- **Account Information**: Detailed account status and buying power
+- **Position Management**: View and close positions
+- **Order Placement**: Place new market and limit orders
+- **Order History**: Track order status and execution
+
+### 3. Market Analysis (`/analysis`)
+Advanced market data analysis and visualization:
+- **Interactive Charts**: Plotly.js charts for price analysis
+- **Market Statistics**: Data availability and symbol information
+- **OHLC Analysis**: Open, High, Low, Close data visualization
+- **Performance Metrics**: Historical performance analysis
+
+### 4. Strategy Management (`/strategies`)
+Strategy configuration and monitoring:
+- **Strategy Overview**: Active and available strategies
+- **Performance Tracking**: Strategy-specific performance metrics
+- **Configuration**: Strategy parameters and settings
+- **Backtesting Results**: Historical strategy performance
+
+### 5. User Profile (`/profile`)
+System information and user preferences:
+- **System Information**: Version, configuration, and status
+- **API Configuration**: Alpaca API settings and connectivity
+- **Preferences**: User interface and notification settings
 
 ## Reusable Card Components
 

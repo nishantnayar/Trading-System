@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'components/card_macro.html' import stat_card %}
 
 {% block title %}Market Analysis{% endblock %}
 
@@ -17,28 +18,34 @@
     <!-- Market Statistics Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <!-- Total Symbols Card -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="text-center">
-                <div class="text-3xl font-bold text-gray-900" id="totalSymbols">-</div>
-                <div class="text-sm font-medium text-gray-500 mt-2">Total Symbols</div>
-            </div>
-        </div>
+        {{ stat_card(
+            icon='fas fa-chart-bar',
+            title='Total Symbols',
+            value='-',
+            description='Available trading symbols',
+            color='blue',
+            value_id='totalSymbols'
+        ) }}
 
         <!-- Total Records Card -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="text-center">
-                <div class="text-3xl font-bold text-gray-900" id="totalRecords">-</div>
-                <div class="text-sm font-medium text-gray-500 mt-2">Total Records</div>
-            </div>
-        </div>
+        {{ stat_card(
+            icon='fas fa-database',
+            title='Total Records',
+            value='-',
+            description='Market data records',
+            color='green',
+            value_id='totalRecords'
+        ) }}
 
         <!-- Last Update Card -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="text-center">
-                <div class="text-3xl font-bold text-gray-900" id="lastUpdate">-</div>
-                <div class="text-sm font-medium text-gray-500 mt-2">Last Update</div>
-            </div>
-        </div>
+        {{ stat_card(
+            icon='fas fa-clock',
+            title='Last Update',
+            value='-',
+            description='Most recent data refresh',
+            color='purple',
+            value_id='lastUpdate'
+        ) }}
     </div>
 
     <!-- Chart Controls -->
@@ -123,7 +130,7 @@ async function loadSymbols() {
         symbols.forEach(symbol => {
             const option = document.createElement('option');
             option.value = symbol.symbol;
-            option.textContent = `${symbol.symbol} (${symbol.record_count} records)`;
+            option.textContent = symbol.symbol;
             symbolSelect.appendChild(option);
         });
     } catch (error) {
@@ -140,7 +147,23 @@ async function loadMarketStats() {
         
         document.getElementById('totalSymbols').textContent = stats.symbols_count || '-';
         document.getElementById('totalRecords').textContent = stats.total_records ? stats.total_records.toLocaleString() : '-';
-        document.getElementById('lastUpdate').textContent = stats.latest_update ? new Date(stats.latest_update).toLocaleString() : '-';
+        
+        // Format last update to be user-friendly
+        if (stats.latest_update) {
+            const date = new Date(stats.latest_update);
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+                timeZone: 'America/Chicago' // Convert from UTC to Central Time
+            };
+            document.getElementById('lastUpdate').textContent = date.toLocaleDateString('en-US', options);
+        } else {
+            document.getElementById('lastUpdate').textContent = '-';
+        }
     } catch (error) {
         console.error('Failed to load market stats:', error);
         document.getElementById('totalSymbols').textContent = 'Error';
@@ -183,6 +206,7 @@ async function loadChartData(symbol) {
                     showline: true,
                     linecolor: 'black',
                     linewidth: 1,
+                    tickangle: 0,  // Force horizontal labels
                     rangebreaks: [
                         { pattern: 'day of week', bounds: [6, 1] },
                         { pattern: 'hour', bounds: [22, 7] }  // UTC-5: 22:00-07:00 (non-trading hours)
@@ -213,6 +237,7 @@ async function loadChartData(symbol) {
                     showline: true,
                     linecolor: 'black',
                     linewidth: 1,
+                    tickangle: 0,  // Force horizontal labels
                     rangebreaks: [
                         { pattern: 'day of week', bounds: [6, 1] },
                         { pattern: 'hour', bounds: [22, 7] }  // UTC-5: 22:00-07:00 (non-trading hours)
@@ -234,6 +259,7 @@ async function loadChartData(symbol) {
             xaxis: { 
                 title: '',
                 showgrid: false,
+                tickangle: 0,  // Force horizontal labels
                 rangebreaks: [
                     { pattern: 'day of week', bounds: [6, 1] },
                     { pattern: 'hour', bounds: [22, 7] }  // UTC-5: 22:00-07:00 (non-trading hours)

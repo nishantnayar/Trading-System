@@ -125,17 +125,20 @@ graph TB
 
 ### **Trading Capabilities**
 - ✅ **Paper Trading** - Start with Alpaca paper trading
-- ✅ **Real-time Data** - Live market data ingestion
+- ✅ **Historical Data** - Polygon.io integration for backtesting
 - ✅ **Strategy Backtesting** - Test before live deployment
 - ✅ **Risk Controls** - Built-in risk management
-- ✅ **Performance Analytics** - Track your results
+- ✅ **Performance Analytics** - Interactive charts and metrics
+- ✅ **Order Management** - Complete order lifecycle management
 
 ### **Technical Features**
 - ✅ **Microservices Architecture** - Scalable and maintainable
 - ✅ **Type Safety** - Pydantic for data validation
 - ✅ **High Performance** - Polars for data processing
-- ✅ **Modern UI** - FastAPI + HTMX + Plotly
+- ✅ **Modern UI** - FastAPI + HTMX + Plotly + Tailwind CSS
 - ✅ **Comprehensive Logging** - Structured logging with Loguru
+- ✅ **Database Design** - PostgreSQL with comprehensive schema
+- ✅ **Data Quality** - Automated validation and monitoring
 
 ### **Development Features**
 - ✅ **Code Quality** - Flake8, Black, isort, mypy

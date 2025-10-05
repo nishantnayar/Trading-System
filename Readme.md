@@ -38,13 +38,15 @@ This system uses a **microservices architecture** with **Prefect orchestration**
 | Feature | Description |
 |---------|-------------|
 | 🚀 **Paper Trading** | Safe testing environment with Alpaca paper trading API |
-| 📊 **Real-time Data** | Live market data ingestion and processing |
+| 📊 **Market Data** | Historical data from Polygon.io with comprehensive analytics |
 | 🧠 **Strategy Engine** | Plugin-based framework for custom trading strategies |
 | ⚡ **Risk Management** | Built-in position sizing and risk controls |
-| 📈 **Analytics** | Comprehensive performance tracking and reporting |
+| 📈 **Analytics** | Interactive charts and performance tracking with Plotly |
 | 🔄 **Backtesting** | Historical strategy validation framework |
-| 📱 **Web Dashboard** | Modern, responsive trading interface |
+| 📱 **Web Dashboard** | Modern HTMX + Tailwind CSS responsive interface |
 | 🔧 **Microservices** | Scalable, maintainable service architecture |
+| 🗄️ **Database** | PostgreSQL with comprehensive schema design |
+| 📊 **Data Quality** | Automated data validation and quality monitoring |
 
 ## 🚀 Quick Start
 
@@ -108,12 +110,21 @@ LOG_LEVEL=INFO
 
 The following API endpoints are available:
 
+**Trading & Account Management:**
 - `GET /api/alpaca/account` - Get account information
 - `GET /api/alpaca/positions` - Get all positions
 - `GET /api/alpaca/orders` - Get orders
 - `GET /api/alpaca/clock` - Get market clock
 - `POST /api/alpaca/positions/{symbol}/close` - Close a position
 - `DELETE /api/alpaca/orders/{order_id}` - Cancel an order
+- `POST /api/alpaca/orders` - Place new orders
+
+**Market Data & Analytics:**
+- `GET /api/market-data/stats` - Get market data statistics
+- `GET /api/market-data/symbols` - Get available symbols
+- `GET /api/market-data/data/{symbol}` - Get historical data
+- `GET /api/market-data/data/{symbol}/latest` - Get latest data
+- `GET /api/market-data/data/{symbol}/ohlc` - Get OHLC summary
 
 #### 5. Security Notes
 
@@ -292,10 +303,11 @@ mkdocs build
 - **Backtesting**: Historical strategy validation and optimization
 
 ### 📈 Data Processing
-- **Real-time Data**: Live market data ingestion from Alpaca
-- **Historical Data**: Efficient storage and processing with Polars
-- **Technical Indicators**: Comprehensive technical analysis tools
+- **Historical Data**: Polygon.io integration for backtesting and analysis
+- **Market Data Analytics**: Comprehensive data processing with Polars
+- **Data Quality Monitoring**: Automated validation and quality checks
 - **Performance Metrics**: Detailed analytics and reporting
+- **Interactive Charts**: Plotly.js integration for financial visualizations
 
 ### 🔔 Monitoring & Alerts
 - **Real-time Dashboard**: Live portfolio monitoring and control
@@ -310,6 +322,7 @@ mkdocs build
 - **Comprehensive Logging**: Structured logging with Loguru
 - **Code Quality**: Black, Flake8, mypy, and pre-commit hooks
 - **CI/CD Pipeline**: Automated testing, security scanning, and deployment
+- **Database Architecture**: PostgreSQL with comprehensive schema design
 
 ## 🔧 Configuration
 
