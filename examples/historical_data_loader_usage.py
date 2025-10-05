@@ -2,8 +2,7 @@
 """
 Example usage of the Historical Data Loader
 
-This script demonstrates how to use the historical data loader
-both directly and through Prefect flows.
+This script demonstrates how to use the historical data loader.
 """
 
 import asyncio
@@ -13,12 +12,6 @@ from datetime import date, timedelta
 # Add src to path for imports
 sys.path.insert(0, "src")
 
-from src.services.data_ingestion.flows import (
-    backfill_historical_data_flow,
-    daily_data_ingestion_flow,
-    load_historical_data_flow,
-    symbol_health_check_flow,
-)
 from src.services.data_ingestion.historical_loader import HistoricalDataLoader
 
 
@@ -87,44 +80,51 @@ async def example_direct_usage():
     print(f"Progress: {progress}")
 
 
-async def example_prefect_flows():
-    """Example of using Prefect flows"""
-    print("\n=== Prefect Flows Example ===")
+async def example_batch_loading():
+    """Example of batch loading multiple symbols"""
+    print("\n=== Batch Loading Example ===")
+    
+    loader = HistoricalDataLoader(batch_size=50, requests_per_minute=2)
+    
+    # Load data for multiple symbols with error handling
+    symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA"]
+    print(f"\nLoading daily data for {len(symbols)} symbols...")
+    
+    for i, symbol in enumerate(symbols, 1):
+        try:
+            print(f"Loading {symbol} ({i}/{len(symbols)})...")
+            records_count = await loader.load_symbol_data(
+                symbol=symbol, days_back=7, timespan="day", multiplier=1
+            )
+            print(f"✓ Loaded {records_count} daily records for {symbol}")
+        except Exception as e:
+            print(f"✗ Error loading {symbol} data: {e}")
 
-    # Daily data ingestion
-    print("\nRunning daily data ingestion flow...")
+async def example_incremental_loading():
+    """Example of incremental loading"""
+    print("\n=== Incremental Loading Example ===")
+    
+    loader = HistoricalDataLoader(batch_size=50, requests_per_minute=2)
+    
+    # First load - full load
+    print("\nFirst load (full): Loading 30 days of data...")
     try:
-        result = await daily_data_ingestion_flow(
-            days_back=1, batch_size=50, requests_per_minute=2
+        records_count = await loader.load_symbol_data(
+            symbol="AAPL", days_back=30, incremental=False
         )
-        print(f"Daily ingestion result: {result}")
+        print(f"✓ Full load: {records_count} records loaded")
     except Exception as e:
-        print(f"Error in daily ingestion: {e}")
-
-    # Backfill historical data
-    print("\nRunning backfill flow...")
+        print(f"✗ Error in full load: {e}")
+    
+    # Second load - incremental (should load only new data)
+    print("\nSecond load (incremental): Loading only new data...")
     try:
-        from_date = date.today() - timedelta(days=30)
-        to_date = date.today() - timedelta(days=1)
-
-        result = await backfill_historical_data_flow(
-            from_date=from_date,
-            to_date=to_date,
-            symbols=["AAPL", "MSFT"],  # Limit to 2 symbols for demo
-            batch_size=50,
-            requests_per_minute=2,
+        records_count = await loader.load_symbol_data(
+            symbol="AAPL", days_back=1, incremental=True
         )
-        print(f"Backfill result: {result}")
+        print(f"✓ Incremental load: {records_count} records loaded")
     except Exception as e:
-        print(f"Error in backfill: {e}")
-
-    # Symbol health check
-    print("\nRunning symbol health check flow...")
-    try:
-        result = await symbol_health_check_flow()
-        print(f"Health check result: {result}")
-    except Exception as e:
-        print(f"Error in health check: {e}")
+        print(f"✗ Error in incremental load: {e}")
 
 
 async def main():
@@ -135,8 +135,11 @@ async def main():
     # Run direct usage example
     await example_direct_usage()
 
-    # Run Prefect flows example
-    await example_prefect_flows()
+    # Run batch loading example
+    await example_batch_loading()
+    
+    # Run incremental loading example
+    await example_incremental_loading()
 
     print("\nExamples completed!")
 

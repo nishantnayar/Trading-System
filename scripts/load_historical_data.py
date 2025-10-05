@@ -3,7 +3,6 @@
 Historical Data Loader for Polygon.io
 
 This script loads historical market data from Polygon.io into the database.
-It can be called directly or from Prefect flows.
 
 Usage:
     python scripts/load_historical_data.py --symbol AAPL --days 365
@@ -18,14 +17,16 @@ from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
 import click
-from loguru import logger
 
 # Add project root to path for imports
 project_root = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, project_root)
 
+from loguru import logger
+
 from src.services.data_ingestion.historical_loader import HistoricalDataLoader
 from src.services.data_ingestion.symbols import SymbolService
+from src.shared.logging import setup_logging
 
 
 def _update_symbol_status(
@@ -168,6 +169,11 @@ async def load_all_symbols_data(
     is_flag=True,
     help="Run health check and exit",
 )
+@click.option(
+    "--detect-delisted/--no-detect-delisted",
+    default=True,
+    help="Enable/disable automatic delisting detection (default: enabled)",
+)
 def main(
     symbol: Optional[str],
     all_symbols: bool,
@@ -182,6 +188,7 @@ def main(
     incremental: bool,
     force_full: bool,
     health_check: bool,
+    detect_delisted: bool,
 ):
     """
     Load historical market data from Polygon.io
@@ -207,14 +214,25 @@ def main(
 
         # Force full reload
         python scripts/load_historical_data.py --symbol AAPL --force-full --days-back 30
+
+        # Load data with delisting detection disabled
+        python scripts/load_historical_data.py --all-symbols --days-back 7 --no-detect-delisted
+
+        # Load data with delisting detection enabled (default)
+        python scripts/load_historical_data.py --all-symbols --days-back 7 --detect-delisted
     """
+    # Setup logging
+    setup_logging()
+
     # Convert datetime to date if provided
     from_date_obj = from_date.date() if from_date else None
     to_date_obj = to_date.date() if to_date else None
 
     async def run_loader():
         loader = HistoricalDataLoader(
-            batch_size=batch_size, requests_per_minute=requests_per_minute
+            batch_size=batch_size,
+            requests_per_minute=requests_per_minute,
+            detect_delisted=detect_delisted,
         )
 
         if health_check:
@@ -268,6 +286,18 @@ def main(
                 logger.info(f"  Successful: {stats['successful']}")
                 logger.info(f"  Failed: {stats['failed']}")
                 logger.info(f"  Total records: {stats['total_records']}")
+
+                if "delisted_symbols" in stats and stats["delisted_symbols"]:
+                    logger.info(
+                        f"  Delisted symbols detected: {len(stats['delisted_symbols'])}"
+                    )
+                    for delisted_symbol in stats["delisted_symbols"]:
+                        logger.info(f"    - {delisted_symbol}")
+
+                if "delisting_error" in stats:
+                    logger.error(
+                        f"  Delisting detection error: {stats['delisting_error']}"
+                    )
 
                 if stats["errors"]:
                     logger.error("Errors encountered:")

@@ -65,6 +65,7 @@
                     <option value="30" selected>30 days</option>
                     <option value="90">90 days</option>
                     <option value="180">180 days</option>
+                    <option value="all">All</option>
                 </select>
             </div>
             <div>
@@ -177,7 +178,13 @@ async function loadChartData(symbol) {
     const chartType = document.getElementById('chartTypeSelect').value;
     
     try {
-        const response = await fetch(`/api/market-data/data/${symbol}?limit=${period}`);
+        // Build URL with or without limit based on selection
+        let url = `/api/market-data/data/${symbol}`;
+        if (period !== 'all') {
+            url += `?limit=${period}`;
+        }
+        
+        const response = await fetch(url);
         const data = await response.json();
         
         // Completely clear containers

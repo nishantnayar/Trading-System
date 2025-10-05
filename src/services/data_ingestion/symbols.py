@@ -18,7 +18,7 @@ from src.shared.database.models.symbols import DelistedSymbol, Symbol, SymbolDat
 class SymbolService:
     """Service for managing symbols and delisting detection"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.polygon_client = PolygonClient()
 
     async def get_active_symbols(self) -> List[Symbol]:
@@ -27,6 +27,13 @@ class SymbolService:
             stmt = select(Symbol).where(Symbol.status == "active")
             result = session.execute(stmt)
             return list(result.scalars().all())
+
+    async def get_active_symbol_strings(self) -> List[str]:
+        """Get list of active symbol strings"""
+        with db_transaction() as session:
+            stmt = select(Symbol.symbol).where(Symbol.status == "active")
+            result = session.execute(stmt)
+            return [row[0] for row in result.fetchall()]
 
     async def get_symbol_by_ticker(self, symbol: str) -> Optional[Symbol]:
         """Get symbol by ticker"""
@@ -128,10 +135,9 @@ class SymbolService:
     async def detect_delisted_symbols(self) -> List[str]:
         """Detect and mark delisted symbols"""
         delisted_symbols = []
-        active_symbols = await self.get_active_symbols()
+        active_symbols = await self.get_active_symbol_strings()
 
-        for symbol_obj in active_symbols:
-            symbol = str(symbol_obj.symbol)
+        for symbol in active_symbols:
             logger.info(f"Checking health of symbol: {symbol}")
 
             is_healthy = await self.check_symbol_health(symbol)

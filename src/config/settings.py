@@ -23,7 +23,6 @@ class Settings(BaseSettings):
     postgres_user: str = Field(default="postgres", alias="POSTGRES_USER")
     postgres_password: str = Field(default="", alias="POSTGRES_PASSWORD")
     trading_db_name: str = Field(default="trading_system", alias="TRADING_DB_NAME")
-    prefect_db_name: str = Field(default="Prefect", alias="PREFECT_DB_NAME")
 
     # Redis Configuration
     redis_host: str = Field(default="localhost", alias="REDIS_HOST")
@@ -48,14 +47,6 @@ class Settings(BaseSettings):
     )
     polygon_data_delay_minutes: int = Field(
         default=15, alias="POLYGON_DATA_DELAY_MINUTES"
-    )
-
-    # Prefect Configuration
-    prefect_api_url: str = Field(
-        default="http://localhost:4200", alias="PREFECT_API_URL"
-    )
-    prefect_database_url: str = Field(
-        default="", alias="PREFECT_API_DATABASE_CONNECTION_URL"
     )
 
     # Security Configuration

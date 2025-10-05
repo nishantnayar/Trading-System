@@ -1,6 +1,5 @@
 """
 Database Configuration for Trading System
-Implements the separate database strategy for Prefect 3.4.14 compatibility.
 """
 
 import os
@@ -23,9 +22,6 @@ class DatabaseConfig(BaseSettings):
 
     # Trading System Database
     trading_db_name: str = Field(default="trading_system", alias="TRADING_DB_NAME")
-
-    # Prefect Database
-    prefect_db_name: str = Field(default="Prefect", alias="PREFECT_DB_NAME")
 
     # Redis Configuration
     redis_host: str = Field(default="localhost", alias="REDIS_HOST")
@@ -53,22 +49,6 @@ class DatabaseConfig(BaseSettings):
         )
 
     @property
-    def prefect_db_url(self) -> str:
-        """Prefect Database URL"""
-        return (
-            f"postgresql://{self.postgres_user}:{self.postgres_password}"
-            f"@{self.postgres_host}:{self.postgres_port}/{self.prefect_db_name}"
-        )
-
-    @property
-    def prefect_async_db_url(self) -> str:
-        """Prefect Async Database URL for Prefect 3.4.14"""
-        return (
-            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
-            f"@{self.postgres_host}:{self.postgres_port}/{self.prefect_db_name}"
-        )
-
-    @property
     def schemas(self) -> Dict[str, str]:
         """Service-specific schemas mapping"""
         return {
@@ -89,7 +69,7 @@ class DatabaseConfig(BaseSettings):
         Get SQLAlchemy engine for specified database and schema
 
         Args:
-            database: Either 'trading' or 'prefect'
+            database: Database name (currently only 'trading')
             schema: Optional schema name for trading database
 
         Returns:
@@ -97,12 +77,8 @@ class DatabaseConfig(BaseSettings):
         """
         if database == "trading":
             url = self.trading_db_url
-        elif database == "prefect":
-            url = self.prefect_db_url
         else:
-            raise ValueError(
-                f"Invalid database: {database}. Must be 'trading' or 'prefect'"
-            )
+            raise ValueError(f"Invalid database: {database}. Must be 'trading'")
 
         # Add schema to URL if specified
         if schema and database == "trading":
@@ -139,10 +115,6 @@ class DatabaseConfig(BaseSettings):
         """Get engine for shared schema"""
         return self.get_engine("trading", "shared")
 
-    def get_prefect_engine(self) -> Engine:
-        """Get engine for Prefect database"""
-        return self.get_engine("prefect")
-
 
 # Global configuration instance
 db_config = DatabaseConfig()
@@ -166,8 +138,3 @@ def get_service_engine(service: str) -> Engine:
 def get_shared_engine() -> Engine:
     """Convenience function to get shared schema engine"""
     return db_config.get_shared_engine()
-
-
-def get_prefect_engine() -> Engine:
-    """Convenience function to get Prefect engine"""
-    return db_config.get_prefect_engine()

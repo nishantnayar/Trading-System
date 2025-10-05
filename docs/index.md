@@ -97,11 +97,6 @@ graph TB
     G --> D
     G --> E
     
-    H[Prefect] --> A
-    H --> B
-    H --> C
-    H --> D
-    H --> E
 ```
 
 </div>
@@ -117,7 +112,6 @@ graph TB
 | **Analytics** | Python + Plotly | Performance tracking |
 | **Database** | PostgreSQL | Data persistence |
 | **Cache** | Redis | High-speed access |
-| **Orchestration** | Prefect | Workflow management |
 
 ---
 
@@ -181,7 +175,6 @@ LOG_RETENTION_DAYS=30
 ### **Service Ports**
 - **Dashboard**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
-- **Prefect UI**: http://localhost:4200
 - **PostgreSQL**: localhost:5432
 - **Redis**: localhost:6379
 

@@ -2,8 +2,7 @@
 Historical Data Loader for Polygon.io
 
 This module provides the core functionality for loading historical market data
-from Polygon.io into the database. It's designed to be used both directly
-and through Prefect flows.
+from Polygon.io into the database.
 """
 
 import asyncio
@@ -15,6 +14,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from src.services.data_ingestion.symbols import SymbolService
 from src.services.polygon.client import PolygonClient
 from src.services.polygon.exceptions import (
     PolygonAPIError,
@@ -36,6 +36,7 @@ class HistoricalDataLoader:
         batch_size: int = 100,
         requests_per_minute: int = 2,
         data_source: str = "polygon",
+        detect_delisted: bool = True,
     ):
         """
         Initialize the historical data loader
@@ -44,6 +45,7 @@ class HistoricalDataLoader:
             batch_size: Number of records to process in each batch
             requests_per_minute: Maximum requests per minute (default 2 for free tier)
             data_source: Data source identifier ('polygon', 'yahoo', etc.)
+            detect_delisted: Whether to detect and mark delisted symbols during loading
         """
         self.polygon_client = PolygonClient()
         self.batch_size = batch_size
@@ -52,6 +54,8 @@ class HistoricalDataLoader:
             60.0 / requests_per_minute
         )  # Calculate delay for rate limiting
         self.data_source = data_source
+        self.detect_delisted = detect_delisted
+        self.symbol_service = SymbolService() if detect_delisted else None
 
     async def load_symbol_data(
         self,
@@ -129,6 +133,20 @@ class HistoricalDataLoader:
 
             if not bars:
                 logger.warning(f"No data found for {symbol} in date range")
+
+                # Check if symbol might be delisted when no data is found
+                if self.detect_delisted and self.symbol_service:
+                    logger.info(f"Checking if {symbol} is delisted due to no data")
+                    is_healthy = await self.symbol_service.check_symbol_health(symbol)
+                    if not is_healthy:
+                        await self.symbol_service.mark_symbol_delisted(
+                            symbol,
+                            notes=f"No data found for date range {from_date} to {to_date}",
+                        )
+                        logger.info(
+                            f"Marked {symbol} as delisted due to no data availability"
+                        )
+
                 return 0
 
             # Convert to database records
@@ -148,13 +166,27 @@ class HistoricalDataLoader:
             # Batch insert into database
             inserted_count = await self._batch_insert_records(records)
 
+            # Calculate the actual last successful date from loaded records
+            actual_last_successful_date = None
+            if records:
+                # Get the latest timestamp from the loaded records
+                actual_last_successful_date = max(
+                    record.timestamp.date() for record in records
+                )
+            elif last_successful_date:
+                # If no new records were loaded but we had a previous successful date, keep it
+                actual_last_successful_date = last_successful_date
+            else:
+                # Fallback to to_date or today if no records and no previous date
+                actual_last_successful_date = to_date or date.today()
+
             # Update load run tracking
             await self._update_load_run(
                 symbol=symbol,
                 data_source=self.data_source,
                 timespan=timespan,
                 multiplier=multiplier,
-                last_successful_date=to_date or date.today(),
+                last_successful_date=actual_last_successful_date,
                 records_loaded=inserted_count,
                 status="success",
             )
@@ -166,13 +198,35 @@ class HistoricalDataLoader:
             error_msg = f"Failed to load data for {symbol}: {str(e)}"
             logger.error(error_msg)
 
+            # Check if error indicates symbol might be delisted
+            if self.detect_delisted and self.symbol_service:
+                error_str = str(e).lower()
+                if any(
+                    indicator in error_str
+                    for indicator in ["not found", "404", "invalid", "delisted"]
+                ):
+                    logger.info(
+                        f"Checking if {symbol} is delisted due to error: {error_str}"
+                    )
+                    is_healthy = await self.symbol_service.check_symbol_health(symbol)
+                    if not is_healthy:
+                        await self.symbol_service.mark_symbol_delisted(
+                            symbol, notes=f"Delisted due to API error: {str(e)}"
+                        )
+                        logger.info(f"Marked {symbol} as delisted due to API error")
+
             # Update load run tracking with error
+            # For failed loads, keep the previous successful date if it exists
+            error_last_successful_date = last_successful_date or (
+                to_date or date.today()
+            )
+
             await self._update_load_run(
                 symbol=symbol,
                 data_source=self.data_source,
                 timespan=timespan,
                 multiplier=multiplier,
-                last_successful_date=to_date or date.today(),
+                last_successful_date=error_last_successful_date,
                 records_loaded=0,
                 status="failed",
                 error_message=str(e),
@@ -255,6 +309,23 @@ class HistoricalDataLoader:
                 continue
 
         logger.info(f"Completed loading data. Stats: {stats}")
+
+        # Run delisting detection after loading all symbols if enabled
+        if self.detect_delisted and self.symbol_service:
+            logger.info("Running delisting detection on all active symbols...")
+            try:
+                delisted_symbols = await self.symbol_service.detect_delisted_symbols()
+                if delisted_symbols:
+                    logger.info(
+                        f"Detected {len(delisted_symbols)} delisted symbols: {delisted_symbols}"
+                    )
+                    stats["delisted_symbols"] = delisted_symbols
+                else:
+                    logger.info("No new delisted symbols detected")
+            except Exception as e:
+                logger.error(f"Delisting detection failed: {e}")
+                stats["delisting_error"] = str(e)
+
         return stats
 
     async def _get_active_symbols(self) -> List[str]:

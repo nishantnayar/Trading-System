@@ -25,7 +25,7 @@ class TimestampMixin:
         comment="Timestamp when record was created (UTC)",
     )
 
-    def set_created_at(self, dt: Optional[datetime] = None):
+    def set_created_at(self, dt: Optional[datetime] = None) -> None:
         """Set created_at timestamp in UTC"""
         if dt is None:
             dt = datetime.now()
@@ -44,7 +44,7 @@ class UpdateTimestampMixin(TimestampMixin):
         comment="Timestamp when record was last updated (UTC)",
     )
 
-    def set_updated_at(self, dt: Optional[datetime] = None):
+    def set_updated_at(self, dt: Optional[datetime] = None) -> None:
         """Set updated_at timestamp in UTC"""
         if dt is None:
             dt = datetime.now()
@@ -75,7 +75,7 @@ class SerializerMixin:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
+    def from_dict(cls, data: Dict[str, Any]) -> "SerializerMixin":
         """
         Create model instance from dictionary
 
@@ -127,13 +127,13 @@ class SoftDeleteMixin:
         comment="Timestamp when record was soft deleted (NULL = active, UTC)",
     )
 
-    def soft_delete(self):
+    def soft_delete(self) -> None:
         """Mark record as deleted without removing from database"""
-        self.deleted_at = ensure_utc_timestamp(datetime.now())
+        setattr(self, "deleted_at", ensure_utc_timestamp(datetime.now()))
 
-    def restore(self):
+    def restore(self) -> None:
         """Restore a soft-deleted record"""
-        self.deleted_at = None
+        setattr(self, "deleted_at", None)
 
     @property
     def is_deleted(self) -> bool:
@@ -186,7 +186,7 @@ class UUIDMixin:
     """Adds UUID primary key to models"""
 
     @declared_attr
-    def id(cls):
+    def id(cls) -> "Column[uuid.UUID]":
         import uuid
 
         from sqlalchemy import Column
@@ -234,4 +234,4 @@ class StatusMixin:
     @property
     def is_active(self) -> bool:
         """Check if record is active"""
-        return self.status == "active"  # type: ignore[return-value]
+        return self.status == "active"
