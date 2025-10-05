@@ -229,24 +229,29 @@ class TestSymbolService:
             symbol_service, "get_active_symbols", return_value=mock_symbols
         ):
             with patch.object(
-                symbol_service, "check_symbol_health"
-            ) as mock_health_check:
-                mock_health_check.side_effect = [
-                    True,
-                    False,
-                ]  # First healthy, second delisted
-
+                symbol_service,
+                "get_active_symbol_strings",
+                return_value=["HEALTHY", "DELISTED"],
+            ):
                 with patch.object(
-                    symbol_service, "mark_symbol_delisted"
-                ) as mock_mark_delisted:
-                    mock_mark_delisted.side_effect = [
-                        True
-                    ]  # Only second symbol gets delisted
+                    symbol_service, "check_symbol_health"
+                ) as mock_health_check:
+                    mock_health_check.side_effect = [
+                        True,
+                        False,
+                    ]  # First healthy, second delisted
 
-                    result = await symbol_service.detect_delisted_symbols()
+                    with patch.object(
+                        symbol_service, "mark_symbol_delisted"
+                    ) as mock_mark_delisted:
+                        mock_mark_delisted.side_effect = [
+                            True
+                        ]  # Only second symbol gets delisted
 
-                    assert len(result) == 1
-                    assert result[0] == "DELISTED"
+                        result = await symbol_service.detect_delisted_symbols()
+
+                        assert len(result) == 1
+                        assert result[0] == "DELISTED"
 
     @pytest.mark.asyncio
     async def test_get_symbol_data_status(self, symbol_service):
