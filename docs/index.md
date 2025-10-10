@@ -129,7 +129,9 @@ graph TB
 - ✅ **Microservices Architecture** - Scalable and maintainable
 - ✅ **Type Safety** - Pydantic for data validation
 - ✅ **High Performance** - Polars for data processing
-- ✅ **Modern UI** - FastAPI + HTMX + Plotly + Tailwind CSS
+- ✅ **Modern UI** - FastAPI + HTMX + Lightweight Charts + Tailwind CSS
+- ✅ **Professional Charts** - Multi-pane trading charts with technical indicators
+- ✅ **Theme Support** - Light/Dark chart themes with persistence
 - ✅ **Comprehensive Logging** - Structured logging with Loguru
 - ✅ **Database Design** - PostgreSQL with comprehensive schema
 - ✅ **Data Quality** - Automated validation and monitoring
@@ -146,7 +148,9 @@ graph TB
 
 Your trading dashboard provides:
 
-- **Real-time Market Data** - Live price feeds and charts
+- **Professional Trading Charts** - Multi-pane charts with candlesticks, volume, MACD, and RSI
+- **Real-time Market Data** - Live price feeds and synchronized chart updates
+- **Technical Analysis** - Professional-grade indicators with theme customization
 - **Strategy Performance** - P&L tracking and analytics
 - **Risk Metrics** - Position sizing and exposure
 - **Order Management** - Trade execution and monitoring

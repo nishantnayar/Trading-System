@@ -30,11 +30,20 @@ Interactive trading interface for order management:
 - **Order History**: Track order status and execution
 
 ### 3. Market Analysis (`/analysis`)
-Advanced market data analysis and visualization:
-- **Interactive Charts**: Plotly.js charts for price analysis
-- **Market Statistics**: Data availability and symbol information
-- **OHLC Analysis**: Open, High, Low, Close data visualization
-- **Performance Metrics**: Historical performance analysis
+Professional multi-pane trading charts with advanced technical analysis:
+- **Professional Charts**: Lightweight Charts library for high-performance visualization
+- **Multi-Pane Layout**: 
+  - Price Chart with candlesticks and moving averages (SMA 20/50)
+  - Volume chart with color-coded bars
+  - MACD indicator (12, 26, 9) with histogram
+  - RSI indicator (14) with overbought/oversold levels
+- **Interactive Features**:
+  - Synchronized crosshairs across all charts
+  - Zoom and pan functionality
+  - Theme toggle (Light/Dark mode)
+  - Timeframe selection (1W, 1M, 3M, 6M, 1Y)
+- **Market Statistics**: Live data cards showing total symbols, records, and last update
+- **Real-time Data**: Live price information bar with symbol, price, change, volume, high/low
 
 ### 4. Strategy Management (`/strategies`)
 Strategy configuration and monitoring:
@@ -223,3 +232,75 @@ The components automatically handle:
 - Hover effects
 - Icon sizing and positioning
 - Typography hierarchy
+
+## Chart Features
+
+### Professional Trading Charts
+
+The Market Analysis page (`/analysis`) features professional-grade multi-pane trading charts built with Lightweight Charts library for optimal performance and professional appearance.
+
+#### Chart Panels
+
+1. **Price Chart (400px height)**
+   - Candlestick chart with green (up) and red (down) bars
+   - Simple Moving Average 20 (blue line)
+   - Simple Moving Average 50 (red line)
+   - Professional OHLC data visualization
+
+2. **Volume Chart (120px height)**
+   - Color-coded volume bars matching price movement
+   - Green bars for up days, red for down days
+   - Semi-transparent overlay for better readability
+
+3. **MACD Indicator (150px height)**
+   - MACD line (blue) - difference between 12 and 26-period EMAs
+   - Signal line (red) - 9-period EMA of MACD line
+   - Histogram (green/red) - difference between MACD and signal lines
+   - Professional technical analysis standard
+
+4. **RSI Indicator (150px height)**
+   - RSI line (blue) - 14-period Relative Strength Index
+   - Overbought level at 70 (gray dashed line)
+   - Oversold level at 30 (gray dashed line)
+   - Momentum oscillator for trend analysis
+
+#### Interactive Controls
+
+- **Symbol Selection**: Dropdown with all available symbols from your database
+- **Timeframe Buttons**: 1 Week, 1 Month, 3 Months, 6 Months, 1 Year
+- **Theme Toggle**: Switch between Light and Dark chart themes
+- **Live Info Bar**: Shows current symbol, price, change, volume, high, and low
+
+#### Theme Options
+
+**Light Theme (Default)**
+- White chart backgrounds
+- Light gray grid lines
+- Dark text for readability
+- Professional clean appearance
+
+**Dark Theme**
+- Dark blue-gray backgrounds (#131722)
+- Darker grid lines
+- Light text for contrast
+- Professional trading platform appearance
+
+Theme preference is automatically saved in browser localStorage.
+
+#### Synchronization Features
+
+- **Crosshair Sync**: Hover over any chart to see synchronized crosshairs across all panels
+- **Zoom Sync**: Zoom and pan operations are synchronized across all charts
+- **Time Range Sync**: Visible time ranges stay aligned across all panels
+- **Data Consistency**: All charts show the same time period and data points
+
+#### Technical Indicators
+
+The system includes professional-grade technical indicator calculations:
+
+- **Simple Moving Average (SMA)**: 20 and 50-period calculations
+- **MACD**: 12, 26, 9 parameter configuration
+- **RSI**: 14-period Relative Strength Index
+- **Volume Analysis**: Color-coded volume visualization
+
+All indicators are calculated client-side for real-time updates and optimal performance.

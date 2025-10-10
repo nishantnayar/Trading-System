@@ -151,29 +151,35 @@ async def get_available_symbols() -> List[SymbolInfo]:
 async def get_market_data(
     symbol: str,
     limit: int = Query(
-        default=100, ge=1, le=1000, description="Number of records to return"
+        default=100, ge=1, le=5000, description="Number of records to return"
     ),
     offset: int = Query(default=0, ge=0, description="Number of records to skip"),
-    start_date: Optional[datetime] = Query(
+    start_date: Optional[str] = Query(
         default=None, description="Start date (ISO format)"
     ),
-    end_date: Optional[datetime] = Query(
-        default=None, description="End date (ISO format)"
-    ),
+    end_date: Optional[str] = Query(default=None, description="End date (ISO format)"),
 ) -> List[MarketDataResponse]:
     """Get market data for a specific symbol"""
     try:
         symbol = symbol.upper()
+
+        # Parse date strings if provided
+        start_dt = None
+        end_dt = None
+        if start_date:
+            start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+        if end_date:
+            end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
 
         with db_transaction() as session:
             # Build query
             query = select(MarketData).where(MarketData.symbol == symbol)
 
             # Add date filters if provided
-            if start_date:
-                query = query.where(MarketData.timestamp >= start_date)
-            if end_date:
-                query = query.where(MarketData.timestamp <= end_date)
+            if start_dt:
+                query = query.where(MarketData.timestamp >= start_dt)
+            if end_dt:
+                query = query.where(MarketData.timestamp <= end_dt)
 
             # Order by timestamp descending (most recent first)
             query = query.order_by(desc(MarketData.timestamp))
