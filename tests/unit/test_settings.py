@@ -15,19 +15,21 @@ class TestSettingsInitialization:
     def test_settings_default_values(self):
         """Test settings with default values"""
         with patch.dict("os.environ", {}, clear=True):
-            settings = Settings()
+            # Disable .env file loading for true default testing
+            with patch.object(Settings.Config, "env_file", None):
+                settings = Settings()
 
-            # Application settings
-            assert settings.app_name == "Trading System"
-            assert settings.app_version == "1.0.0"
-            assert settings.debug is False
-            assert settings.log_level == "INFO"
+                # Application settings
+                assert settings.app_name == "Trading System"
+                assert settings.app_version == "1.0.0"
+                assert settings.debug is False
+                assert settings.log_level == "INFO"
 
-            # Database settings
-            assert settings.postgres_host == "localhost"
-            assert settings.postgres_port == 5432
-            assert settings.postgres_user == "postgres"
-            assert settings.trading_db_name == "trading_system"
+                # Database settings
+                assert settings.postgres_host == "localhost"
+                assert settings.postgres_port == 5432
+                assert settings.postgres_user == "postgres"
+                assert settings.trading_db_name == "trading_system"
 
             # Redis settings
             assert settings.redis_host == "localhost"
@@ -353,14 +355,16 @@ class TestSettingsDefaults:
     def test_database_defaults(self):
         """Test database default values"""
         with patch.dict("os.environ", {}, clear=True):
-            settings = Settings()
+            # Disable .env file loading for true default testing
+            with patch.object(Settings.Config, "env_file", None):
+                settings = Settings()
 
-            assert settings.postgres_host == "localhost"
-            assert settings.postgres_port == 5432
-            assert settings.postgres_user == "postgres"
-            # Password may be set in .env, just verify it exists
-            assert hasattr(settings, "postgres_password")
-            assert settings.trading_db_name == "trading_system"
+                assert settings.postgres_host == "localhost"
+                assert settings.postgres_port == 5432
+                assert settings.postgres_user == "postgres"
+                # Password may be set in .env, just verify it exists
+                assert hasattr(settings, "postgres_password")
+                assert settings.trading_db_name == "trading_system"
 
     def test_redis_defaults(self):
         """Test Redis default values"""
