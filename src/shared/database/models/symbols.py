@@ -2,21 +2,10 @@
 Database models for symbol management
 """
 
-from datetime import date, datetime, timezone
-from typing import Optional
+from datetime import datetime, timezone
 
-from sqlalchemy import (
-    BigInteger,
-    Boolean,
-    Column,
-    Date,
-    DateTime,
-    Numeric,
-    String,
-    Text,
-)
+from sqlalchemy import BigInteger, Column, Date, DateTime, Numeric, String, Text
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import Base
 

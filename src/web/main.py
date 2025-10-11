@@ -2,7 +2,6 @@
 Main FastAPI application for the trading system web interface.
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -10,13 +9,13 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
+from fastapi.templating import Jinja2Templates  # noqa: E402
 
-from src.web.api.alpaca_routes import router as alpaca_router
-from src.web.api.market_data import router as market_data_router
-from src.web.api.routes import router
+from src.web.api.alpaca_routes import router as alpaca_router  # noqa: E402
+from src.web.api.market_data import router as market_data_router  # noqa: E402
+from src.web.api.routes import router  # noqa: E402
 
 app = FastAPI(
     title="Trading System",

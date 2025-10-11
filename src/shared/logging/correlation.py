@@ -30,7 +30,8 @@ def get_correlation_id() -> Optional[str]:
     Returns:
         Optional[str]: Current correlation ID or None
     """
-    return getattr(_correlation_context, "correlation_id", None)
+    result = getattr(_correlation_context, "correlation_id", None)
+    return str(result) if result is not None else None
 
 
 def set_correlation_id(correlation_id: str) -> None:

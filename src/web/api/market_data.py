@@ -2,13 +2,12 @@
 Market Data API endpoints for trading dashboard
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import and_, desc, func, select
-from sqlalchemy.orm import Session
 
 from src.shared.database.base import db_transaction
 from src.shared.database.models.market_data import MarketData

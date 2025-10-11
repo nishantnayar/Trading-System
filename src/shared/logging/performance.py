@@ -4,14 +4,14 @@ Performance tracking decorators and utilities
 
 import functools
 import time
-from typing import Any, Callable, Dict, Optional, TypeVar
-
-F = TypeVar("F", bound=Callable[..., Any])
+from typing import Any, Callable, TypeVar
 
 import psutil
 from loguru import logger
 
 from .correlation import get_correlation_context
+
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def log_performance(

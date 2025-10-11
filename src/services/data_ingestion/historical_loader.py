@@ -6,22 +6,15 @@ from Polygon.io into the database.
 """
 
 import asyncio
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
 from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import Session
 
 from src.services.data_ingestion.symbols import SymbolService
 from src.services.polygon.client import PolygonClient
-from src.services.polygon.exceptions import (
-    PolygonAPIError,
-    PolygonAuthenticationError,
-    PolygonConnectionError,
-    PolygonRateLimitError,
-)
 from src.shared.database.base import db_transaction
 from src.shared.database.models.load_runs import LoadRun
 from src.shared.database.models.market_data import MarketData
@@ -383,7 +376,7 @@ class HistoricalDataLoader:
                     },
                 )
 
-                result = session.execute(stmt)
+                session.execute(stmt)
                 inserted_count += len(batch)
                 session.commit()
 

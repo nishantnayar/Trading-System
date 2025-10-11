@@ -5,7 +5,7 @@ Database models for market data storage
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import BigInteger, Column, DateTime, Numeric, String
+from sqlalchemy import BigInteger, DateTime, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import Base

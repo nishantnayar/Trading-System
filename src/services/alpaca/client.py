@@ -4,10 +4,9 @@ Alpaca Trading API Client
 
 import logging
 import os
-from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from alpaca_trade_api import REST, TimeFrame
+from alpaca_trade_api import REST
 from alpaca_trade_api.rest import APIError
 
 from .exceptions import AlpacaAPIError, AlpacaAuthenticationError, AlpacaConnectionError

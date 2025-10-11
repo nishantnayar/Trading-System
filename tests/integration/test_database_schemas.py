@@ -3,7 +3,7 @@ Integration tests for database schemas and table creation
 """
 
 import pytest
-from sqlalchemy import inspect, text
+from sqlalchemy import text
 
 from config.database import get_database_config
 
@@ -19,11 +19,11 @@ class TestSchemaCreation:
             result = conn.execute(
                 text(
                     """
-                SELECT schema_name 
-                FROM information_schema.schemata 
+                SELECT schema_name
+                FROM information_schema.schemata
                 WHERE schema_name IN (
-                    'data_ingestion', 'strategy_engine', 'execution', 
-                    'risk_management', 'analytics', 'notification', 
+                    'data_ingestion', 'strategy_engine', 'execution',
+                    'risk_management', 'analytics', 'notification',
                     'logging', 'shared'
                 )
                 ORDER BY schema_name
@@ -75,9 +75,9 @@ class TestSchemaCreation:
                 result = conn.execute(
                     text(
                         f"""
-                    SELECT table_name 
-                    FROM information_schema.tables 
-                    WHERE table_schema = '{schema}' 
+                    SELECT table_name
+                    FROM information_schema.tables
+                    WHERE table_schema = '{schema}'
                     AND table_name = 'test_table'
                 """
                     )

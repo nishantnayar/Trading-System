@@ -5,7 +5,7 @@ Unit tests for database connections and configuration
 import pytest
 from sqlalchemy import text
 
-from src.config.database import get_database_config, get_engine
+from src.config.database import get_engine
 
 
 @pytest.mark.unit

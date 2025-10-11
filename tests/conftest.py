@@ -2,23 +2,21 @@
 Pytest configuration and fixtures for database testing
 """
 
-import os
 from pathlib import Path
 
 import pytest
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 # Load environment variables
 load_dotenv()
 
 # Add src to path
-import sys
+import sys  # noqa: E402
 
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from src.config.database import get_database_config, get_engine
+from src.config.database import get_database_config  # noqa: E402
 
 
 @pytest.fixture(scope="session")

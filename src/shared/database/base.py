@@ -6,13 +6,13 @@ Provides SQLAlchemy declarative base and session management
 from contextlib import contextmanager
 from typing import Any, Callable, Generator, TypeVar
 
-T = TypeVar("T")
-
 from loguru import logger
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError, ProgrammingError
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from src.config.database import get_engine
+
+T = TypeVar("T")
 
 # Create declarative base - all models inherit from this
 Base = declarative_base()

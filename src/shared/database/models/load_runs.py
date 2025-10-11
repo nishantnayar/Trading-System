@@ -5,7 +5,7 @@ Database model for tracking incremental data loading runs
 from datetime import date, datetime, timezone
 from typing import Optional
 
-from sqlalchemy import BigInteger, Column, Date, DateTime, Integer, String, Text
+from sqlalchemy import BigInteger, Date, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..base import Base

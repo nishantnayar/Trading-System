@@ -7,7 +7,6 @@ from typing import List, Optional
 
 from loguru import logger
 from sqlalchemy import and_, func, select
-from sqlalchemy.orm import Session
 
 from src.services.polygon.client import PolygonClient
 from src.services.polygon.exceptions import PolygonDataError

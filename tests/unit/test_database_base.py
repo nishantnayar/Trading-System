@@ -44,7 +44,7 @@ class TestDatabaseBase:
                 )
 
                 with pytest.raises(IntegrityError):
-                    with db_transaction() as session:
+                    with db_transaction() as _:
                         pass
 
                 # Verify rollback was called
@@ -65,7 +65,7 @@ class TestDatabaseBase:
                 )
 
                 with pytest.raises(OperationalError):
-                    with db_transaction() as session:
+                    with db_transaction() as _:
                         pass
 
                 # Verify rollback was called
@@ -84,7 +84,7 @@ class TestDatabaseBase:
                 mock_session.commit.side_effect = DataError("Invalid data", None, None)
 
                 with pytest.raises(DataError):
-                    with db_transaction() as session:
+                    with db_transaction() as _:
                         pass
 
                 # Verify rollback was called
@@ -105,7 +105,7 @@ class TestDatabaseBase:
                 )
 
                 with pytest.raises(ProgrammingError):
-                    with db_transaction() as session:
+                    with db_transaction() as _:
                         pass
 
                 # Verify rollback was called
@@ -124,7 +124,7 @@ class TestDatabaseBase:
                 mock_session.commit.side_effect = Exception("Unexpected error")
 
                 with pytest.raises(Exception):
-                    with db_transaction() as session:
+                    with db_transaction() as _:
                         pass
 
                 # Verify rollback was called
@@ -159,7 +159,7 @@ class TestDatabaseBase:
                 mock_sessionmaker.return_value.return_value = mock_session
 
                 with pytest.raises(Exception):
-                    with db_readonly_session() as session:
+                    with db_readonly_session() as _:
                         raise Exception("Read error")
 
                 # Verify close was called

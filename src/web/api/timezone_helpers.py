@@ -9,7 +9,7 @@ Email: nishant.nayar@hotmail.com
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 
 from pydantic import BaseModel
 
@@ -17,8 +17,6 @@ from src.shared.utils.timezone import (
     ensure_utc_timestamp,
     format_for_display,
     format_trading_time,
-    to_central,
-    to_eastern,
 )
 
 

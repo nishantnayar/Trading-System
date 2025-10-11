@@ -2,14 +2,12 @@
 Polygon.io API Client
 """
 
-import os
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from dateutil.parser import parse as parse_datetime
 from loguru import logger
 from polygon import RESTClient
-from polygon.rest.models import Agg
 
 from src.config.settings import get_settings
 

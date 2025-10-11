@@ -2,7 +2,6 @@
 Database Configuration for Trading System
 """
 
-import os
 from typing import Dict, Optional
 
 from pydantic import Field
