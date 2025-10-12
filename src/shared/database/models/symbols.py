@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import BigInteger, Column, Date, DateTime, Numeric, String, Text
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship
 
 from ..base import Base
 
@@ -37,6 +38,18 @@ class Symbol(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
+    )
+
+    # Relationships
+    key_statistics = relationship(
+        "KeyStatistics",
+        back_populates="symbol_ref",
+        cascade="all, delete-orphan",
+    )
+    institutional_holders = relationship(
+        "InstitutionalHolder",
+        back_populates="symbol_ref",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:
@@ -97,7 +110,10 @@ class SymbolDataStatus(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<SymbolDataStatus(symbol='{self.symbol}', date='{self.date}', status='{self.status}')>"
+        return (
+            f"<SymbolDataStatus(symbol='{self.symbol}', "
+            f"date='{self.date}', status='{self.status}')>"
+        )
 
     @hybrid_property
     def is_success(self) -> bool:

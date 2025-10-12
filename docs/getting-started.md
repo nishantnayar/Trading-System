@@ -268,11 +268,11 @@ python -m src.services.strategy_engine.main
 python -m src.services.execution.main
 ```
 
-### Step 4: Access the Dashboard
+### Step 3: Access the Dashboard
 
-1. **Open your browser** and go to `http://localhost:8000`
+1. **Open your browser** and go to `http://localhost:8002`
 2. **Check the dashboard** for system status
-3. **Verify all services** are running correctly
+3. **Verify the application** is running correctly
 
 ## Verification
 
@@ -289,16 +289,14 @@ python scripts/run_tests.py unit
 python scripts/run_tests.py all
 ```
 
-### Step 2: Check Service Health
+### Step 2: Check Application Health
 
 ```bash
-# Check if all services are running
-curl http://localhost:8000/health
+# Check if the application is running
+curl http://localhost:8002/health
 
-# Check individual services
-curl http://localhost:8001/health  # Data Ingestion
-curl http://localhost:8002/health  # Strategy Engine
-curl http://localhost:8003/health  # Execution
+# Or open in browser
+# http://localhost:8002/docs for API documentation
 ```
 
 ### Step 3: Verify Database
@@ -332,9 +330,9 @@ tail -f logs/strategy_engine.log
 
 ### 1. Explore the System
 
-- **Dashboard**: Navigate through the web interface
-- **Prefect UI**: Check workflow management at `http://localhost:4200`
-- **API Documentation**: Visit `http://localhost:8000/docs`
+- **Dashboard**: Navigate through the web interface at `http://localhost:8002`
+- **API Documentation**: Visit `http://localhost:8002/docs`
+- **Market Data**: Explore professional charts and analytics
 
 ### 2. Configure Trading
 

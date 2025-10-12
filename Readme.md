@@ -25,12 +25,12 @@ A production-grade algorithmic trading system designed for local deployment, foc
 
 ## 🏗️ Architecture
 
-This system uses a **microservices architecture** with **Prefect orchestration**, providing:
+This system uses a **modular monolithic architecture** with clear service boundaries, providing:
 
-- **6 Microservices**: Data Ingestion, Strategy Engine, Execution, Risk Management, Analytics, and Notification
-- **Modern Tech Stack**: Python + FastAPI + PostgreSQL + Redis + Polars
-- **Professional Frontend**: HTMX + Plotly + Tailwind CSS
-- **Workflow Orchestration**: Prefect for automated trading workflows
+- **Service-Oriented Modules**: Data Ingestion, Strategy Engine, Execution, Risk Management, Analytics, and Notification
+- **Modern Tech Stack**: Python + FastAPI + PostgreSQL + Redis + pandas
+- **Professional Frontend**: HTMX + Lightweight Charts + Tailwind CSS
+- **Scalable Design**: Prepared for future microservices migration
 - **Comprehensive Monitoring**: Loguru logging with structured data
 
 ### Key Features
@@ -44,7 +44,7 @@ This system uses a **microservices architecture** with **Prefect orchestration**
 | 📈 **Analytics** | Interactive charts and performance tracking with Plotly |
 | 🔄 **Backtesting** | Historical strategy validation framework |
 | 📱 **Web Dashboard** | Modern HTMX + Tailwind CSS responsive interface |
-| 🔧 **Microservices** | Scalable, maintainable service architecture |
+| 🔧 **Modular Design** | Scalable, maintainable service-oriented architecture |
 | 🗄️ **Database** | PostgreSQL with comprehensive schema design |
 | 📊 **Data Quality** | Automated data validation and quality monitoring |
 
@@ -198,9 +198,8 @@ python deployment/scripts/start_services.py
 ```
 
 #### 6. Access Dashboard
-- **URL**: http://localhost:8000
-- **Default Login**: admin/admin
-- **API Docs**: http://localhost:8000/docs
+- **URL**: http://localhost:8002
+- **API Docs**: http://localhost:8002/docs
 
 </details>
 
@@ -316,9 +315,8 @@ mkdocs build
 - **Email Notifications**: Critical event notifications and reports
 
 ### 🛠️ Development Features
-- **Microservices Architecture**: Scalable, maintainable service design
-- **Prefect Orchestration**: Automated workflow management
-- **Modern Frontend**: HTMX + Plotly + Tailwind CSS interface
+- **Modular Architecture**: Service-oriented design ready for scaling
+- **Modern Frontend**: HTMX + Lightweight Charts + Tailwind CSS interface
 - **Comprehensive Logging**: Structured logging with Loguru
 - **Code Quality**: Black, Flake8, mypy, and pre-commit hooks
 - **CI/CD Pipeline**: Automated testing, security scanning, and deployment
@@ -357,12 +355,12 @@ risk_management:
 
 ### Starting the System
 
-1. **Start all services**:
+1. **Start the application**:
    ```bash
-   python deployment/scripts/start_services.py
+   python main.py
    ```
 
-2. **Access web dashboard**: http://localhost:8000
+2. **Access web dashboard**: http://localhost:8002
 
 3. **Monitor logs**: Check `logs/` directory for system logs
 
@@ -419,17 +417,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 | Version | Status | Features |
 |---------|--------|----------|
-| **v1.0.0** | ✅ Released | Paper trading, basic strategies, web dashboard |
-| **v1.1.0** | 🚧 Planned | Live trading, advanced risk management |
-| **v1.2.0** | 📋 Roadmap | ML integration, multi-asset support |
-| **v1.3.0** | 📋 Roadmap | Cloud deployment, mobile app |
+| **v1.0.0** | ✅ Current | Paper trading, market data integration, web dashboard |
+| **v1.1.0** | 🚧 Planned | Strategy engine implementation, backtesting |
+| **v1.2.0** | 📋 Roadmap | Prefect orchestration, automated workflows |
+| **v1.3.0** | 📋 Roadmap | Microservices architecture, cloud deployment |
 
 ## 🏆 Acknowledgments
 
 - **Alpaca Markets** for providing excellent trading APIs
 - **FastAPI** team for the amazing web framework
-- **Prefect** for workflow orchestration
-- **Polars** for high-performance data processing
+- **Polygon.io** for historical market data
 - **Python Community** for the incredible ecosystem
 
 ---

@@ -59,6 +59,176 @@ CREATE INDEX idx_market_data_timestamp ON market_data(timestamp DESC);
 3. **Comprehensive Indexing**: Composite indexes for time-series queries
 4. **Time-Based Partitioning**: Optimized for large datasets
 
+##### Key Statistics Table
+
+Stores comprehensive financial metrics and fundamental data from Yahoo Finance for stock screening and analysis.
+
+```sql
+CREATE TABLE data_ingestion.key_statistics (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(10) NOT NULL,
+    date DATE NOT NULL,
+    data_source VARCHAR(50) DEFAULT 'yahoo',
+    
+    -- Valuation Metrics (9 fields)
+    market_cap BIGINT,
+    enterprise_value BIGINT,
+    trailing_pe NUMERIC(10, 2),
+    forward_pe NUMERIC(10, 2),
+    peg_ratio NUMERIC(10, 2),
+    price_to_book NUMERIC(10, 2),
+    price_to_sales NUMERIC(10, 2),
+    enterprise_to_revenue NUMERIC(10, 2),
+    enterprise_to_ebitda NUMERIC(10, 2),
+    
+    -- Profitability Metrics (6 fields, stored as decimals: 0.15 = 15%)
+    profit_margin NUMERIC(10, 4),
+    operating_margin NUMERIC(10, 4),
+    return_on_assets NUMERIC(10, 4),
+    return_on_equity NUMERIC(10, 4),
+    gross_margin NUMERIC(10, 4),
+    ebitda_margin NUMERIC(10, 4),
+    
+    -- Financial Health (10 fields)
+    revenue BIGINT,
+    revenue_per_share NUMERIC(10, 2),
+    earnings_per_share NUMERIC(10, 2),
+    total_cash BIGINT,
+    total_debt BIGINT,
+    debt_to_equity NUMERIC(10, 2),
+    current_ratio NUMERIC(10, 2),
+    quick_ratio NUMERIC(10, 2),
+    free_cash_flow BIGINT,
+    operating_cash_flow BIGINT,
+    
+    -- Growth Metrics (2 fields, stored as decimals)
+    revenue_growth NUMERIC(10, 4),
+    earnings_growth NUMERIC(10, 4),
+    
+    -- Trading Metrics (6 fields)
+    beta NUMERIC(10, 2),
+    fifty_two_week_high NUMERIC(10, 2),
+    fifty_two_week_low NUMERIC(10, 2),
+    fifty_day_average NUMERIC(10, 2),
+    two_hundred_day_average NUMERIC(10, 2),
+    average_volume BIGINT,
+    
+    -- Dividend Metrics (3 fields, stored as decimals)
+    dividend_yield NUMERIC(10, 4),
+    dividend_rate NUMERIC(10, 2),
+    payout_ratio NUMERIC(10, 4),
+    
+    -- Share Information (6 fields)
+    shares_outstanding BIGINT,
+    float_shares BIGINT,
+    shares_short BIGINT,
+    short_ratio NUMERIC(10, 2),
+    held_percent_insiders NUMERIC(10, 4),
+    held_percent_institutions NUMERIC(10, 4),
+    
+    -- Metadata
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Constraints
+    CONSTRAINT key_statistics_symbol_date_source_key UNIQUE (symbol, date, data_source),
+    CONSTRAINT key_statistics_symbol_fkey FOREIGN KEY (symbol) 
+        REFERENCES data_ingestion.symbols(symbol) ON DELETE CASCADE
+);
+
+-- Performance indexes
+CREATE INDEX idx_key_statistics_symbol ON data_ingestion.key_statistics(symbol);
+CREATE INDEX idx_key_statistics_date ON data_ingestion.key_statistics(date);
+CREATE INDEX idx_key_statistics_symbol_date ON data_ingestion.key_statistics(symbol, date);
+
+-- Screening indexes for common queries
+CREATE INDEX idx_key_statistics_valuation 
+    ON data_ingestion.key_statistics(trailing_pe, price_to_book, market_cap);
+CREATE INDEX idx_key_statistics_profitability 
+    ON data_ingestion.key_statistics(return_on_equity, profit_margin);
+
+-- Auto-update trigger
+CREATE OR REPLACE FUNCTION update_key_statistics_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_key_statistics_updated_at
+    BEFORE UPDATE ON data_ingestion.key_statistics
+    FOR EACH ROW
+    EXECUTE FUNCTION update_key_statistics_updated_at();
+```
+
+**Design Features:**
+
+1. **Comprehensive Metrics**: 50+ financial indicators covering valuation, profitability, growth, and trading
+2. **Screening Optimization**: Dedicated indexes for common stock screening queries
+3. **Decimal Precision**: NUMERIC(10,4) for percentage values, NUMERIC(10,2) for ratios
+4. **Data Integrity**: Unique constraint on (symbol, date, data_source) prevents duplicates
+5. **Automatic Updates**: Trigger maintains updated_at timestamp
+6. **Cascade Delete**: Foreign key ensures referential integrity with symbols table
+
+**Use Cases:**
+
+- Stock screening and filtering based on fundamental metrics
+- Historical fundamental analysis and trend tracking
+- Portfolio fundamental assessment
+- Value/growth stock identification
+- Risk assessment based on financial health metrics
+
+**Migration Location**: `scripts/09_create_key_statistics_table.sql`  
+**SQLAlchemy Model**: `src/shared/database/models/key_statistics.py`
+
+##### Institutional Holders Table
+
+Stores institutional ownership data from Yahoo Finance, tracking major shareholders like investment firms, mutual funds, and pension funds.
+
+```sql
+CREATE TABLE data_ingestion.institutional_holders (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(10) NOT NULL,
+    date_reported DATE NOT NULL,
+    holder_name VARCHAR(255) NOT NULL,
+    shares BIGINT,
+    value BIGINT,
+    percent_held NUMERIC(10, 4),
+    data_source VARCHAR(50) DEFAULT 'yahoo',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT institutional_holders_symbol_holder_date_key UNIQUE (symbol, holder_name, date_reported),
+    CONSTRAINT institutional_holders_symbol_fkey FOREIGN KEY (symbol) 
+        REFERENCES data_ingestion.symbols(symbol) ON DELETE CASCADE
+);
+
+-- Performance indexes
+CREATE INDEX idx_institutional_holders_symbol ON data_ingestion.institutional_holders(symbol);
+CREATE INDEX idx_institutional_holders_date ON data_ingestion.institutional_holders(date_reported);
+CREATE INDEX idx_institutional_holders_shares ON data_ingestion.institutional_holders(symbol, shares DESC);
+CREATE INDEX idx_institutional_holders_percent ON data_ingestion.institutional_holders(symbol, percent_held DESC);
+```
+
+**Design Features:**
+
+1. **Ownership Tracking**: Captures major institutional shareholders and their positions
+2. **Historical Data**: Tracks ownership changes over time via date_reported
+3. **Top Holders Optimization**: Indexes for quickly finding largest shareholders
+4. **Unique Constraint**: Prevents duplicates based on (symbol, holder_name, date_reported)
+5. **Value Tracking**: Stores both share count and dollar value of holdings
+
+**Use Cases:**
+
+- Identifying major shareholders and ownership concentration
+- Tracking institutional buying/selling trends
+- Analyzing ownership structure for risk assessment
+- Monitoring whale movements and institutional sentiment
+
+**Migration Location**: `scripts/10_create_institutional_holders_table.sql`  
+**SQLAlchemy Model**: `src/shared/database/models/institutional_holders.py`
+
 ##### Orders Table
 ```sql
 CREATE TYPE order_side AS ENUM ('buy', 'sell');
@@ -986,7 +1156,7 @@ The SQL scripts provide:
 - `shared` - Common utilities and configuration
 
 #### Core Tables
-- **Market Data**: `market_data`, `data_quality_logs`
+- **Market Data**: `market_data`, `key_statistics`, `institutional_holders`, `data_quality_logs`
 - **Trading**: `orders`, `trades`, `positions`
 - **Strategy**: `strategies`, `strategy_signals`, `strategy_performance`
 - **Risk**: `risk_limits`, `risk_events`
@@ -1098,7 +1268,7 @@ REDIS_URL=redis://localhost:6379/0
 - **System Logging**: Structured log storage
 
 #### **2.2 Service-Specific Schemas**
-- **data_ingestion**: Market data, data quality logs, ingestion status
+- **data_ingestion**: Market data, key statistics, institutional holders, company info, data quality logs, ingestion status
 - **strategy_engine**: Strategies, signals, performance metrics
 - **execution**: Orders, trades, positions, execution logs
 - **risk_management**: Risk limits, events, position limits

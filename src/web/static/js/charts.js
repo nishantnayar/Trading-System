@@ -20,7 +20,9 @@ class TradingChartsDashboard {
      */
     async init() {
         this.setupEventListeners();
-        await this.loadSymbols();
+        // Don't load symbols here - let filters.js handle it
+        // The filters manager will populate the dropdown and trigger change events
+        console.log('Charts: Initialized, waiting for filters to load symbols');
     }
 
     /**
@@ -31,10 +33,27 @@ class TradingChartsDashboard {
         const symbolSelect = document.getElementById('symbolSelect');
         if (symbolSelect) {
             symbolSelect.addEventListener('change', (e) => {
-                console.log('Charts: Symbol changed to', e.target.value);
+                console.log('Charts: Symbol change event received');
+                console.log('Charts: e.target:', e.target);
+                console.log('Charts: e.target.value:', e.target.value);
+                console.log('Charts: typeof e.target.value:', typeof e.target.value);
+                
                 this.currentSymbol = e.target.value;
-                if (this.currentSymbol) {
+                console.log('Charts: this.currentSymbol set to:', this.currentSymbol);
+                console.log('Charts: typeof this.currentSymbol:', typeof this.currentSymbol);
+                
+                if (this.currentSymbol && this.currentSymbol !== '[object Object]') {
                     this.loadChartData();
+                } else if (this.currentSymbol === '[object Object]') {
+                    console.error('Charts: ERROR - currentSymbol is "[object Object]"!');
+                    console.error('Charts: symbolSelect value:', symbolSelect.value);
+                    console.error('Charts: symbolSelect selectedIndex:', symbolSelect.selectedIndex);
+                    if (symbolSelect.selectedIndex >= 0) {
+                        const selectedOption = symbolSelect.options[symbolSelect.selectedIndex];
+                        console.error('Charts: selected option:', selectedOption);
+                        console.error('Charts: selected option value:', selectedOption.value);
+                        console.error('Charts: selected option text:', selectedOption.text);
+                    }
                 }
             });
             console.log('Charts: Event listener registered for symbolSelect');
@@ -63,36 +82,6 @@ class TradingChartsDashboard {
                 }
             });
         });
-    }
-
-    /**
-     * Load available symbols from API
-     */
-    async loadSymbols() {
-        try {
-            const response = await fetch('/api/market-data/symbols');
-            const symbols = await response.json();
-            
-            const select = document.getElementById('symbolSelect');
-            select.innerHTML = '<option value="">Select a symbol...</option>';
-            
-            symbols.forEach(symbol => {
-                const option = document.createElement('option');
-                option.value = symbol.symbol;
-                option.textContent = `${symbol.symbol} ${symbol.name ? '- ' + symbol.name : ''} (${symbol.record_count} records)`;
-                select.appendChild(option);
-            });
-
-            // Auto-select first symbol with data
-            if (symbols.length > 0) {
-                select.value = symbols[0].symbol;
-                this.currentSymbol = symbols[0].symbol;
-                this.loadChartData();
-            }
-        } catch (error) {
-            console.error('Error loading symbols:', error);
-            this.showError('Failed to load symbols');
-        }
     }
 
     /**

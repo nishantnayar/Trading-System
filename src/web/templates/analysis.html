@@ -663,6 +663,10 @@
         <i class="fas fa-building"></i>
         Company Info
     </button>
+    <button class="tab-button" data-tab="fundamentals">
+        <i class="fas fa-calculator"></i>
+        Fundamentals
+    </button>
     <button class="tab-button active" data-tab="technical-analysis">
         <i class="fas fa-chart-line"></i>
         Technical Analysis
@@ -789,11 +793,221 @@
                             color='indigo'
                         ) }}
                     </div>
+
+                    <!-- Institutional Holders Card -->
+                    <div class="company-description-card">
+                        {{ info_card(
+                            title='Top Institutional Holders',
+                            icon='fas fa-building-columns',
+                            content='
+                                <div id="institutionalHoldersLoading" style="text-align: center; padding: 20px; color: #64748b;">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading institutional holders...
+                                </div>
+                                <div id="institutionalHoldersContent" style="display: none;">
+                                    <div style="overflow-x: auto;">
+                                        <table style="width: 100%; border-collapse: collapse;">
+                                            <thead>
+                                                <tr style="border-bottom: 2px solid #e2e8f0;">
+                                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #475569;">#</th>
+                                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #475569;">Institution</th>
+                                                    <th style="padding: 12px; text-align: right; font-weight: 600; color: #475569;">Shares</th>
+                                                    <th style="padding: 12px; text-align: right; font-weight: 600; color: #475569;">Value</th>
+                                                    <th style="padding: 12px; text-align: right; font-weight: 600; color: #475569;">Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="institutionalHoldersTable">
+                                                <!-- Data will be inserted here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div id="institutionalHoldersNoData" style="display: none; text-align: center; padding: 30px; color: #64748b;">
+                                    <i class="fas fa-info-circle" style="font-size: 24px; margin-bottom: 10px;"></i>
+                                    <p>No institutional holders data available. Load data first.</p>
+                                </div>
+                            ',
+                            color='purple'
+                        ) }}
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     <!-- End Company Info Tab -->
+
+    <!-- Fundamentals Tab -->
+    <div id="fundamentals-tab" class="tab-content">
+        <div class="company-info-container">
+            <div class="loading-company" id="fundamentalsLoading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading key statistics...</p>
+            </div>
+            <div id="fundamentalsContent" style="display: none;">
+                <!-- Fundamentals Header -->
+                <div class="company-header">
+                    <h1 class="company-name" id="fundCompanyName">-</h1>
+                    <div class="company-meta">
+                        <span class="company-badge" id="fundSymbol">-</span>
+                        <span class="company-badge" id="fundDate">-</span>
+                        <span class="company-badge" id="fundSource">-</span>
+                    </div>
+                </div>
+
+                <!-- Key Statistics Grid -->
+                <div class="company-cards-grid">
+                    <!-- Market Cap Card (Large) -->
+                    {{ large_stat_card(
+                        icon='fas fa-chart-line',
+                        title='Market Cap',
+                        value='-',
+                        subtitle='Market Capitalization',
+                        color='blue',
+                        value_id='fundMarketCapLarge'
+                    ) }}
+
+                    <!-- P/E Ratio Card -->
+                    {{ stat_card(
+                        icon='fas fa-calculator',
+                        title='P/E Ratio',
+                        value='-',
+                        description='Trailing P/E',
+                        color='purple',
+                        value_id='fundPECard'
+                    ) }}
+
+                    <!-- ROE Card -->
+                    {{ stat_card(
+                        icon='fas fa-percent',
+                        title='Return on Equity',
+                        value='-',
+                        description='Profitability measure',
+                        color='green',
+                        value_id='fundROECard'
+                    ) }}
+
+                    <!-- Profit Margin Card -->
+                    {{ stat_card(
+                        icon='fas fa-chart-pie',
+                        title='Profit Margin',
+                        value='-',
+                        description='Net profit margin',
+                        color='indigo',
+                        value_id='fundProfitMarginCard'
+                    ) }}
+
+                    <!-- Valuation Metrics -->
+                    {{ info_card(
+                        title='Valuation Metrics',
+                        icon='fas fa-balance-scale',
+                        content='
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                <div><strong>Market Cap:</strong> <span id="fundMarketCap">-</span></div>
+                                <div><strong>Enterprise Value:</strong> <span id="fundEnterpriseValue">-</span></div>
+                                <div><strong>P/E (Trailing):</strong> <span id="fundTrailingPE">-</span></div>
+                                <div><strong>P/E (Forward):</strong> <span id="fundForwardPE">-</span></div>
+                                <div><strong>PEG Ratio:</strong> <span id="fundPEG">-</span></div>
+                                <div><strong>Price/Book:</strong> <span id="fundPriceBook">-</span></div>
+                                <div><strong>Price/Sales:</strong> <span id="fundPriceSales">-</span></div>
+                                <div><strong>EV/Revenue:</strong> <span id="fundEVRevenue">-</span></div>
+                                <div><strong>EV/EBITDA:</strong> <span id="fundEVEBITDA">-</span></div>
+                            </div>
+                        ',
+                        color='blue'
+                    ) }}
+
+                    <!-- Profitability Metrics -->
+                    {{ info_card(
+                        title='Profitability Metrics',
+                        icon='fas fa-chart-pie',
+                        content='
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                <div><strong>Profit Margin:</strong> <span id="fundProfitMargin">-</span></div>
+                                <div><strong>Operating Margin:</strong> <span id="fundOperatingMargin">-</span></div>
+                                <div><strong>Gross Margin:</strong> <span id="fundGrossMargin">-</span></div>
+                                <div><strong>EBITDA Margin:</strong> <span id="fundEBITDAMargin">-</span></div>
+                                <div><strong>ROE:</strong> <span id="fundROE">-</span></div>
+                                <div><strong>ROA:</strong> <span id="fundROA">-</span></div>
+                            </div>
+                        ',
+                        color='green'
+                    ) }}
+
+                    <!-- Financial Health -->
+                    {{ info_card(
+                        title='Financial Health',
+                        icon='fas fa-heartbeat',
+                        content='
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                <div><strong>Total Cash:</strong> <span id="fundTotalCash">-</span></div>
+                                <div><strong>Total Debt:</strong> <span id="fundTotalDebt">-</span></div>
+                                <div><strong>Debt/Equity:</strong> <span id="fundDebtEquity">-</span></div>
+                                <div><strong>Current Ratio:</strong> <span id="fundCurrentRatio">-</span></div>
+                                <div><strong>Quick Ratio:</strong> <span id="fundQuickRatio">-</span></div>
+                                <div><strong>Free Cash Flow:</strong> <span id="fundFCF">-</span></div>
+                                <div><strong>Revenue:</strong> <span id="fundRevenue">-</span></div>
+                                <div><strong>EPS:</strong> <span id="fundEPS">-</span></div>
+                            </div>
+                        ',
+                        color='purple'
+                    ) }}
+
+                    <!-- Growth Metrics -->
+                    {{ stat_card(
+                        icon='fas fa-arrow-trend-up',
+                        title='Revenue Growth',
+                        value='-',
+                        description='Year-over-year growth',
+                        color='green',
+                        value_id='fundRevenueGrowth'
+                    ) }}
+
+                    {{ stat_card(
+                        icon='fas fa-chart-line',
+                        title='Earnings Growth',
+                        value='-',
+                        description='Year-over-year growth',
+                        color='green',
+                        value_id='fundEarningsGrowth'
+                    ) }}
+
+                    <!-- Trading Metrics -->
+                    {{ info_card(
+                        title='Trading Metrics',
+                        icon='fas fa-chart-line',
+                        content='
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                <div><strong>Beta:</strong> <span id="fundBeta">-</span></div>
+                                <div><strong>52W High:</strong> <span id="fund52WHigh">-</span></div>
+                                <div><strong>52W Low:</strong> <span id="fund52WLow">-</span></div>
+                                <div><strong>50D Average:</strong> <span id="fund50DAvg">-</span></div>
+                                <div><strong>200D Average:</strong> <span id="fund200DAvg">-</span></div>
+                                <div><strong>Avg Volume:</strong> <span id="fundAvgVolume">-</span></div>
+                            </div>
+                        ',
+                        color='indigo'
+                    ) }}
+
+                    <!-- Dividend & Ownership -->
+                    {{ info_card(
+                        title='Dividends & Ownership',
+                        icon='fas fa-users',
+                        content='
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                <div><strong>Dividend Yield:</strong> <span id="fundDivYield">-</span></div>
+                                <div><strong>Dividend Rate:</strong> <span id="fundDivRate">-</span></div>
+                                <div><strong>Payout Ratio:</strong> <span id="fundPayoutRatio">-</span></div>
+                                <div><strong>Insider Ownership:</strong> <span id="fundInsiders">-</span></div>
+                                <div><strong>Institutional:</strong> <span id="fundInstitutional">-</span></div>
+                                <div><strong>Short Interest:</strong> <span id="fundShortInterest">-</span></div>
+                            </div>
+                        ',
+                        color='yellow'
+                    ) }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End Fundamentals Tab -->
 
     <!-- Technical Analysis Tab -->
     <div id="technical-analysis-tab" class="tab-content active">
@@ -890,6 +1104,8 @@
 <script src="/static/js/indicators.js?v=20"></script>
 <script src="/static/js/charts.js?v=20"></script>
 <script src="/static/js/company-info.js?v=17"></script>
+<script src="/static/js/key-statistics.js?v=2"></script>
+<script src="/static/js/institutional-holders.js?v=1"></script>
 <script src="/static/js/filters.js?v=14"></script>
 
 <script>

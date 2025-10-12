@@ -75,10 +75,19 @@ Usage:
 </div>
 {% endmacro %}
 
-{# Info Card - for displaying information without icons #}
-{% macro info_card(title='Info Title', content='Information content', color='blue', extra_classes='') %}
+{# Info Card - for displaying information with optional icon #}
+{% macro info_card(title='Info Title', content='Information content', color='blue', icon=None, extra_classes='') %}
 <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 p-6 border border-gray-100 {{ extra_classes }}">
+    {% if icon %}
+    <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 bg-gradient-to-r {{ color_config[color]['gradient'] }} rounded-lg flex items-center justify-center">
+            <i class="{{ icon }} text-white"></i>
+        </div>
+        <h3 class="text-lg font-semibold {{ color_config[color]['text'] }}">{{ title }}</h3>
+    </div>
+    {% else %}
     <h3 class="text-lg font-semibold {{ color_config[color]['text'] }} mb-3">{{ title }}</h3>
+    {% endif %}
     <div class="text-gray-600">{{ content | safe }}</div>
 </div>
 {% endmacro %}
@@ -108,7 +117,7 @@ Usage:
 <div class="chart-panel {{ extra_classes }}">
     <div class="chart-header">{{ title }}</div>
     <div class="chart-wrapper">
-        <div id="{{ chart_id }}" style="height: {{ height }};"></div>
+        <div id="{{ chart_id }}" style="height: {{ height }}"></div>
     </div>
 </div>
 {% endmacro %}

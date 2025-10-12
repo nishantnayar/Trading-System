@@ -80,12 +80,32 @@ from src.shared.logging import setup_logging
 @click.option(
     "--fundamentals",
     is_flag=True,
-    help="Load company fundamentals (company info, statistics, etc.)",
+    help="Load company fundamentals (company info)",
+)
+@click.option(
+    "--key-statistics",
+    is_flag=True,
+    help="Load key financial statistics (P/E, ROE, margins, etc.)",
 )
 @click.option(
     "--company-info-only",
     is_flag=True,
     help="Load only company info (no market data)",
+)
+@click.option(
+    "--key-statistics-only",
+    is_flag=True,
+    help="Load only key statistics (no market data)",
+)
+@click.option(
+    "--institutional-holders",
+    is_flag=True,
+    help="Load institutional holders data",
+)
+@click.option(
+    "--institutional-holders-only",
+    is_flag=True,
+    help="Load only institutional holders (no market data)",
 )
 @click.option(
     "--dividends",
@@ -113,7 +133,11 @@ def main(
     delay: float,
     max_symbols: Optional[int],
     fundamentals: bool,
+    key_statistics: bool,
     company_info_only: bool,
+    key_statistics_only: bool,
+    institutional_holders: bool,
+    institutional_holders_only: bool,
     dividends: bool,
     splits: bool,
     health_check: bool,
@@ -128,11 +152,20 @@ def main(
         # Load hourly data for AAPL for the last 7 days
         python scripts/load_yahoo_data.py --symbol AAPL --days 7 --interval 1h
 
+        # Load key statistics for AAPL
+        python scripts/load_yahoo_data.py --symbol AAPL --key-statistics-only
+
+        # Load institutional holders for AAPL
+        python scripts/load_yahoo_data.py --symbol AAPL --institutional-holders-only
+
+        # Load key statistics for all symbols
+        python scripts/load_yahoo_data.py --all-symbols --key-statistics-only --max-symbols 10
+
+        # Load market data + key statistics + institutional holders
+        python scripts/load_yahoo_data.py --symbol AAPL --days 30 --key-statistics --institutional-holders
+
         # Load data for all symbols for specific date range
         python scripts/load_yahoo_data.py --all-symbols --from-date 2023-01-01 --to-date 2023-12-31
-
-        # Load data for first 10 symbols (testing)
-        python scripts/load_yahoo_data.py --all-symbols --days 7 --max-symbols 10
 
         # Load company info only (no market data)
         python scripts/load_yahoo_data.py --symbol AAPL --company-info-only
@@ -194,13 +227,41 @@ def main(
                     else:
                         logger.error(f"❌ Failed to load company info for {symbol}")
                         return 1
-                elif fundamentals or dividends or splits:
+                elif key_statistics_only:
+                    # Load only key statistics
+                    success = await loader.load_key_statistics(symbol)
+                    if success:
+                        logger.info(
+                            f"✅ Successfully loaded key statistics for {symbol}"
+                        )
+                    else:
+                        logger.error(f"❌ Failed to load key statistics for {symbol}")
+                        return 1
+                elif institutional_holders_only:
+                    # Load only institutional holders
+                    count = await loader.load_institutional_holders(symbol)
+                    if count > 0:
+                        logger.info(
+                            f"✅ Successfully loaded {count} institutional holders for {symbol}"
+                        )
+                    else:
+                        logger.warning(f"⚠ No institutional holders found for {symbol}")
+                        return 1
+                elif (
+                    fundamentals
+                    or key_statistics
+                    or institutional_holders
+                    or dividends
+                    or splits
+                ):
                     # Use load_all_data for comprehensive loading
                     results = await loader.load_all_data(
                         symbol=symbol,
                         start_date=from_date_obj,
                         end_date=to_date_obj,
                         include_fundamentals=fundamentals,
+                        include_key_statistics=key_statistics,
+                        include_institutional_holders=institutional_holders,
                         include_dividends=dividends,
                         include_splits=splits,
                     )
@@ -245,6 +306,67 @@ def main(
                     logger.info(f"  Failed: {failed}")
 
                     return 0 if failed == 0 else 1
+                elif key_statistics_only:
+                    # Load key statistics for all symbols
+                    symbols_list = await loader._get_active_symbols()
+                    if max_symbols:
+                        symbols_list = symbols_list[:max_symbols]
+
+                    logger.info(
+                        f"Loading key statistics for {len(symbols_list)} symbols"
+                    )
+                    successful = 0
+                    failed = 0
+
+                    for i, sym in enumerate(symbols_list, 1):
+                        logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
+                        success = await loader.load_key_statistics(sym)
+                        if success:
+                            successful += 1
+                        else:
+                            failed += 1
+
+                        if i < len(symbols_list):
+                            await asyncio.sleep(loader.delay_between_requests)
+
+                    logger.info(f"Key statistics loading completed:")
+                    logger.info(f"  Total symbols: {len(symbols_list)}")
+                    logger.info(f"  Successful: {successful}")
+                    logger.info(f"  Failed: {failed}")
+
+                    return 0 if failed == 0 else 1
+                elif institutional_holders_only:
+                    # Load institutional holders for all symbols
+                    symbols_list = await loader._get_active_symbols()
+                    if max_symbols:
+                        symbols_list = symbols_list[:max_symbols]
+
+                    logger.info(
+                        f"Loading institutional holders for {len(symbols_list)} symbols"
+                    )
+                    successful = 0
+                    failed = 0
+                    total_holders = 0
+
+                    for i, sym in enumerate(symbols_list, 1):
+                        logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
+                        count = await loader.load_institutional_holders(sym)
+                        if count > 0:
+                            successful += 1
+                            total_holders += count
+                        else:
+                            failed += 1
+
+                        if i < len(symbols_list):
+                            await asyncio.sleep(loader.delay_between_requests)
+
+                    logger.info(f"Institutional holders loading completed:")
+                    logger.info(f"  Total symbols: {len(symbols_list)}")
+                    logger.info(f"  Successful: {successful}")
+                    logger.info(f"  Failed: {failed}")
+                    logger.info(f"  Total holders: {total_holders}")
+
+                    return 0 if failed == 0 else 1
                 else:
                     # Load all symbols
                     stats = await loader.load_all_symbols_data(
@@ -253,6 +375,8 @@ def main(
                         interval=interval,
                         max_symbols=max_symbols,
                         include_fundamentals=fundamentals,
+                        include_key_statistics=key_statistics,
+                        include_institutional_holders=institutional_holders,
                     )
 
                 logger.info("Loading completed:")

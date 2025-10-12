@@ -23,9 +23,18 @@ class CompanyInfoManager {
         const symbolSelect = document.getElementById('symbolSelect');
         if (symbolSelect) {
             symbolSelect.addEventListener('change', (e) => {
+                console.log('CompanyInfo: Symbol change event received');
+                console.log('CompanyInfo: e.target.value:', e.target.value);
+                console.log('CompanyInfo: typeof e.target.value:', typeof e.target.value);
+                
                 this.currentSymbol = e.target.value;
-                if (this.currentSymbol) {
+                console.log('CompanyInfo: this.currentSymbol set to:', this.currentSymbol);
+                
+                if (this.currentSymbol && this.currentSymbol !== '[object Object]') {
                     this.loadCompanyInfo();
+                } else if (this.currentSymbol === '[object Object]') {
+                    console.error('CompanyInfo: ERROR - currentSymbol is "[object Object]"!');
+                    console.error('CompanyInfo: symbolSelect value:', symbolSelect.value);
                 }
             });
         }

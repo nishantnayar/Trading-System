@@ -181,3 +181,5 @@ cython_debug/
 .cursorindexingignore
 /.idea
 /.vscode
+YAHOO_FINANCE_SUMMARY.md
+KEY_STATISTICS_LOADER.md

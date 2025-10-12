@@ -8,11 +8,11 @@
 
 ### **Technology Stack**
 
-![Python](https://img.shields.io/badge/Python-3.9+-green?style=for-the-badge&logo=python)
+![Python](https://img.shields.io/badge/Python-3.11+-green?style=for-the-badge&logo=python)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue?style=for-the-badge&logo=postgresql)
 ![Redis](https://img.shields.io/badge/Redis-Cache-red?style=for-the-badge&logo=redis)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Web%20Framework-009688?style=for-the-badge&logo=fastapi)
-![Polars](https://img.shields.io/badge/Polars-Data%20Processing-FF6B6B?style=for-the-badge&logo=rust)
+![pandas](https://img.shields.io/badge/pandas-Data%20Processing-150458?style=for-the-badge&logo=pandas)
 
 ---
 
@@ -34,15 +34,15 @@ cd trading-system
 conda activate your-environment-name
 
 # Install dependencies
-pip install -r deployment/requirements.txt
+pip install -r requirements.txt
 
 # Configure and run
 cp deployment/env.example .env
-python deployment/scripts/setup_database.py
-python deployment/scripts/start_services.py
+python scripts/setup_databases.py
+python main.py
 ```
 
-**Access your dashboard**: http://localhost:8000
+**Access your dashboard**: http://localhost:8002
 
 ---
 
@@ -105,11 +105,11 @@ graph TB
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Data Ingestion** | Python + Polars | Market data processing |
-| **Strategy Engine** | Python + Pydantic | Algorithm execution |
-| **Risk Management** | Python + PostgreSQL | Risk controls |
+| **Data Ingestion** | Python + pandas | Market data processing |
+| **Strategy Engine** | Python + Pydantic | Algorithm execution (v1.1.0) |
+| **Risk Management** | Python + PostgreSQL | Risk controls (v1.1.0) |
 | **Execution Engine** | Python + Alpaca API | Order management |
-| **Analytics** | Python + Plotly | Performance tracking |
+| **Analytics** | Python + Lightweight Charts | Performance tracking |
 | **Database** | PostgreSQL | Data persistence |
 | **Cache** | Redis | High-speed access |
 
@@ -126,9 +126,9 @@ graph TB
 - ✅ **Order Management** - Complete order lifecycle management
 
 ### **Technical Features**
-- ✅ **Microservices Architecture** - Scalable and maintainable
+- ✅ **Modular Architecture** - Service-oriented design ready for scaling
 - ✅ **Type Safety** - Pydantic for data validation
-- ✅ **High Performance** - Polars for data processing
+- ✅ **Data Processing** - pandas for analytics and manipulation
 - ✅ **Modern UI** - FastAPI + HTMX + Lightweight Charts + Tailwind CSS
 - ✅ **Professional Charts** - Multi-pane trading charts with technical indicators
 - ✅ **Theme Support** - Light/Dark chart themes with persistence
@@ -177,8 +177,8 @@ LOG_RETENTION_DAYS=30
 ```
 
 ### **Service Ports**
-- **Dashboard**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
+- **Dashboard**: http://localhost:8002
+- **API Docs**: http://localhost:8002/docs
 - **PostgreSQL**: localhost:5432
 - **Redis**: localhost:6379
 
@@ -223,7 +223,7 @@ LOG_RETENTION_DAYS=30
 - Check the [Troubleshooting Guide](troubleshooting.md)
 - Join the [Discussions](https://github.com/nishantnayar/trading-system/discussions)
 - Create an issue on GitHub
-- Contact: nishantnayar@gmail.com
+- Contact: nishant.nayar@hotmail.com
 
 ---
 

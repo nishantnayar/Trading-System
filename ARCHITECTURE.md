@@ -2,7 +2,10 @@
 
 ## Overview
 
-A production-grade algorithmic trading system designed for local deployment, focusing on equities trading through Alpaca with paper trading capabilities. The system uses a microservices architecture with Prefect orchestration, Python-based services, and a modern web interface.
+A production-grade algorithmic trading system designed for local deployment, focusing on equities trading through Alpaca with paper trading capabilities. The system uses a modular monolithic architecture with clear service boundaries, Python-based components, and a modern web interface.
+
+**Current Architecture**: Modular monolith with service-oriented design  
+**Future Plans**: Microservices architecture with Prefect orchestration (v1.3.0+)
 
 **Author**: Nishant Nayar  
 **Email**: nishant.nayar@hotmail.com  
@@ -24,16 +27,16 @@ A production-grade algorithmic trading system designed for local deployment, foc
 - **Language**: Python 3.11+
 - **Environment**: Anaconda
 - **Database**: PostgreSQL (metadata, transactions)
-- **Cache/Queue**: Redis (caching, pub/sub)
-- **Data Processing**: Polars (analytics, large datasets)
-- **Orchestration**: Prefect (workflow management)
+- **Cache/Queue**: Redis (caching, planned: pub/sub)
+- **Data Processing**: pandas (analytics, data manipulation)
+- **Orchestration**: Planned for v1.2.0 (Prefect workflow management)
 - **Validation**: Pydantic (data models, API validation)
 
 ### Frontend
 - **Backend**: FastAPI
-- **Frontend**: HTMX + Plotly + Tailwind CSS
-- **Charts**: Plotly.js for financial visualizations
-- **Real-time**: WebSocket connections for live updates
+- **Frontend**: HTMX + Lightweight Charts + Tailwind CSS
+- **Charts**: Lightweight Charts library for financial visualizations
+- **Real-time**: Planned for future versions
 
 ### Development & Quality
 - **Linting**: Flake8 + Black + isort
@@ -42,17 +45,21 @@ A production-grade algorithmic trading system designed for local deployment, foc
 - **Logging**: Loguru (consolidated logging)
 - **Testing**: pytest + coverage
 
-## Microservices Architecture
+## Service-Oriented Architecture
 
-### 1. Data Ingestion Service
+### Current Architecture (v1.0.0)
+
+The system is implemented as a **modular monolith** with clear service boundaries. Each service is a separate module that can be independently developed and tested, with the flexibility to extract into microservices in future versions.
+
+### 1. Data Ingestion Module
 **Purpose**: Collect market data from multiple sources (Polygon.io + Alpaca)
 
 **Components**:
 - Polygon.io client (historical data)
 - Alpaca API client (real-time trading)
+- Yahoo Finance client (additional data source)
 - Symbol management system
 - Data validation (Pydantic models)
-- Prefect flows for data ingestion
 - Data quality checks
 - Error handling and retry logic
 
@@ -63,17 +70,12 @@ A production-grade algorithmic trading system designed for local deployment, foc
 - Validate data integrity
 - Store raw data in PostgreSQL
 - Cache frequently accessed data in Redis
-- Publish data events to message queue
 - Automatic delisting detection
 
-**Prefect Flows**:
-- `fetch_historical_data`: Polygon.io end-of-day data collection
-- `fetch_realtime_data`: Alpaca real-time trading data
-- `detect_delisted_symbols`: Automatic delisting detection
-- `validate_data_quality`: Data validation pipeline
-- `archive_old_data`: Data lifecycle management
+**Implementation Status**: ✅ Core functionality implemented  
+**Future Enhancements**: Prefect workflows for automated data collection (v1.2.0)
 
-### 2. Strategy Engine Service
+### 2. Strategy Engine Module
 **Purpose**: Execute trading strategies and generate signals
 
 **Components**:
@@ -89,14 +91,11 @@ A production-grade algorithmic trading system designed for local deployment, foc
 - Manage strategy state and parameters
 - Log strategy performance metrics
 
-**Prefect Flows**:
-- `run_strategy`: Execute strategy logic
-- `calculate_indicators`: Technical analysis
-- `generate_signals`: Signal generation
-- `backtest_strategy`: Historical strategy testing
+**Implementation Status**: 🚧 Planned for v1.1.0  
+**Future Enhancements**: Automated backtesting workflows
 
-### 3. Execution Service
-**Purpose**: Execute trades and manage orders
+### 3. Execution Module
+**Purpose**: Execute trades and manage orders via Alpaca API
 
 **Components**:
 - Alpaca trading API client
@@ -111,13 +110,10 @@ A production-grade algorithmic trading system designed for local deployment, foc
 - Handle order fills and partial fills
 - Implement order types (market, limit, stop)
 
-**Prefect Flows**:
-- `execute_trades`: Process trading signals
-- `manage_orders`: Order lifecycle management
-- `update_positions`: Position tracking
-- `reconcile_trades`: Trade reconciliation
+**Implementation Status**: ✅ Core Alpaca integration complete  
+**Future Enhancements**: Advanced order types, automated trade reconciliation
 
-### 4. Risk Management Service
+### 4. Risk Management Module
 **Purpose**: Monitor and control trading risks
 
 **Components**:
@@ -133,42 +129,35 @@ A production-grade algorithmic trading system designed for local deployment, foc
 - Generate risk alerts
 - Implement circuit breakers
 
-**Prefect Flows**:
-- `calculate_position_size`: Position sizing
-- `validate_risk_limits`: Risk validation
-- `monitor_portfolio_risk`: Continuous risk monitoring
-- `generate_risk_alerts`: Risk alerting
+**Implementation Status**: 🚧 Planned for v1.1.0  
+**Future Enhancements**: Real-time risk monitoring, automated alerts
 
-### 5. Analytics Service
+### 5. Analytics Module
 **Purpose**: Performance analysis and reporting
 
 **Components**:
 - Performance calculation engine
-- Backtesting framework
-- Reporting generation
-- Data visualization
+- Data visualization (Lightweight Charts)
+- Market data analysis
+- Interactive dashboards
 
 **Responsibilities**:
-- Calculate strategy performance metrics
+- Display market data with professional charts
 - Generate performance reports
-- Create backtesting results
 - Analyze trade patterns
-- Generate portfolio analytics
+- Portfolio analytics
+- Technical indicator visualization
 
-**Prefect Flows**:
-- `calculate_performance`: Performance metrics
-- `generate_reports`: Report generation
-- `run_backtest`: Historical testing
-- `analyze_trades`: Trade analysis
+**Implementation Status**: ✅ Market data visualization complete  
+**Future Enhancements**: Strategy performance metrics, backtesting framework
 
-### 6. Notification Service
+### 6. Notification Module
 **Purpose**: Handle alerts and communications
 
 **Components**:
-- Email notification system
-- SMS alerts (optional)
+- Email notification system (planned)
 - Dashboard notifications
-- Log aggregation
+- Log aggregation (Loguru)
 
 **Responsibilities**:
 - Send trade notifications
@@ -177,11 +166,8 @@ A production-grade algorithmic trading system designed for local deployment, foc
 - Aggregate and format logs
 - Manage notification preferences
 
-**Prefect Flows**:
-- `send_trade_alerts`: Trade notifications
-- `monitor_system_health`: System monitoring
-- `aggregate_logs`: Log processing
-- `send_daily_summary`: Daily reports
+**Implementation Status**: 🚧 Planned for v1.1.0  
+**Future Enhancements**: Email/SMS alerts, automated daily summaries
 
 ## Data Architecture
 
@@ -261,20 +247,19 @@ shared.system_config (config_key, config_value, description)
 - Backtesting data processing
 - Performance analytics
 
-## Communication Patterns
+## Current Architecture Patterns
 
-### Service Communication
-- **Synchronous**: REST APIs for real-time requests
-- **Asynchronous**: Redis pub/sub for events
-- **Batch Processing**: Prefect flows for scheduled tasks
+### Module Communication (v1.0.0)
+- **Direct Function Calls**: In-process module communication
+- **Shared Database**: PostgreSQL for data persistence
+- **Caching Layer**: Redis for frequently accessed data
+- **API Endpoints**: FastAPI REST APIs for frontend
+
+### Future Communication Patterns (v1.3.0+)
+- **Synchronous**: REST APIs between microservices
+- **Asynchronous**: Redis pub/sub for event-driven architecture
+- **Batch Processing**: Prefect flows for scheduled workflows
 - **Real-time Updates**: WebSocket connections to frontend
-
-### Message Flow
-```
-Data Ingestion → Strategy Engine → Risk Management → Execution
-     ↓                ↓                ↓              ↓
-Analytics Service ← Notification Service ← Redis ← PostgreSQL
-```
 
 ## Security Architecture
 
@@ -357,28 +342,42 @@ mypy src/
 
 ## Deployment Architecture
 
-### Local Deployment
+### Current Local Deployment (v1.0.0)
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Local Machine                        │
 ├─────────────────────────────────────────────────────────┤
+│  PostgreSQL  │  Redis                                   │
+├─────────────────────────────────────────────────────────┤
+│  FastAPI Application (main.py)                          │
+│  ├── Data Ingestion Module                              │
+│  ├── Execution Module (Alpaca Integration)              │
+│  ├── Analytics Module                                   │
+│  └── Shared Components (Database, Logging, Utils)       │
+├─────────────────────────────────────────────────────────┤
+│  Frontend (HTMX + Lightweight Charts + Tailwind)        │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Startup Process
+1. Start PostgreSQL and Redis
+2. Run database migrations (if needed)
+3. Start FastAPI application: `python main.py`
+4. Access dashboard at `http://localhost:8002`
+
+### Future Microservices Deployment (v1.3.0+)
+```
+┌─────────────────────────────────────────────────────────┐
 │  PostgreSQL  │  Redis    │  Prefect Server             │
 ├─────────────────────────────────────────────────────────┤
 │  Data        │ Strategy  │ Execution  │ Risk           │
 │  Ingestion   │ Engine    │ Service    │ Management     │
+│  :8001       │ :8002     │ :8003      │ :8004          │
 ├─────────────────────────────────────────────────────────┤
-│  Analytics   │ Notification │ FastAPI Web Server      │
-├─────────────────────────────────────────────────────────┤
-│  Frontend (HTMX + Plotly)                              │
+│  Analytics   │ Notification │ API Gateway              │
+│  :8005       │ :8006        │ :8000                    │
 └─────────────────────────────────────────────────────────┘
 ```
-
-### Service Startup Order
-1. PostgreSQL and Redis
-2. Prefect Server
-3. Microservices (parallel)
-4. FastAPI Web Server
-5. Frontend
 
 ## Configuration Management
 
@@ -442,33 +441,53 @@ strategies:
 - **Memory Management**: Efficient data structures
 - **Async Processing**: Non-blocking operations
 
-## Future Enhancements
+## Development Roadmap
 
-### Phase 1 (Current)
-- Paper trading with single strategy
-- Basic monitoring and alerts
-- Simple web interface
+### Phase 1 - v1.0.0 (Current) ✅
+- Paper trading with Alpaca
+- Market data integration (Polygon.io, Yahoo Finance)
+- Professional web dashboard
+- Database architecture
+- Comprehensive logging
 
-### Phase 2
-- Live trading capabilities
-- Multiple strategy support
-- Advanced analytics
-- Mobile-responsive interface
+### Phase 2 - v1.1.0 (In Progress) 🚧
+- Strategy engine implementation
+- Backtesting framework
+- Risk management module
+- Performance analytics
+- Notification system
 
-### Phase 3
-- Machine learning integration
-- Advanced risk management
+### Phase 3 - v1.2.0 (Planned) 📋
+- Prefect workflow orchestration
+- Automated data collection
+- Scheduled strategy execution
+- Advanced backtesting
+- Email/SMS notifications
+
+### Phase 4 - v1.3.0 (Future) 🔮
+- Microservices architecture
+- Service mesh and API gateway
+- Horizontal scaling
+- Cloud deployment (AWS/Azure/GCP)
 - Multi-asset support
-- Cloud deployment options
+- Machine learning integration
 
 ## Getting Started
 
 1. **Setup Environment**: Install Anaconda, PostgreSQL, Redis
 2. **Clone Repository**: Get the codebase
-3. **Install Dependencies**: Create conda environment
-4. **Configure**: Set up API keys and database
-5. **Run Services**: Start all microservices
-6. **Access Dashboard**: Open web interface
-7. **Deploy Strategy**: Configure and start trading
+3. **Install Dependencies**: `pip install -r requirements.txt`
+4. **Configure**: Set up API keys in `.env` file
+5. **Initialize Database**: `python scripts/setup_databases.py`
+6. **Start Application**: `python main.py`
+7. **Access Dashboard**: Open `http://localhost:8002`
 
-This architecture provides a solid foundation for a production-grade trading system that can scale with your needs while maintaining simplicity for local deployment.
+## Architecture Evolution
+
+This architecture follows the **Majestic Monolith** pattern, starting simple and evolving as needed:
+
+- **v1.0 (Current)**: Modular monolith - fast development, easy deployment
+- **v1.1-1.2**: Enhanced functionality within monolith
+- **v1.3+**: Microservices extraction when scale demands it
+
+This approach provides a solid foundation for a production-grade trading system that can scale with your needs while maintaining simplicity for local deployment and rapid iteration.

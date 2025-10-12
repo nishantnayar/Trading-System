@@ -6,12 +6,19 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import distinct, func, select
+from sqlalchemy import select
 
 from src.shared.database.base import db_transaction
 from src.shared.database.models.company_info import CompanyInfo
 
 router = APIRouter(prefix="/api/company-info", tags=["company-info"])
+
+
+class SymbolFilterInfo(BaseModel):
+    """Symbol filter information with name"""
+
+    symbol: str
+    name: Optional[str]
 
 
 class CompanyInfoResponse(BaseModel):
@@ -87,15 +94,15 @@ async def get_industries(
         )
 
 
-@router.get("/filters/symbols", response_model=List[str])
+@router.get("/filters/symbols", response_model=List[SymbolFilterInfo])
 async def get_symbols_by_filter(
     sector: Optional[str] = Query(default=None, description="Filter by sector"),
     industry: Optional[str] = Query(default=None, description="Filter by industry"),
-) -> List[str]:
+) -> List[SymbolFilterInfo]:
     """Get list of symbols filtered by sector and/or industry"""
     try:
         with db_transaction() as session:
-            query = select(CompanyInfo.symbol)
+            query = select(CompanyInfo.symbol, CompanyInfo.name)
 
             # Add filters if provided
             if sector:
@@ -106,7 +113,10 @@ async def get_symbols_by_filter(
             query = query.order_by(CompanyInfo.symbol)
 
             result = session.execute(query)
-            symbols = [row[0] for row in result.fetchall()]
+            symbols = [
+                SymbolFilterInfo(symbol=row[0], name=row[1])
+                for row in result.fetchall()
+            ]
 
             return symbols
 

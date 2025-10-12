@@ -5,11 +5,23 @@ FastAPI routes for the trading system web interface.
 from datetime import datetime
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 router = APIRouter()
 templates = Jinja2Templates(directory="src/web/templates")
+
+
+@router.get("/health")
+async def health_check() -> JSONResponse:
+    """Health check endpoint for monitoring"""
+    return JSONResponse(
+        content={
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "service": "trading-system",
+        }
+    )
 
 
 @router.get("/", response_class=HTMLResponse)
