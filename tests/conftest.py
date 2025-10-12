@@ -75,13 +75,13 @@ def clean_prefect_db(prefect_engine):
 def setup_test_tables(trading_engine):
     """Setup required database tables for tests"""
     from sqlalchemy import text
-    
+
     # Create the data_ingestion schema if it doesn't exist
     with trading_engine.connect() as conn:
         conn.execute(text("CREATE SCHEMA IF NOT EXISTS data_ingestion"))
         conn.execute(text("CREATE SCHEMA IF NOT EXISTS shared"))
         conn.commit()
-    
+
     # Create the load_runs table
     create_load_runs_table = """
     CREATE TABLE IF NOT EXISTS data_ingestion.load_runs (
@@ -101,13 +101,13 @@ def setup_test_tables(trading_engine):
         CONSTRAINT unique_symbol_data_source_timespan UNIQUE (symbol, data_source, timespan, multiplier)
     );
     """
-    
+
     with trading_engine.connect() as conn:
         conn.execute(text(create_load_runs_table))
         conn.commit()
-    
+
     yield
-    
+
     # Cleanup - drop the table after test
     with trading_engine.connect() as conn:
         conn.execute(text("DROP TABLE IF EXISTS data_ingestion.load_runs CASCADE"))
