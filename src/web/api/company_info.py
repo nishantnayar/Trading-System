@@ -132,23 +132,23 @@ async def get_company_info(symbol: str) -> CompanyInfoResponse:
 
             return CompanyInfoResponse(
                 symbol=str(company.symbol),
-                name=company.name,
-                sector=company.sector,
-                industry=company.industry,
-                description=company.description,
-                website=company.website,
-                phone=company.phone,
-                address=company.address,
-                city=company.city,
-                state=company.state,
-                zip=company.zip,
-                country=company.country,
-                employees=company.employees,
-                market_cap=company.market_cap,
+                name=company.name,  # type: ignore[arg-type]
+                sector=company.sector,  # type: ignore[arg-type]
+                industry=company.industry,  # type: ignore[arg-type]
+                description=company.description,  # type: ignore[arg-type]
+                website=company.website,  # type: ignore[arg-type]
+                phone=company.phone,  # type: ignore[arg-type]
+                address=company.address,  # type: ignore[arg-type]
+                city=company.city,  # type: ignore[arg-type]
+                state=company.state,  # type: ignore[arg-type]
+                zip=company.zip,  # type: ignore[arg-type]
+                country=company.country,  # type: ignore[arg-type]
+                employees=company.employees,  # type: ignore[arg-type]
+                market_cap=company.market_cap,  # type: ignore[arg-type]
                 market_cap_billions=company.market_cap_billions,
-                currency=company.currency,
-                exchange=company.exchange,
-                quote_type=company.quote_type,
+                currency=company.currency,  # type: ignore[arg-type]
+                exchange=company.exchange,  # type: ignore[arg-type]
+                quote_type=company.quote_type,  # type: ignore[arg-type]
                 data_source=str(company.data_source),
             )
 

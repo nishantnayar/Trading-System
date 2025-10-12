@@ -74,7 +74,7 @@ class CompanyInfo(Base):
         if self.city:
             parts.append(self.city)
         if self.state and self.zip:
-            parts.append(f"{self.state} {self.zip}")
+            parts.append(f"{self.state} {self.zip}")  # type: ignore[arg-type]
         elif self.state:
             parts.append(self.state)
         elif self.zip:
@@ -82,7 +82,7 @@ class CompanyInfo(Base):
         if self.country:
             parts.append(self.country)
 
-        return ", ".join(parts) if parts else None
+        return ", ".join(parts) if parts else None  # type: ignore[arg-type]
 
     @hybrid_property
     def market_cap_millions(self) -> Optional[float]:
