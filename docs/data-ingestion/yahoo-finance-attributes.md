@@ -505,7 +505,7 @@ if __name__ == "__main__":
 
 ## See Also
 
-- [Yahoo Finance Client API](../api/yahoo-finance.md)
-- [Data Ingestion Guide](../user-guide/data-ingestion.md)
+- [Data Ingestion API](../api/data-ingestion.md)
 - [Database Schema](../development/database.md)
+- [Trading Dashboard](../user-guide/dashboard.md)
 
