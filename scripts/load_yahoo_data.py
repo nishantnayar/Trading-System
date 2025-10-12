@@ -80,7 +80,12 @@ from src.shared.logging import setup_logging
 @click.option(
     "--fundamentals",
     is_flag=True,
-    help="Load company fundamentals (not yet implemented)",
+    help="Load company fundamentals (company info, statistics, etc.)",
+)
+@click.option(
+    "--company-info-only",
+    is_flag=True,
+    help="Load only company info (no market data)",
 )
 @click.option(
     "--dividends",
@@ -108,6 +113,7 @@ def main(
     delay: float,
     max_symbols: Optional[int],
     fundamentals: bool,
+    company_info_only: bool,
     dividends: bool,
     splits: bool,
     health_check: bool,
@@ -127,6 +133,10 @@ def main(
 
         # Load data for first 10 symbols (testing)
         python scripts/load_yahoo_data.py --all-symbols --days 7 --max-symbols 10
+
+        # Load company info only (no market data)
+        python scripts/load_yahoo_data.py --symbol AAPL --company-info-only
+        python scripts/load_yahoo_data.py --all-symbols --company-info-only
 
         # Health check
         python scripts/load_yahoo_data.py --health-check
@@ -176,7 +186,15 @@ def main(
         try:
             if symbol:
                 # Load single symbol
-                if fundamentals or dividends or splits:
+                if company_info_only:
+                    # Load only company info
+                    success = await loader.load_company_info(symbol)
+                    if success:
+                        logger.info(f"✅ Successfully loaded company info for {symbol}")
+                    else:
+                        logger.error(f"❌ Failed to load company info for {symbol}")
+                        return 1
+                elif fundamentals or dividends or splits:
                     # Use load_all_data for comprehensive loading
                     results = await loader.load_all_data(
                         symbol=symbol,
@@ -200,14 +218,42 @@ def main(
                 return 0
 
             elif all_symbols:
-                # Load all symbols
-                stats = await loader.load_all_symbols_data(
-                    start_date=from_date_obj,
-                    end_date=to_date_obj,
-                    interval=interval,
-                    max_symbols=max_symbols,
-                    include_fundamentals=fundamentals,
-                )
+                if company_info_only:
+                    # Load company info for all symbols
+                    symbols_list = await loader._get_active_symbols()
+                    if max_symbols:
+                        symbols_list = symbols_list[:max_symbols]
+
+                    logger.info(f"Loading company info for {len(symbols_list)} symbols")
+                    successful = 0
+                    failed = 0
+
+                    for i, sym in enumerate(symbols_list, 1):
+                        logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
+                        success = await loader.load_company_info(sym)
+                        if success:
+                            successful += 1
+                        else:
+                            failed += 1
+
+                        if i < len(symbols_list):
+                            await asyncio.sleep(loader.delay_between_requests)
+
+                    logger.info(f"Company info loading completed:")
+                    logger.info(f"  Total symbols: {len(symbols_list)}")
+                    logger.info(f"  Successful: {successful}")
+                    logger.info(f"  Failed: {failed}")
+
+                    return 0 if failed == 0 else 1
+                else:
+                    # Load all symbols
+                    stats = await loader.load_all_symbols_data(
+                        start_date=from_date_obj,
+                        end_date=to_date_obj,
+                        interval=interval,
+                        max_symbols=max_symbols,
+                        include_fundamentals=fundamentals,
+                    )
 
                 logger.info("Loading completed:")
                 logger.info(f"  Total symbols: {stats['total_symbols']}")

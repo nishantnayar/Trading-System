@@ -12,6 +12,7 @@ from loguru import logger
 from sqlalchemy.dialects.postgresql import insert
 
 from src.shared.database.base import db_transaction
+from src.shared.database.models.company_info import CompanyInfo
 from src.shared.database.models.market_data import MarketData
 from src.shared.database.models.symbols import Symbol
 
@@ -114,10 +115,48 @@ class YahooDataLoader:
         Returns:
             True if successful
         """
-        # Note: This requires the company_info table to be created
-        # We'll implement this after database migration
-        logger.info(f"Company info loading not yet implemented for {symbol}")
-        return False
+        symbol = symbol.upper()
+        logger.info(f"Loading company info for {symbol} from Yahoo Finance")
+
+        try:
+            # Fetch company info from Yahoo
+            company_data = await self.client.get_company_info(symbol)
+
+            # Create or update database record
+            with db_transaction() as session:
+                # Use merge for upsert (insert or update)
+                company_info = CompanyInfo(
+                    symbol=symbol,
+                    name=company_data.name,
+                    sector=company_data.sector,
+                    industry=company_data.industry,
+                    description=company_data.description,
+                    website=company_data.website,
+                    phone=company_data.phone,
+                    address=company_data.address,
+                    city=company_data.city,
+                    state=company_data.state,
+                    zip=company_data.zip,
+                    country=company_data.country,
+                    employees=company_data.employees,
+                    market_cap=company_data.market_cap,
+                    currency=company_data.currency,
+                    exchange=company_data.exchange,
+                    quote_type=company_data.quote_type,
+                    data_source=self.data_source,
+                    additional_data=company_data.additional_data,
+                )
+
+                # Merge will update if exists, insert if new
+                session.merge(company_info)
+                session.commit()
+
+            logger.info(f"Successfully loaded company info for {symbol}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to load company info for {symbol}: {e}")
+            return False
 
     async def load_dividends(
         self,

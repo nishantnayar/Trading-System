@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from src.web.api.alpaca_routes import router as alpaca_router
+from src.web.api.company_info import router as company_info_router
 from src.web.api.market_data import router as market_data_router
 from src.web.api.routes import router
 
@@ -28,6 +29,7 @@ app = FastAPI(
 app.include_router(router)
 app.include_router(alpaca_router, prefix="/api/alpaca")
 app.include_router(market_data_router)
+app.include_router(company_info_router)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="src/web/static"), name="static")

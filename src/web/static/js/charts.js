@@ -28,12 +28,19 @@ class TradingChartsDashboard {
      */
     setupEventListeners() {
         // Symbol selector
-        document.getElementById('symbolSelect').addEventListener('change', (e) => {
-            this.currentSymbol = e.target.value;
-            if (this.currentSymbol) {
-                this.loadChartData();
-            }
-        });
+        const symbolSelect = document.getElementById('symbolSelect');
+        if (symbolSelect) {
+            symbolSelect.addEventListener('change', (e) => {
+                console.log('Charts: Symbol changed to', e.target.value);
+                this.currentSymbol = e.target.value;
+                if (this.currentSymbol) {
+                    this.loadChartData();
+                }
+            });
+            console.log('Charts: Event listener registered for symbolSelect');
+        } else {
+            console.error('Charts: symbolSelect element not found!');
+        }
 
         // Data source selector
         document.getElementById('sourceSelect').addEventListener('change', (e) => {
@@ -89,12 +96,52 @@ class TradingChartsDashboard {
     }
 
     /**
+     * Load available symbols from API
+     */
+    async loadSymbols() {
+        try {
+            const response = await fetch('/api/market-data/symbols');
+            const symbols = await response.json();
+            
+            const select = document.getElementById('symbolSelect');
+            select.innerHTML = '<option value="">Select a symbol...</option>';
+            
+            symbols.forEach(symbol => {
+                const option = document.createElement('option');
+                option.value = symbol.symbol;
+                option.textContent = `${symbol.symbol} ${symbol.name ? '- ' + symbol.name : ''} (${symbol.record_count} records)`;
+                select.appendChild(option);
+            });
+
+            // Auto-select first symbol with data
+            if (symbols.length > 0) {
+                select.value = symbols[0].symbol;
+                this.currentSymbol = symbols[0].symbol;
+                this.loadChartData();
+            }
+        } catch (error) {
+            console.error('Error loading symbols:', error);
+            this.showError('Failed to load symbols');
+        }
+    }
+
+    /**
      * Load chart data for current symbol
      */
     async loadChartData() {
         if (!this.currentSymbol) {
             console.warn('No symbol selected');
             return;
+        }
+
+        // Check if technical analysis tab is visible
+        const tab = document.getElementById('technical-analysis-tab');
+        if (tab) {
+            const isVisible = tab.classList.contains('active');
+            console.log('Technical analysis tab visible:', isVisible);
+            if (!isVisible) {
+                console.warn('Tab not visible, but will render charts anyway');
+            }
         }
 
         this.showLoading(true);
@@ -206,6 +253,13 @@ class TradingChartsDashboard {
             this.showError('Chart containers not found. Please reload the page.');
             return;
         }
+
+        // Check container dimensions
+        console.log('Chart container dimensions:');
+        console.log('  priceChart:', priceChartEl.offsetWidth, 'x', priceChartEl.offsetHeight);
+        console.log('  volumeChart:', volumeChartEl.offsetWidth, 'x', volumeChartEl.offsetHeight);
+        console.log('  macdChart:', macdChartEl.offsetWidth, 'x', macdChartEl.offsetHeight);
+        console.log('  rsiChart:', rsiChartEl.offsetWidth, 'x', rsiChartEl.offsetHeight);
 
         const chartOptions = this.getChartThemeOptions();
 
@@ -486,8 +540,7 @@ class TradingChartsDashboard {
             }
         });
 
-        // Now that data is rendered, enable chart synchronization
-        // Use setTimeout to ensure fitContent has completed
+        // Enable chart synchronization
         setTimeout(() => {
             this.synchronizeCharts();
             console.log('Chart synchronization enabled');
@@ -568,6 +621,26 @@ class TradingChartsDashboard {
                 },
             };
         }
+    }
+
+    /**
+     * Resize and refit all charts (useful when container visibility changes)
+     */
+    resizeCharts() {
+        if (!this.charts || Object.keys(this.charts).length === 0) {
+            console.log('No charts to resize');
+            return;
+        }
+
+        console.log('Resizing all charts');
+        Object.values(this.charts).forEach(chart => {
+            try {
+                chart.resize();
+                chart.timeScale().fitContent();
+            } catch (e) {
+                console.warn('Error resizing chart:', e);
+            }
+        });
     }
 
     /**
@@ -659,6 +732,8 @@ class TradingChartsDashboard {
 
 // Initialize dashboard when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('Charts: Initializing TradingChartsDashboard');
     window.dashboard = new TradingChartsDashboard();
+    console.log('Charts: Dashboard initialized and ready');
 });
 
