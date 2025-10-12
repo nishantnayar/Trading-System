@@ -69,3 +69,46 @@ def clean_prefect_db(prefect_engine):
     # This fixture can be used to clean up test data
     yield
     # Add cleanup logic here if needed
+
+
+@pytest.fixture(scope="function")
+def setup_test_tables(trading_engine):
+    """Setup required database tables for tests"""
+    from sqlalchemy import text
+    
+    # Create the data_ingestion schema if it doesn't exist
+    with trading_engine.connect() as conn:
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS data_ingestion"))
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS shared"))
+        conn.commit()
+    
+    # Create the load_runs table
+    create_load_runs_table = """
+    CREATE TABLE IF NOT EXISTS data_ingestion.load_runs (
+        id BIGSERIAL PRIMARY KEY,
+        symbol VARCHAR(20) NOT NULL,
+        data_source VARCHAR(20) NOT NULL,
+        timespan VARCHAR(10) NOT NULL,
+        multiplier INTEGER NOT NULL,
+        last_run_date DATE NOT NULL,
+        last_successful_date DATE NOT NULL,
+        records_loaded INTEGER DEFAULT 0,
+        status VARCHAR(20) DEFAULT 'success',
+        error_message TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        
+        CONSTRAINT unique_symbol_data_source_timespan UNIQUE (symbol, data_source, timespan, multiplier)
+    );
+    """
+    
+    with trading_engine.connect() as conn:
+        conn.execute(text(create_load_runs_table))
+        conn.commit()
+    
+    yield
+    
+    # Cleanup - drop the table after test
+    with trading_engine.connect() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS data_ingestion.load_runs CASCADE"))
+        conn.commit()

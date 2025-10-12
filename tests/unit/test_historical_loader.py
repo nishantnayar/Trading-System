@@ -132,7 +132,7 @@ class TestHistoricalDataLoaderSymbolData:
                         mock_update.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_load_symbol_data_no_data(self, loader):
+    async def test_load_symbol_data_no_data(self, loader, setup_test_tables):
         """Test loading when no data is returned"""
         with patch.object(
             loader.polygon_client, "get_aggregates", new_callable=AsyncMock
