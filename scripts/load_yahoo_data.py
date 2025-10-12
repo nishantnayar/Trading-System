@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+"""
+Yahoo Finance Data Loader Script
+
+Load market data from Yahoo Finance into the database.
+
+Usage:
+    python scripts/load_yahoo_data.py --symbol AAPL --days 365
+    python scripts/load_yahoo_data.py --all-symbols --days 30
+    python scripts/load_yahoo_data.py --symbol AAPL --from-date 2023-01-01 --to-date 2024-12-31
+"""
+
+import asyncio
+import os
+import sys
+from datetime import date, datetime, timedelta
+from typing import List, Optional
+
+import click
+
+# Add project root to path
+project_root = os.path.dirname(os.path.dirname(__file__))
+sys.path.insert(0, project_root)
+
+from loguru import logger
+
+from src.services.yahoo.loader import YahooDataLoader
+from src.shared.logging import setup_logging
+
+
+@click.command()
+@click.option(
+    "--symbol",
+    type=str,
+    help="Stock symbol to load data for (e.g., AAPL)",
+)
+@click.option(
+    "--all-symbols",
+    is_flag=True,
+    help="Load data for all active symbols",
+)
+@click.option(
+    "--from-date",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    help="Start date (YYYY-MM-DD)",
+)
+@click.option(
+    "--to-date",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    help="End date (YYYY-MM-DD)",
+)
+@click.option(
+    "--days",
+    type=int,
+    help="Number of days to look back from today",
+)
+@click.option(
+    "--interval",
+    type=click.Choice(["1m", "5m", "15m", "30m", "1h", "1d", "1wk", "1mo"]),
+    default="1h",
+    help="Data interval (default: 1h for hourly)",
+)
+@click.option(
+    "--batch-size",
+    type=int,
+    default=100,
+    help="Batch size for database inserts (default: 100)",
+)
+@click.option(
+    "--delay",
+    type=float,
+    default=0.5,
+    help="Delay between requests in seconds (default: 0.5)",
+)
+@click.option(
+    "--max-symbols",
+    type=int,
+    help="Maximum number of symbols to process (for testing)",
+)
+@click.option(
+    "--fundamentals",
+    is_flag=True,
+    help="Load company fundamentals (not yet implemented)",
+)
+@click.option(
+    "--dividends",
+    is_flag=True,
+    help="Load dividend history (not yet implemented)",
+)
+@click.option(
+    "--splits",
+    is_flag=True,
+    help="Load stock split history (not yet implemented)",
+)
+@click.option(
+    "--health-check",
+    is_flag=True,
+    help="Run health check and exit",
+)
+def main(
+    symbol: Optional[str],
+    all_symbols: bool,
+    from_date: Optional[datetime],
+    to_date: Optional[datetime],
+    days: Optional[int],
+    interval: str,
+    batch_size: int,
+    delay: float,
+    max_symbols: Optional[int],
+    fundamentals: bool,
+    dividends: bool,
+    splits: bool,
+    health_check: bool,
+) -> None:
+    """
+    Load market data from Yahoo Finance
+
+    Examples:
+        # Load daily data for AAPL for the last 30 days
+        python scripts/load_yahoo_data.py --symbol AAPL --days 30
+
+        # Load hourly data for AAPL for the last 7 days
+        python scripts/load_yahoo_data.py --symbol AAPL --days 7 --interval 1h
+
+        # Load data for all symbols for specific date range
+        python scripts/load_yahoo_data.py --all-symbols --from-date 2023-01-01 --to-date 2023-12-31
+
+        # Load data for first 10 symbols (testing)
+        python scripts/load_yahoo_data.py --all-symbols --days 7 --max-symbols 10
+
+        # Health check
+        python scripts/load_yahoo_data.py --health-check
+    """
+    # Setup logging
+    setup_logging()
+
+    async def run_loader() -> int:
+        loader = YahooDataLoader(
+            batch_size=batch_size,
+            delay_between_requests=delay,
+        )
+
+        if health_check:
+            healthy = await loader.health_check()
+            if healthy:
+                logger.info("✅ Health check passed - Yahoo Finance is accessible")
+                return 0
+            else:
+                logger.error("❌ Health check failed - Yahoo Finance not accessible")
+                return 1
+
+        if not symbol and not all_symbols:
+            logger.error("Must specify either --symbol or --all-symbols")
+            return 1
+
+        if symbol and all_symbols:
+            logger.error("Cannot specify both --symbol and --all-symbols")
+            return 1
+
+        # Convert datetime to date if provided
+        from_date_obj = from_date.date() if from_date else None
+        to_date_obj = to_date.date() if to_date else None
+
+        # Calculate date range
+        if days:
+            to_date_obj = to_date_obj or date.today()
+            from_date_obj = from_date_obj or (to_date_obj - timedelta(days=days))
+        elif not from_date_obj:
+            # Default to 30 days if no date range specified
+            to_date_obj = to_date_obj or date.today()
+            from_date_obj = to_date_obj - timedelta(days=30)
+
+        logger.info(f"Date range: {from_date_obj} to {to_date_obj}")
+        logger.info(f"Interval: {interval}")
+
+        try:
+            if symbol:
+                # Load single symbol
+                if fundamentals or dividends or splits:
+                    # Use load_all_data for comprehensive loading
+                    results = await loader.load_all_data(
+                        symbol=symbol,
+                        start_date=from_date_obj,
+                        end_date=to_date_obj,
+                        include_fundamentals=fundamentals,
+                        include_dividends=dividends,
+                        include_splits=splits,
+                    )
+                    logger.info(f"Loaded data for {symbol}: {results}")
+                else:
+                    # Load market data only
+                    records_count = await loader.load_market_data(
+                        symbol=symbol,
+                        start_date=from_date_obj,
+                        end_date=to_date_obj,
+                        interval=interval,
+                    )
+                    logger.info(f"Loaded {records_count} records for {symbol}")
+
+                return 0
+
+            elif all_symbols:
+                # Load all symbols
+                stats = await loader.load_all_symbols_data(
+                    start_date=from_date_obj,
+                    end_date=to_date_obj,
+                    interval=interval,
+                    max_symbols=max_symbols,
+                    include_fundamentals=fundamentals,
+                )
+
+                logger.info("Loading completed:")
+                logger.info(f"  Total symbols: {stats['total_symbols']}")
+                logger.info(f"  Successful: {stats['successful']}")
+                logger.info(f"  Failed: {stats['failed']}")
+                logger.info(f"  Total records: {stats['total_records']}")
+
+                if stats["errors"]:
+                    logger.error("Errors encountered:")
+                    for error in stats["errors"]:
+                        logger.error(f"  {error}")
+
+                return 0 if stats["failed"] == 0 else 1
+
+        except Exception as e:
+            logger.error(f"Loader failed: {e}")
+            return 1
+
+    # Run the async function
+    return asyncio.run(run_loader())
+
+
+if __name__ == "__main__":
+    exit(main())

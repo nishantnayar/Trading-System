@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from 'components/card_macro.html' import stat_card %}
+{% from 'components/card_macro.html' import chart_card %}
 
 {% block title %}Market Analysis{% endblock %}
 
@@ -7,8 +7,7 @@
 <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
 <style>
     .charts-container {
-        max-width: 1400px;
-        margin: 0 auto;
+        width: 100%;
     }
 
     .charts-header {
@@ -53,6 +52,51 @@
         outline: none;
         border-color: #3b82f6;
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .source-selector {
+        background: white;
+        border: 1px solid #d1d5db;
+        color: #374151;
+        padding: 10px 15px;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        min-width: 150px;
+        transition: all 0.2s;
+    }
+
+    .source-selector:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .source-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .source-badge.polygon {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .source-badge.yahoo {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .source-badge.alpaca {
+        background: #d1fae5;
+        color: #065f46;
     }
 
     .timeframe-buttons {
@@ -166,22 +210,6 @@
         position: relative;
     }
 
-    #priceChart {
-        height: 400px;
-    }
-
-    #volumeChart {
-        height: 120px;
-    }
-
-    #macdChart {
-        height: 150px;
-    }
-
-    #rsiChart {
-        height: 150px;
-    }
-
     .info-bar {
         display: flex;
         gap: 30px;
@@ -260,60 +288,25 @@
 
 {% block content %}
 <div class="space-y-6">
-    <!-- Page Header -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h1 class="text-2xl font-bold text-gray-900">Market Analysis</h1>
-        <p class="text-gray-600 mt-2">Professional multi-pane trading charts with technical indicators</p>
-    </div>
-
-    <!-- Market Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Total Symbols Card -->
-        {{ stat_card(
-            icon='fas fa-chart-bar',
-            title='Total Symbols',
-            value='-',
-            description='Available trading symbols',
-            color='blue',
-            value_id='totalSymbols'
-        ) }}
-
-        <!-- Total Records Card -->
-        {{ stat_card(
-            icon='fas fa-database',
-            title='Total Records',
-            value='-',
-            description='Market data records',
-            color='green',
-            value_id='totalRecords'
-        ) }}
-
-        <!-- Last Update Card -->
-        {{ stat_card(
-            icon='fas fa-clock',
-            title='Last Update',
-            value='-',
-            description='Most recent data refresh',
-            color='purple',
-            value_id='lastUpdate'
-        ) }}
-    </div>
-
-    <!-- Professional Trading Charts -->
+    <!-- Technical Analysis -->
     <div class="charts-container">
         <div class="charts-header">
             <h1 class="charts-title">
                 <i class="fas fa-chart-candlestick"></i>
-                Professional Trading Charts
+                Technical Analysis
             </h1>
             <div class="controls">
                 <select id="symbolSelect" class="symbol-selector">
                     <option value="">Loading symbols...</option>
                 </select>
+                <select id="sourceSelect" class="source-selector">
+                    <option value="polygon" selected>Polygon.io</option>
+                    <option value="yahoo">Yahoo Finance</option>
+                </select>
                 <div class="timeframe-buttons">
                     <button class="btn" data-days="7">1 Week</button>
-                    <button class="btn" data-days="30">1 Month</button>
-                    <button class="btn active" data-days="90">3 Months</button>
+                    <button class="btn active" data-days="30">1 Month</button>
+                    <button class="btn" data-days="90">3 Months</button>
                     <button class="btn" data-days="180">6 Months</button>
                     <button class="btn" data-days="365">1 Year</button>
                 </div>
@@ -329,6 +322,12 @@
             <div class="info-item">
                 <span class="info-label">Symbol</span>
                 <span class="info-value" id="infoSymbol">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Data Source</span>
+                <span class="info-value" id="infoSource">
+                    <span class="source-badge" id="sourceBadge">-</span>
+                </span>
             </div>
             <div class="info-item">
                 <span class="info-label">Last Price</span>
@@ -358,47 +357,42 @@
         </div>
 
         <div class="chart-container">
-            <div class="chart-panel">
-                <div class="chart-header">Price Chart with Moving Averages</div>
-                <div class="chart-wrapper">
-                    <div id="priceChart"></div>
-                </div>
-            </div>
+            {{ chart_card(
+                title='Price Chart with Moving Averages',
+                chart_id='priceChart',
+                height='400px'
+            ) }}
 
-            <div class="chart-panel">
-                <div class="chart-header">Volume</div>
-                <div class="chart-wrapper">
-                    <div id="volumeChart"></div>
-                </div>
-            </div>
+            {{ chart_card(
+                title='Volume',
+                chart_id='volumeChart',
+                height='120px'
+            ) }}
 
-            <div class="chart-panel">
-                <div class="chart-header">MACD (12, 26, 9)</div>
-                <div class="chart-wrapper">
-                    <div id="macdChart"></div>
-                </div>
-            </div>
+            {{ chart_card(
+                title='MACD (12, 26, 9)',
+                chart_id='macdChart',
+                height='150px'
+            ) }}
 
-            <div class="chart-panel">
-                <div class="chart-header">RSI (14)</div>
-                <div class="chart-wrapper">
-                    <div id="rsiChart"></div>
-                </div>
-            </div>
+            {{ chart_card(
+                title='RSI (14)',
+                chart_id='rsiChart',
+                height='150px'
+            ) }}
         </div>
     </div>
 </div>
 
-<script src="/static/js/indicators.js"></script>
-<script src="/static/js/charts.js"></script>
+<script src="/static/js/indicators.js?v=3"></script>
+<script src="/static/js/charts.js?v=3"></script>
 
 <script>
 // Chart theme management
 let currentChartTheme = 'light';
 
-// Load market statistics for the cards
+// Initialize chart theme on page load
 document.addEventListener('DOMContentLoaded', function() {
-    loadMarketStats();
     initializeChartTheme();
 });
 
@@ -512,40 +506,6 @@ function getChartThemeColors(theme) {
                 borderColor: '#e0e0e0',
             },
         };
-    }
-}
-
-async function loadMarketStats() {
-    try {
-        const response = await fetch('/api/market-data/stats');
-        const stats = await response.json();
-        
-        console.log('Market stats:', stats); // Debug log
-        
-        document.getElementById('totalSymbols').textContent = stats.symbols_count || '-';
-        document.getElementById('totalRecords').textContent = stats.total_records ? stats.total_records.toLocaleString() : '-';
-        
-        // Format last update to be user-friendly
-        if (stats.latest_update) {
-            const date = new Date(stats.latest_update);
-            const options = { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true,
-                timeZone: 'America/Chicago' // Convert from UTC to Central Time
-            };
-            document.getElementById('lastUpdate').textContent = date.toLocaleDateString('en-US', options);
-        } else {
-            document.getElementById('lastUpdate').textContent = '-';
-        }
-    } catch (error) {
-        console.error('Failed to load market stats:', error);
-        document.getElementById('totalSymbols').textContent = 'Error';
-        document.getElementById('totalRecords').textContent = 'Error';
-        document.getElementById('lastUpdate').textContent = 'Error';
     }
 }
 </script>

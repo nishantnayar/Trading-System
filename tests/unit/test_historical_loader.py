@@ -341,6 +341,7 @@ class TestHistoricalDataLoaderBatchInsert:
             record = MarketData(
                 symbol="AAPL",
                 timestamp=datetime(2024, 1, i + 1, 9, 30, 0, tzinfo=timezone.utc),
+                data_source="polygon",
                 open=100.0 + i,
                 high=105.0 + i,
                 low=95.0 + i,

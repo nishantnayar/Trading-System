@@ -26,6 +26,11 @@ class MarketData(Base):
         DateTime(timezone=True), nullable=False, index=True
     )
 
+    # Data source
+    data_source: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="polygon", index=True
+    )  # 'polygon', 'yahoo', 'alpaca', etc.
+
     # OHLCV data
     open: Mapped[Optional[float]] = mapped_column(Numeric(15, 4), nullable=True)
     high: Mapped[Optional[float]] = mapped_column(Numeric(15, 4), nullable=True)
@@ -42,8 +47,8 @@ class MarketData(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<MarketData(symbol='{self.symbol}', timestamp='{self.timestamp}', "
-            f"close={self.close}, volume={self.volume})>"
+            f"<MarketData(symbol='{self.symbol}', source='{self.data_source}', "
+            f"timestamp='{self.timestamp}', close={self.close}, volume={self.volume})>"
         )
 
     @property

@@ -124,7 +124,7 @@ class TestDelistedSymbolModel:
         )
 
         # created_at should be set automatically
-        assert delisted.created_at is not None or hasattr(delisted, "created_at")
+        assert delisted.created_at is not None
 
 
 class TestSymbolDataStatusModel:
@@ -178,6 +178,7 @@ class TestMarketDataModel:
         market_data = MarketData(
             symbol="AAPL",
             timestamp=datetime(2024, 1, 1, 9, 30, 0, tzinfo=timezone.utc),
+            data_source="polygon",
             open=150.0,
             high=155.0,
             low=149.0,
@@ -200,6 +201,7 @@ class TestMarketDataModel:
         market_data = MarketData(
             symbol="AAPL",
             timestamp=datetime(2024, 1, 1, 9, 30, 0, tzinfo=timezone.utc),
+            data_source="polygon",
             open=150.0,
             high=155.0,
             low=149.0,
@@ -222,6 +224,7 @@ class TestMarketDataModel:
         market_data = MarketData(
             symbol="AAPL",
             timestamp=timestamp,
+            data_source="polygon",
             open=150.0,
             high=155.0,
             low=149.0,
@@ -237,6 +240,7 @@ class TestMarketDataModel:
         market_data = MarketData(
             symbol="AAPL",
             timestamp=datetime(2024, 1, 1, 9, 30, 0, tzinfo=timezone.utc),
+            data_source="polygon",
             open=150.0,
             high=155.0,
             low=149.0,
@@ -345,11 +349,12 @@ class TestModelRelationships:
         # Uniqueness would be enforced at database level
 
     def test_market_data_composite_key(self):
-        """Test MarketData composite key (symbol, timestamp)"""
-        # Verify the model has both fields that make up composite key
+        """Test MarketData composite key (symbol, timestamp, data_source)"""
+        # Verify the model has all fields that make up composite key
         market_data = MarketData(
             symbol="AAPL",
             timestamp=datetime(2024, 1, 1, 9, 30, 0, tzinfo=timezone.utc),
+            data_source="polygon",
             open=150.0,
             high=155.0,
             low=149.0,
@@ -383,6 +388,7 @@ class TestModelValidation:
         market_data = MarketData(
             symbol="AAPL",
             timestamp=datetime(2024, 1, 1, 9, 30, 0, tzinfo=timezone.utc),
+            data_source="polygon",
             open=150.0,
             high=155.0,
             low=149.0,
@@ -425,6 +431,7 @@ class TestModelEdgeCases:
         market_data = MarketData(
             symbol="AAPL",
             timestamp=datetime(2024, 1, 1, 9, 30, 0, tzinfo=timezone.utc),
+            data_source="polygon",
             open=150.0,
             high=150.0,
             low=150.0,
@@ -439,6 +446,7 @@ class TestModelEdgeCases:
         market_data = MarketData(
             symbol="OIL_FUTURES",
             timestamp=datetime(2024, 1, 1, 9, 30, 0, tzinfo=timezone.utc),
+            data_source="polygon",
             open=-5.0,
             high=-3.0,
             low=-7.0,

@@ -9,6 +9,7 @@ class TradingChartsDashboard {
         this.series = {};
         this.currentSymbol = null;
         this.currentDays = 90;
+        this.currentSource = 'polygon';  // Default to polygon to match dropdown default
         this.rawData = null;
         
         this.init();
@@ -29,6 +30,14 @@ class TradingChartsDashboard {
         // Symbol selector
         document.getElementById('symbolSelect').addEventListener('change', (e) => {
             this.currentSymbol = e.target.value;
+            if (this.currentSymbol) {
+                this.loadChartData();
+            }
+        });
+
+        // Data source selector
+        document.getElementById('sourceSelect').addEventListener('change', (e) => {
+            this.currentSource = e.target.value || null;
             if (this.currentSymbol) {
                 this.loadChartData();
             }
@@ -95,10 +104,15 @@ class TradingChartsDashboard {
             const startDate = new Date();
             startDate.setDate(startDate.getDate() - this.currentDays);
             
-            const url = `/api/market-data/data/${this.currentSymbol}?` +
+            let url = `/api/market-data/data/${this.currentSymbol}?` +
                 `limit=5000&` +
                 `start_date=${startDate.toISOString()}&` +
                 `end_date=${endDate.toISOString()}`;
+            
+            // Add data source filter if selected
+            if (this.currentSource) {
+                url += `&data_source=${this.currentSource}`;
+            }
             
             console.log('Fetching data from:', url);
             
@@ -146,6 +160,13 @@ class TradingChartsDashboard {
         const priceChangePercent = (priceChange / previous.close) * 100;
         
         document.getElementById('infoSymbol').textContent = this.currentSymbol;
+        
+        // Update data source badge
+        const sourceBadge = document.getElementById('sourceBadge');
+        const dataSource = latest.data_source || 'unknown';
+        sourceBadge.textContent = dataSource.toUpperCase();
+        sourceBadge.className = `source-badge ${dataSource}`;
+        
         document.getElementById('infoPrice').textContent = TechnicalIndicators.formatPrice(latest.close);
         
         const changeElement = document.getElementById('infoChange');

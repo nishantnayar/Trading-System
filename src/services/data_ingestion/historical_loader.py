@@ -148,6 +148,7 @@ class HistoricalDataLoader:
                 record = MarketData(
                     symbol=symbol,
                     timestamp=bar.timestamp,
+                    data_source=self.data_source,
                     open=bar.open,
                     high=bar.high,
                     low=bar.low,
@@ -354,6 +355,7 @@ class HistoricalDataLoader:
                         {
                             "symbol": record.symbol,
                             "timestamp": record.timestamp,
+                            "data_source": record.data_source,
                             "open": record.open,
                             "high": record.high,
                             "low": record.low,
@@ -364,9 +366,9 @@ class HistoricalDataLoader:
                     ]
                 )
 
-                # Update on conflict (symbol, timestamp)
+                # Update on conflict (symbol, timestamp, data_source)
                 stmt = stmt.on_conflict_do_update(
-                    index_elements=["symbol", "timestamp"],
+                    index_elements=["symbol", "timestamp", "data_source"],
                     set_={
                         "open": stmt.excluded.open,
                         "high": stmt.excluded.high,

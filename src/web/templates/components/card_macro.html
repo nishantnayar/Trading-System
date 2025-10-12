@@ -1,6 +1,6 @@
 {# Card Component Macros
 Usage:
-{% from 'components/card_macro.html' import stat_card, feature_card, info_card %}
+{% from 'components/card_macro.html' import stat_card, feature_card, info_card, chart_card %}
 
 {{ stat_card(
     icon='fas fa-wallet',
@@ -23,6 +23,12 @@ Usage:
     title='System Status',
     content='All systems operational',
     color='green'
+) }}
+
+{{ chart_card(
+    title='Price Chart',
+    chart_id='priceChart',
+    height='400px'
 ) }}
 #}
 
@@ -94,5 +100,15 @@ Usage:
     {% else %}
         <div class="text-4xl font-bold {{ color_config[color]['text'] }}">{{ value }}</div>
     {% endif %}
+</div>
+{% endmacro %}
+
+{# Chart Card - for displaying chart panels with consistent styling #}
+{% macro chart_card(title='Chart Title', chart_id='chart', height='400px', extra_classes='') %}
+<div class="chart-panel {{ extra_classes }}">
+    <div class="chart-header">{{ title }}</div>
+    <div class="chart-wrapper">
+        <div id="{{ chart_id }}" style="height: {{ height }};"></div>
+    </div>
 </div>
 {% endmacro %}

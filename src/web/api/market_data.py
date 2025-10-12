@@ -26,6 +26,7 @@ class MarketDataResponse(BaseModel):
     low: Optional[float]
     close: Optional[float]
     volume: Optional[int]
+    data_source: str
 
 
 class MarketDataStats(BaseModel):
@@ -157,6 +158,9 @@ async def get_market_data(
         default=None, description="Start date (ISO format)"
     ),
     end_date: Optional[str] = Query(default=None, description="End date (ISO format)"),
+    data_source: Optional[str] = Query(
+        default=None, description="Data source filter (polygon, yahoo, alpaca)"
+    ),
 ) -> List[MarketDataResponse]:
     """Get market data for a specific symbol"""
     try:
@@ -173,6 +177,10 @@ async def get_market_data(
         with db_transaction() as session:
             # Build query
             query = select(MarketData).where(MarketData.symbol == symbol)
+
+            # Add data source filter if provided
+            if data_source:
+                query = query.where(MarketData.data_source == data_source.lower())
 
             # Add date filters if provided
             if start_dt:
@@ -202,6 +210,7 @@ async def get_market_data(
                         low=float(record.low) if record.low else None,
                         close=float(record.close) if record.close else None,
                         volume=record.volume,
+                        data_source=record.data_source,
                     )
                 )
 
@@ -214,19 +223,25 @@ async def get_market_data(
 
 
 @router.get("/data/{symbol}/latest", response_model=MarketDataResponse)
-async def get_latest_market_data(symbol: str) -> MarketDataResponse:
+async def get_latest_market_data(
+    symbol: str,
+    data_source: Optional[str] = Query(
+        default=None, description="Data source filter (polygon, yahoo, alpaca)"
+    ),
+) -> MarketDataResponse:
     """Get the latest market data for a specific symbol"""
     try:
         symbol = symbol.upper()
 
         with db_transaction() as session:
             # Get latest record for symbol
-            query = (
-                select(MarketData)
-                .where(MarketData.symbol == symbol)
-                .order_by(desc(MarketData.timestamp))
-                .limit(1)
-            )
+            query = select(MarketData).where(MarketData.symbol == symbol)
+
+            # Add data source filter if provided
+            if data_source:
+                query = query.where(MarketData.data_source == data_source.lower())
+
+            query = query.order_by(desc(MarketData.timestamp)).limit(1)
 
             result = session.execute(query)
             record = result.scalar_one_or_none()
@@ -244,6 +259,7 @@ async def get_latest_market_data(symbol: str) -> MarketDataResponse:
                 low=float(record.low) if record.low else None,
                 close=float(record.close) if record.close else None,
                 volume=record.volume,
+                data_source=record.data_source,
             )
 
     except HTTPException:
@@ -252,6 +268,36 @@ async def get_latest_market_data(symbol: str) -> MarketDataResponse:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get latest market data for {symbol}: {str(e)}",
+        )
+
+
+@router.get("/data/{symbol}/sources")
+async def get_available_sources(symbol: str) -> dict:
+    """Get available data sources for a specific symbol"""
+    try:
+        symbol = symbol.upper()
+
+        with db_transaction() as session:
+            # Get distinct data sources for this symbol
+            query = (
+                select(MarketData.data_source, func.count(MarketData.id).label("count"))
+                .where(MarketData.symbol == symbol)
+                .group_by(MarketData.data_source)
+                .order_by(MarketData.data_source)
+            )
+
+            result = session.execute(query)
+            sources = [
+                {"source": row.data_source, "record_count": row.count}
+                for row in result.fetchall()
+            ]
+
+            return {"symbol": symbol, "sources": sources}
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get sources for {symbol}: {str(e)}",
         )
 
 
