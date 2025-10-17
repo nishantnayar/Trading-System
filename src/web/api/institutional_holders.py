@@ -12,9 +12,7 @@ from src.shared.database.models.institutional_holders import (
     InstitutionalHolder,
 )
 
-router = APIRouter(
-    prefix="/api/institutional-holders", tags=["institutional-holders"]
-)
+router = APIRouter(prefix="/api/institutional-holders", tags=["institutional-holders"])
 
 
 @router.get("/{symbol}")
@@ -58,9 +56,7 @@ async def get_institutional_holders(
             holders = [holder.to_dict() for holder in results]
 
             # Calculate percentages if missing by getting shares outstanding
-            has_percentages = any(
-                h.get("percent_held") is not None for h in holders
-            )
+            has_percentages = any(h.get("percent_held") is not None for h in holders)
             if holders and not has_percentages:
                 holders = await _calculate_missing_percentages(symbol, holders)
 
@@ -101,9 +97,7 @@ async def list_available_symbols() -> dict:
 
             results = session.execute(query).all()
 
-            symbols = [
-                {"symbol": row[0], "holder_count": row[1]} for row in results
-            ]
+            symbols = [{"symbol": row[0], "holder_count": row[1]} for row in results]
 
             return {"success": True, "count": len(symbols), "symbols": symbols}
 
@@ -140,9 +134,7 @@ async def _calculate_missing_percentages(
                 for holder in holders:
                     shares = holder.get("shares")
                     if shares is not None and shares > 0:
-                        percentage = (
-                            holder["shares"] / shares_outstanding
-                        ) * 100
+                        percentage = (holder["shares"] / shares_outstanding) * 100
                         holder["percent_held"] = percentage
                         holder["percent_held_display"] = f"{percentage:.2f}%"
                     else:
@@ -154,10 +146,7 @@ async def _calculate_missing_percentages(
                     h.get("shares", 0) for h in holders if h.get("shares")
                 )
 
-                if (
-                    total_institutional_shares
-                    and total_institutional_shares > 0
-                ):
+                if total_institutional_shares and total_institutional_shares > 0:
                     for holder in holders:
                         shares = holder.get("shares")
                         if shares is not None and shares > 0:
@@ -165,9 +154,7 @@ async def _calculate_missing_percentages(
                                 holder["shares"] / total_institutional_shares
                             ) * 100
                             holder["percent_held"] = percentage
-                            holder["percent_held_display"] = (
-                                f"{percentage:.2f}%"
-                            )
+                            holder["percent_held_display"] = f"{percentage:.2f}%"
                         else:
                             holder["percent_held"] = 0.0
                             holder["percent_held_display"] = "0.00%"
