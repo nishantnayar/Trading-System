@@ -561,6 +561,48 @@
         color: #3b82f6;
     }
 
+    /* Institutional Holders Percentage Bar Styles */
+    .percentage-bar-container {
+        position: relative;
+        width: 100%;
+        min-width: 120px;
+        height: 24px;
+        background: transparent;
+        border-radius: 12px;
+        overflow: visible;
+        display: flex;
+        align-items: center;
+    }
+
+    .percentage-bar-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+        border-radius: 12px;
+        transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        min-width: 0;
+    }
+
+    .percentage-bar-text {
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 12px;
+        font-weight: 600;
+        color: #1e293b;
+        white-space: nowrap;
+        z-index: 2;
+    }
+
+    .percentage-cell {
+        padding: 12px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
     @media (max-width: 768px) {
         .page-header {
             padding: 20px;
@@ -617,6 +659,15 @@
             width: 100%;
             padding: 14px 20px;
             font-size: 14px;
+        }
+
+        .percentage-bar-container {
+            min-width: 100px;
+            height: 20px;
+        }
+
+        .percentage-bar-text {
+            font-size: 11px;
         }
     }
 </style>
@@ -812,6 +863,7 @@
                                                     <th style="padding: 12px; text-align: left; font-weight: 600; color: #475569;">Institution</th>
                                                     <th style="padding: 12px; text-align: right; font-weight: 600; color: #475569;">Shares</th>
                                                     <th style="padding: 12px; text-align: right; font-weight: 600; color: #475569;">Value</th>
+                                                    <th style="padding: 12px; text-align: center; font-weight: 600; color: #475569;">% Share</th>
                                                     <th style="padding: 12px; text-align: right; font-weight: 600; color: #475569;">Date</th>
                                                 </tr>
                                             </thead>
@@ -1105,7 +1157,7 @@
 <script src="/static/js/charts.js?v=20"></script>
 <script src="/static/js/company-info.js?v=17"></script>
 <script src="/static/js/key-statistics.js?v=2"></script>
-<script src="/static/js/institutional-holders.js?v=1"></script>
+<script src="/static/js/institutional-holders.js?v=7"></script>
 <script src="/static/js/filters.js?v=14"></script>
 
 <script>

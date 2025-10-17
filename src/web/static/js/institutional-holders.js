@@ -57,6 +57,9 @@ class InstitutionalHoldersManager {
         const tableBody = document.getElementById('institutionalHoldersTable');
         tableBody.innerHTML = '';
 
+        // Find the maximum percentage for scaling the bars
+        const maxPercentage = Math.max(...holders.map(h => h.percent_held || 0));
+
         holders.forEach((holder, index) => {
             const row = document.createElement('tr');
             row.style.borderBottom = '1px solid #f1f5f9';
@@ -69,16 +72,43 @@ class InstitutionalHoldersManager {
                 this.style.backgroundColor = '';
             };
 
+            // Calculate percentage and bar width
+            const percentage = holder.percent_held || 0;
+            const percentageDisplay = holder.percent_held_display || 'N/A';
+            const barWidth = maxPercentage > 0 ? (percentage / maxPercentage) * 100 : 0;
+
             row.innerHTML = `
                 <td style="padding: 12px; color: #64748b; font-weight: 500;">${index + 1}</td>
                 <td style="padding: 12px; color: #1e293b; font-weight: 500;">${holder.holder_name}</td>
                 <td style="padding: 12px; text-align: right; color: #1e293b;">${holder.shares_display}</td>
                 <td style="padding: 12px; text-align: right; color: #059669; font-weight: 600;">${holder.value_display}</td>
+                <td class="percentage-cell">
+                    ${this.createPercentageBar(percentageDisplay, barWidth)}
+                </td>
                 <td style="padding: 12px; text-align: right; color: #64748b; font-size: 13px;">${this.formatDate(holder.date_reported)}</td>
             `;
 
             tableBody.appendChild(row);
         });
+    }
+
+    /**
+     * Create horizontal percentage bar element
+     */
+    createPercentageBar(percentageText, barWidth) {
+        if (percentageText === 'N/A') {
+            return `<span style="color: #64748b; font-size: 12px;">N/A</span>`;
+        }
+
+        // Position text to the right of the bar with some padding
+        const textLeft = Math.min(barWidth + 8, 85); // 8px padding from bar, max 85% to avoid overflow
+        
+        return `
+            <div class="percentage-bar-container">
+                <div class="percentage-bar-fill" style="width: ${barWidth}%;"></div>
+                <div class="percentage-bar-text" style="left: ${textLeft}%;">${percentageText}</div>
+            </div>
+        `;
     }
 
     /**
