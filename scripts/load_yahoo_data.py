@@ -200,7 +200,7 @@ def main(
         # Load company info only (no market data)
         python scripts/load_yahoo_data.py --symbol AAPL --company-info-only
         python scripts/load_yahoo_data.py --all-symbols --company-info-only
-        
+
         # Load market data + company info
         python scripts/load_yahoo_data.py --symbol AAPL --days 30 --company-info
 

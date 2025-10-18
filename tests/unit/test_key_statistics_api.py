@@ -578,9 +578,7 @@ class TestKeyStatisticsAPI:
         assert 0 <= stats["percent_held_by_insiders"] <= 1
         # Note: percent_held_by_institutions is already in percentage form (60.5),
         # not decimal (0.605)
-        assert (
-            0 <= stats["percent_held_by_institutions"] <= 100
-        )
+        assert 0 <= stats["percent_held_by_institutions"] <= 100
 
         # Margins should be between 0 and 1
         assert 0 <= stats["gross_profit_margin"] <= 1

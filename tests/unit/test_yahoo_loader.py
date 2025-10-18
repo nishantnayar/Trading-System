@@ -659,9 +659,7 @@ class TestYahooDataLoader:
         """Test error handling in load methods"""
         # Test that all load methods properly handle exceptions
         with patch.object(
-            loader.client,
-            "get_company_info",
-            side_effect=Exception("Test error")
+            loader.client, "get_company_info", side_effect=Exception("Test error")
         ):
             with pytest.raises(YahooAPIError):
                 await loader.load_company_info("AAPL")
