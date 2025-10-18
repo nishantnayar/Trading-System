@@ -3,7 +3,7 @@ Database model for company information
 """
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy import JSON, BigInteger, Column, DateTime, Integer, String, Text
 from sqlalchemy.ext.hybrid import hybrid_property

@@ -97,8 +97,10 @@ def setup_test_tables(trading_engine):
         error_message TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        
-        CONSTRAINT unique_symbol_data_source_timespan UNIQUE (symbol, data_source, timespan, multiplier)
+
+        CONSTRAINT unique_symbol_data_source_timespan UNIQUE (
+            symbol, data_source, timespan, multiplier
+        )
     );
     """
 

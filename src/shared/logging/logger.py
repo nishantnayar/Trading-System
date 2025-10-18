@@ -155,7 +155,8 @@ class LoggingManager:
         Get logger for a specific module with automatic service detection
 
         Args:
-            module_name: Full module name (e.g., '__main__' or 'src.services.execution.order_manager')
+            module_name: Full module name (e.g., '__main__' or
+                'src.services.execution.order_manager')
 
         Returns:
             Logger: Configured logger instance

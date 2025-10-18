@@ -78,7 +78,8 @@ class TestServiceSchemas:
         with engine.connect() as conn:
             result = conn.execute(
                 text(
-                    "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'data_ingestion'"
+                    "SELECT schema_name FROM information_schema.schemata "
+                    "WHERE schema_name = 'data_ingestion'"
                 )
             )
             row = result.fetchone()
@@ -91,7 +92,8 @@ class TestServiceSchemas:
         with engine.connect() as conn:
             result = conn.execute(
                 text(
-                    "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'strategy_engine'"
+                    "SELECT schema_name FROM information_schema.schemata "
+                    "WHERE schema_name = 'strategy_engine'"
                 )
             )
             row = result.fetchone()
@@ -104,7 +106,8 @@ class TestServiceSchemas:
         with engine.connect() as conn:
             result = conn.execute(
                 text(
-                    "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'execution'"
+                    "SELECT schema_name FROM information_schema.schemata "
+                    "WHERE schema_name = 'execution'"
                 )
             )
             row = result.fetchone()
@@ -117,7 +120,8 @@ class TestServiceSchemas:
         with engine.connect() as conn:
             result = conn.execute(
                 text(
-                    "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'risk_management'"
+                    "SELECT schema_name FROM information_schema.schemata "
+                    "WHERE schema_name = 'risk_management'"
                 )
             )
             row = result.fetchone()
@@ -130,7 +134,8 @@ class TestServiceSchemas:
         with engine.connect() as conn:
             result = conn.execute(
                 text(
-                    "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'analytics'"
+                    "SELECT schema_name FROM information_schema.schemata "
+                    "WHERE schema_name = 'analytics'"
                 )
             )
             row = result.fetchone()
@@ -143,7 +148,8 @@ class TestServiceSchemas:
         with engine.connect() as conn:
             result = conn.execute(
                 text(
-                    "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'notification'"
+                    "SELECT schema_name FROM information_schema.schemata "
+                    "WHERE schema_name = 'notification'"
                 )
             )
             row = result.fetchone()
@@ -156,7 +162,8 @@ class TestServiceSchemas:
         with engine.connect() as conn:
             result = conn.execute(
                 text(
-                    "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'logging'"
+                    "SELECT schema_name FROM information_schema.schemata "
+                    "WHERE schema_name = 'logging'"
                 )
             )
             row = result.fetchone()
@@ -169,7 +176,8 @@ class TestServiceSchemas:
         with engine.connect() as conn:
             result = conn.execute(
                 text(
-                    "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'shared'"
+                    "SELECT schema_name FROM information_schema.schemata "
+                    "WHERE schema_name = 'shared'"
                 )
             )
             row = result.fetchone()

@@ -35,7 +35,7 @@ async def get_key_statistics(
         with db_transaction() as session:
             query = select(KeyStatistics).where(KeyStatistics.symbol == symbol)
 
-            if stats_date:
+            if stats_date and isinstance(stats_date, str):
                 query = query.where(
                     KeyStatistics.date == date.fromisoformat(stats_date)
                 )

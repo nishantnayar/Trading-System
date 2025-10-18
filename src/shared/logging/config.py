@@ -125,7 +125,10 @@ def load_logging_config(config_path: Optional[str] = None) -> LoggingConfig:
             "retention": "30 days",
             "compression": True,
         },
-        "format": "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} | {message}",
+        "format": (
+            "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | "
+            "{name}:{function}:{line} | {message}"
+        ),
         "files": {
             "main": "logs/trading.log",
             "errors": "logs/errors.log",

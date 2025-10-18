@@ -756,6 +756,124 @@ async def data_ingestion_health_check():
 - Advanced caching strategies
 - Multi-region deployment
 
+## Institutional Holders API
+
+### Overview
+
+The Institutional Holders API provides access to institutional ownership data with enhanced percentage calculations and visualization features.
+
+### Endpoints
+
+#### GET `/api/institutional-holders/{symbol}`
+
+Retrieves institutional holders data for a specific symbol with automatic percentage calculation.
+
+**Parameters:**
+- `symbol` (path): Stock symbol (e.g., "AAPL", "MSFT")
+- `limit` (query, optional): Maximum number of holders to return (default: 10)
+
+**Response Format:**
+```json
+{
+  "success": true,
+  "symbol": "AAPL",
+  "count": 10,
+  "holders": [
+    {
+      "id": 1,
+      "symbol": "AAPL",
+      "date_reported": "2024-09-30",
+      "holder_name": "Vanguard Group Inc",
+      "shares": 1234567890,
+      "value": 24567890123.45,
+      "percent_held": 9.54,
+      "percent_held_display": "9.54%",
+      "data_source": "yahoo",
+      "created_at": "2024-10-16T19:30:00Z",
+      "updated_at": "2024-10-16T19:30:00Z"
+    }
+  ]
+}
+```
+
+#### GET `/api/institutional-holders`
+
+Lists all symbols that have institutional holders data.
+
+**Response Format:**
+```json
+{
+  "success": true,
+  "count": 25,
+  "symbols": [
+    {
+      "symbol": "AAPL",
+      "holder_count": 10
+    }
+  ]
+}
+```
+
+### Enhanced Features
+
+#### Automatic Percentage Calculation
+
+When Yahoo Finance doesn't provide percentage data, the API automatically calculates percentages using:
+
+1. **Primary Method**: Uses `shares_outstanding` from Key Statistics table
+   ```python
+   percentage = (holder_shares / shares_outstanding) * 100
+   ```
+
+2. **Fallback Method**: Uses relative percentages based on total institutional shares
+   ```python
+   percentage = (holder_shares / total_institutional_shares) * 100
+   ```
+
+#### Horizontal Bars Visualization
+
+The frontend displays institutional ownership using horizontal bars:
+
+- **Blue gradient bars** showing relative ownership percentage
+- **Black text** positioned to the right of bars for readability
+- **Responsive design** that scales with container width
+- **Consistent positioning** regardless of bar length
+
+### Error Handling
+
+- **Invalid Symbol**: Returns empty results with `count: 0`
+- **Missing Data**: Automatically calculates percentages when possible
+- **Database Errors**: Returns HTTP 500 with error details
+
+### Usage Examples
+
+```python
+import requests
+
+# Get institutional holders for AAPL
+response = requests.get("http://localhost:8002/api/institutional-holders/AAPL")
+data = response.json()
+
+if data["success"]:
+    print(f"Found {data['count']} institutional holders for {data['symbol']}")
+    for holder in data["holders"]:
+        print(f"{holder['holder_name']}: {holder['percent_held_display']}")
+```
+
+```javascript
+// Frontend usage with horizontal bars
+fetch('/api/institutional-holders/MS')
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      data.holders.forEach(holder => {
+        // Display holder with horizontal bar
+        displayHolderWithBar(holder);
+      });
+    }
+  });
+```
+
 ## Getting Started
 
 ### Hybrid Data Ingestion Setup

@@ -7,7 +7,6 @@ from unittest.mock import Mock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from src.shared.database.models.company_info import CompanyInfo
 from src.web.main import app
 
 

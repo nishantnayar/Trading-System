@@ -5,7 +5,6 @@ Tests the performance tracking and monitoring functionality.
 """
 
 import time
-from unittest.mock import Mock, patch
 
 import pytest
 

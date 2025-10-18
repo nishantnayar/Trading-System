@@ -5,7 +5,7 @@ Client for fetching market data from Yahoo Finance using yfinance library.
 """
 
 from datetime import date, datetime, timezone
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import pandas as pd
 import yfinance as yf
@@ -13,7 +13,6 @@ from loguru import logger
 
 from .exceptions import (
     YahooAPIError,
-    YahooConnectionError,
     YahooDataError,
     YahooSymbolNotFoundError,
 )
@@ -22,7 +21,6 @@ from .models import (
     CompanyInfo,
     CompanyOfficer,
     Dividend,
-    EarningsCalendar,
     ESGScore,
     FinancialStatement,
     InstitutionalHolder,
@@ -356,7 +354,7 @@ class YahooClient:
                         split_date=timestamp.date(),
                         split_ratio=float(ratio),
                         ratio_str=(
-                            f"{int(ratio)}:1" if ratio >= 1 else f"1:{int(1/ratio)}"
+                            f"{int(ratio)}:1" if ratio >= 1 else f"1:{int(1 / ratio)}"
                         ),
                     )
                     split_list.append(split)

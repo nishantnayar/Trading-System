@@ -4,7 +4,7 @@ Unit tests for Yahoo Finance Client
 Tests the Yahoo Finance API client functionality.
 """
 
-from datetime import date, datetime, timezone
+from datetime import date
 from unittest.mock import Mock, patch
 
 import pandas as pd

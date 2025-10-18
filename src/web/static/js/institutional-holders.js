@@ -165,6 +165,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Load institutional holders on initial page load if company-info tab is active
+    setTimeout(() => {
+        const companyInfoTab = document.querySelector('[data-tab="company-info"]');
+        const symbolSelect = document.getElementById('symbolSelect');
+        
+        if (companyInfoTab && companyInfoTab.classList.contains('active') && 
+            symbolSelect && symbolSelect.value && window.institutionalHoldersManager) {
+            console.log('InstitutionalHolders: Loading initial data for symbol:', symbolSelect.value);
+            window.institutionalHoldersManager.loadInstitutionalHolders(symbolSelect.value);
+        }
+    }, 1000); // Wait 1 second for filters to load and select first symbol
+
     // Listen for tab clicks
     const tabButtons = document.querySelectorAll('.tab-button');
     tabButtons.forEach(button => {

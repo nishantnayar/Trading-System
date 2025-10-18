@@ -212,6 +212,34 @@ for holder in holders[:10]:
     print(f"{holder.holder_name}: {holder.shares:,} shares ({holder.percent_held*100:.2f}%)")
 ```
 
+### Enhanced API Features
+
+The institutional holders data is now enhanced with automatic percentage calculations and horizontal bar visualization:
+
+#### Automatic Percentage Calculation
+When Yahoo Finance doesn't provide percentage data, the system automatically calculates percentages using:
+- **Primary**: Shares outstanding from Key Statistics
+- **Fallback**: Relative percentages based on total institutional shares
+
+#### API Endpoint
+```python
+# Direct API access with enhanced features
+import requests
+
+response = requests.get("http://localhost:8002/api/institutional-holders/AAPL")
+data = response.json()
+
+if data["success"]:
+    for holder in data["holders"]:
+        print(f"{holder['holder_name']}: {holder['percent_held_display']}")
+```
+
+#### Frontend Visualization
+The institutional holders are displayed with horizontal bars showing ownership percentages:
+- Blue gradient bars for visual representation
+- Black text positioned for optimal readability
+- Responsive design that scales with container width
+
 ## 7. Analyst Recommendations
 
 ### Available Attributes

@@ -670,6 +670,207 @@
             font-size: 11px;
         }
     }
+
+    /* Financial Statements Styles */
+    .financial-statements-container {
+        padding: 20px;
+    }
+
+    .loading-financial-statements {
+        text-align: center;
+        padding: 60px 20px;
+        color: #64748b;
+    }
+
+    .loading-financial-statements i {
+        font-size: 32px;
+        margin-bottom: 16px;
+        color: #3b82f6;
+    }
+
+    .statement-type-selector {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .statement-type-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        background: white;
+        color: #64748b;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .statement-type-btn:hover {
+        border-color: #3b82f6;
+        color: #3b82f6;
+        background: #eff6ff;
+    }
+
+    .statement-type-btn.active {
+        border-color: #3b82f6;
+        background: #3b82f6;
+        color: white;
+    }
+
+    .statement-type-btn i {
+        font-size: 16px;
+    }
+
+    .period-type-selector {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+    }
+
+    .period-type-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: white;
+        color: #6b7280;
+        font-weight: 500;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .period-type-btn:hover {
+        border-color: #3b82f6;
+        color: #3b82f6;
+        background: #eff6ff;
+    }
+
+    .period-type-btn.active {
+        border-color: #3b82f6;
+        background: #3b82f6;
+        color: white;
+    }
+
+    .period-type-btn i {
+        font-size: 14px;
+    }
+
+    .financial-statements-table-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .financial-statements-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+
+    .financial-statements-table th {
+        background: #f8fafc;
+        padding: 16px 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #374151;
+        border-bottom: 2px solid #e2e8f0;
+        white-space: nowrap;
+    }
+
+    .financial-statements-table td {
+        padding: 12px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #4b5563;
+    }
+
+    .financial-statements-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .financial-statements-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .financial-value {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .financial-value.positive {
+        color: #059669;
+    }
+
+    .financial-value.negative {
+        color: #dc2626;
+    }
+
+    .fiscal-period {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .fiscal-quarter {
+        background: #eff6ff;
+        color: #1e40af;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .no-data-message {
+        text-align: center;
+        padding: 60px 20px;
+        color: #64748b;
+    }
+
+    .no-data-message i {
+        font-size: 48px;
+        margin-bottom: 16px;
+        color: #cbd5e1;
+    }
+
+    .no-data-message p {
+        font-size: 16px;
+        font-weight: 500;
+    }
+
+    @media (max-width: 768px) {
+        .statement-type-selector {
+            flex-direction: column;
+        }
+
+        .statement-type-btn {
+            justify-content: center;
+        }
+
+        .period-type-selector {
+            justify-content: center;
+        }
+
+        .financial-statements-table {
+            font-size: 12px;
+        }
+
+        .financial-statements-table th,
+        .financial-statements-table td {
+            padding: 8px 6px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -679,6 +880,13 @@
     <div class="page-header">
         <div class="page-header-content">
             <h2 class="filters-title">Select Symbol</h2>
+            <div class="flex items-center gap-4 mt-4">
+                <a href="/strategies" class="inline-flex items-center px-6 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full text-white font-semibold hover:bg-white/30 transition-all duration-300">
+                    <i class="fas fa-cogs mr-2"></i>
+                    Go to Strategies
+                    <i class="fas fa-arrow-right ml-2"></i>
+                </a>
+            </div>
             <div class="filters-wrapper">
                 <div class="filter-group">
                     <label for="sectorFilter" class="filter-label">
@@ -710,7 +918,7 @@
 
 <!-- Horizontal Tab Navigation -->
 <div class="tab-navigation">
-    <button class="tab-button" data-tab="company-info">
+    <button class="tab-button active" data-tab="company-info">
         <i class="fas fa-building"></i>
         Company Info
     </button>
@@ -718,14 +926,18 @@
         <i class="fas fa-calculator"></i>
         Fundamentals
     </button>
-    <button class="tab-button active" data-tab="technical-analysis">
+    <button class="tab-button" data-tab="financial-statements">
+        <i class="fas fa-file-invoice-dollar"></i>
+        Financial Statements
+    </button>
+    <button class="tab-button" data-tab="technical-analysis">
         <i class="fas fa-chart-line"></i>
         Technical Analysis
     </button>
 </div>
 
 <!-- Company Info Tab -->
-<div id="company-info-tab" class="tab-content">
+<div id="company-info-tab" class="tab-content active">
         <div class="company-info-container">
             <div class="loading-company" id="companyLoading">
                 <i class="fas fa-spinner fa-spin"></i>
@@ -1061,8 +1273,79 @@
     </div>
     <!-- End Fundamentals Tab -->
 
+    <!-- Financial Statements Tab -->
+    <div id="financial-statements-tab" class="tab-content">
+        <div class="financial-statements-container">
+            <div class="loading-financial-statements" id="financialStatementsLoading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading financial statements...</p>
+            </div>
+            
+            <div class="financial-statements-content" id="financialStatementsContent" style="display: none;">
+                <!-- Statement Type Selector -->
+                <div class="statement-type-selector">
+                    <button class="statement-type-btn active" data-type="income">
+                        <i class="fas fa-chart-line"></i>
+                        Income Statement
+                    </button>
+                    <button class="statement-type-btn" data-type="balance_sheet">
+                        <i class="fas fa-balance-scale"></i>
+                        Balance Sheet
+                    </button>
+                    <button class="statement-type-btn" data-type="cash_flow">
+                        <i class="fas fa-coins"></i>
+                        Cash Flow
+                    </button>
+                </div>
+
+                <!-- Period Type Selector -->
+                <div class="period-type-selector">
+                    <button class="period-type-btn active" data-period="quarterly">
+                        <i class="fas fa-calendar-alt"></i>
+                        Quarterly
+                    </button>
+                    <button class="period-type-btn" data-period="annual">
+                        <i class="fas fa-calendar"></i>
+                        Annual
+                    </button>
+                </div>
+
+                <!-- Financial Statements Table -->
+                <div class="financial-statements-table-container">
+                    <div class="table-responsive">
+                        <table class="financial-statements-table" id="financialStatementsTable">
+                            <thead>
+                                <tr>
+                                    <th>Period</th>
+                                    <th>Fiscal Year</th>
+                                    <th>Q</th>
+                                    <th>Revenue</th>
+                                    <th>Net Income</th>
+                                    <th>EPS</th>
+                                    <th>Assets</th>
+                                    <th>Liabilities</th>
+                                    <th>Equity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="financialStatementsTableBody">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- No Data Message -->
+                <div class="no-data-message" id="financialStatementsNoData" style="display: none;">
+                    <i class="fas fa-file-invoice"></i>
+                    <p>No financial statements data available</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End Financial Statements Tab -->
+
     <!-- Technical Analysis Tab -->
-    <div id="technical-analysis-tab" class="tab-content active">
+    <div id="technical-analysis-tab" class="tab-content">
     <div class="charts-container">
         <div class="charts-header">
             <div class="controls">
@@ -1161,6 +1444,157 @@
 <script src="/static/js/filters.js?v=14"></script>
 
 <script>
+// Financial Statements functionality
+let currentStatementType = 'income';
+let currentPeriodType = 'quarterly';
+
+function loadFinancialStatements() {
+    const symbol = document.getElementById('symbolSelect').value;
+    if (!symbol) return;
+
+    const loadingEl = document.getElementById('financialStatementsLoading');
+    const contentEl = document.getElementById('financialStatementsContent');
+    const noDataEl = document.getElementById('financialStatementsNoData');
+    const tableBody = document.getElementById('financialStatementsTableBody');
+
+    // Show loading
+    loadingEl.style.display = 'block';
+    contentEl.style.display = 'none';
+    noDataEl.style.display = 'none';
+
+    // Fetch financial statements data
+    const apiUrl = `/api/financial-statements/${symbol}?statement_type=${currentStatementType}&period_type=${currentPeriodType}&limit=20`;
+    console.log('Fetching financial statements:', apiUrl);
+    
+    fetch(apiUrl)
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(response => {
+            console.log('API response:', response);
+            loadingEl.style.display = 'none';
+            
+            // Check if response has statements array
+            const statements = response.statements || response;
+            console.log('Statements to display:', statements);
+            
+            if (statements && statements.length > 0) {
+                contentEl.style.display = 'block';
+                populateFinancialStatementsTable(statements);
+            } else {
+                noDataEl.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading financial statements:', error);
+            loadingEl.style.display = 'none';
+            noDataEl.style.display = 'block';
+        });
+}
+
+function populateFinancialStatementsTable(statements) {
+    console.log('Populating table with statements:', statements);
+    const tableBody = document.getElementById('financialStatementsTableBody');
+    if (!tableBody) {
+        console.error('Table body element not found!');
+        return;
+    }
+    tableBody.innerHTML = '';
+
+    statements.forEach((stmt, index) => {
+        console.log(`Processing statement ${index}:`, stmt);
+        const row = document.createElement('tr');
+        
+        // Format period end date
+        const periodEnd = new Date(stmt.period_end).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+
+        // Format fiscal quarter
+        const fiscalQuarter = stmt.fiscal_quarter ? `Q${stmt.fiscal_quarter}` : '-';
+
+        // Format financial values
+        const formatValue = (value) => {
+            if (value === null || value === undefined) return '-';
+            if (typeof value === 'number') {
+                if (Math.abs(value) >= 1e9) {
+                    return (value / 1e9).toFixed(1) + 'B';
+                } else if (Math.abs(value) >= 1e6) {
+                    return (value / 1e6).toFixed(1) + 'M';
+                } else if (Math.abs(value) >= 1e3) {
+                    return (value / 1e3).toFixed(1) + 'K';
+                } else {
+                    return value.toFixed(2);
+                }
+            }
+            return value;
+        };
+
+        // Get values from common metrics or JSONB data
+        const revenue = stmt.total_revenue || (stmt.data && stmt.data['Total Revenue']) || null;
+        const netIncome = stmt.net_income || (stmt.data && stmt.data['Net Income']) || null;
+        const eps = stmt.basic_eps || (stmt.data && stmt.data['Basic EPS']) || null;
+        const assets = stmt.total_assets || (stmt.data && stmt.data['Total Assets']) || null;
+        const liabilities = stmt.total_liabilities || (stmt.data && stmt.data['Total Liabilities']) || null;
+        const equity = stmt.total_equity || (stmt.data && stmt.data['Total Equity']) || null;
+
+        row.innerHTML = `
+            <td class="fiscal-period">${periodEnd}</td>
+            <td>${stmt.fiscal_year || '-'}</td>
+            <td><span class="fiscal-quarter">${fiscalQuarter}</span></td>
+            <td class="financial-value">${formatValue(revenue)}</td>
+            <td class="financial-value ${netIncome < 0 ? 'negative' : 'positive'}">${formatValue(netIncome)}</td>
+            <td class="financial-value">${formatValue(eps)}</td>
+            <td class="financial-value">${formatValue(assets)}</td>
+            <td class="financial-value">${formatValue(liabilities)}</td>
+            <td class="financial-value">${formatValue(equity)}</td>
+        `;
+
+        tableBody.appendChild(row);
+    });
+    console.log(`Table populated with ${statements.length} statements`);
+}
+
+// Statement type selector
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.statement-type-btn')) {
+        const btn = e.target.closest('.statement-type-btn');
+        const type = btn.getAttribute('data-type');
+        console.log('Statement type button clicked:', type);
+        
+        // Update active button
+        document.querySelectorAll('.statement-type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Update current type and reload data
+        currentStatementType = type;
+        console.log('Updated currentStatementType to:', currentStatementType);
+        loadFinancialStatements();
+    }
+});
+
+// Period type selector
+document.addEventListener('click', function(e) {
+    console.log('Click detected on:', e.target);
+    if (e.target.closest('.period-type-btn')) {
+        const btn = e.target.closest('.period-type-btn');
+        const period = btn.getAttribute('data-period');
+        console.log('Period type button clicked:', period);
+        
+        // Update active button
+        document.querySelectorAll('.period-type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Update current period and reload data
+        currentPeriodType = period;
+        console.log('Updated currentPeriodType to:', currentPeriodType);
+        loadFinancialStatements();
+    }
+});
+
 // Tab switching functionality
 document.addEventListener('DOMContentLoaded', function() {
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -1183,6 +1617,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(() => {
                     window.dashboard.resizeCharts();
                 }, 50);
+            }
+            
+            // If switching to financial statements tab, load data
+            if (tabName === 'financial-statements') {
+                loadFinancialStatements();
             }
         });
     });
@@ -1314,6 +1753,7 @@ function getChartThemeColors(theme) {
             },
         };
     }
+
 }
 </script>
 {% endblock %}

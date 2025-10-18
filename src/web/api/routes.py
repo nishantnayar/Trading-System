@@ -8,8 +8,14 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
+# Import API routers
+from .pairs_trading import router as pairs_trading_router
+
 router = APIRouter()
 templates = Jinja2Templates(directory="src/web/templates")
+
+# Include API routers
+router.include_router(pairs_trading_router)
 
 
 @router.get("/health")

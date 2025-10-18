@@ -51,6 +51,16 @@ class Symbol(Base):
         back_populates="symbol_ref",
         cascade="all, delete-orphan",
     )
+    financial_statements = relationship(
+        "FinancialStatement",
+        back_populates="symbol_ref",
+        cascade="all, delete-orphan",
+    )
+    company_officers = relationship(
+        "CompanyOfficer",
+        back_populates="symbol_ref",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Symbol(symbol='{self.symbol}', name='{self.name}', status='{self.status}')>"

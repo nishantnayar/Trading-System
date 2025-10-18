@@ -3,7 +3,6 @@ Unit tests for Web API endpoints
 """
 
 from datetime import datetime, timezone
-from unittest.mock import Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient

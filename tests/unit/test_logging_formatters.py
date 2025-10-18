@@ -4,7 +4,6 @@ Unit tests for Logging Formatters
 Tests the custom logging formatters for structured logging.
 """
 
-import json
 from datetime import datetime
 from unittest.mock import Mock
 

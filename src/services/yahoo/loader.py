@@ -13,6 +13,8 @@ from sqlalchemy.dialects.postgresql import insert
 
 from src.shared.database.base import db_transaction
 from src.shared.database.models.company_info import CompanyInfo
+from src.shared.database.models.company_officers import CompanyOfficer
+from src.shared.database.models.financial_statements import FinancialStatement
 from src.shared.database.models.institutional_holders import InstitutionalHolder
 from src.shared.database.models.key_statistics import KeyStatistics
 from src.shared.database.models.market_data import MarketData
@@ -530,6 +532,210 @@ class YahooDataLoader:
         logger.info(f"Split loading not yet implemented for {symbol}")
         return 0
 
+    async def load_financial_statements(
+        self, symbol: str, include_annual: bool = True, include_quarterly: bool = True
+    ) -> List[Any]:
+        """
+        Load financial statements for a symbol
+
+        Args:
+            symbol: Stock symbol
+            include_annual: Whether to load annual statements
+            include_quarterly: Whether to load quarterly statements
+
+        Returns:
+            List of financial statements
+        """
+        statements = []
+
+        try:
+            # Load income statements
+            if include_annual:
+                income_annual = await self.client.get_financial_statements(
+                    symbol, "income", "annual"
+                )
+                statements.extend(income_annual)
+
+            if include_quarterly:
+                income_quarterly = await self.client.get_financial_statements(
+                    symbol, "income", "quarterly"
+                )
+                statements.extend(income_quarterly)
+
+            # Load balance sheets
+            if include_annual:
+                balance_annual = await self.client.get_financial_statements(
+                    symbol, "balance_sheet", "annual"
+                )
+                statements.extend(balance_annual)
+
+            if include_quarterly:
+                balance_quarterly = await self.client.get_financial_statements(
+                    symbol, "balance_sheet", "quarterly"
+                )
+                statements.extend(balance_quarterly)
+
+            # Load cash flow statements
+            if include_annual:
+                cashflow_annual = await self.client.get_financial_statements(
+                    symbol, "cash_flow", "annual"
+                )
+                statements.extend(cashflow_annual)
+
+            if include_quarterly:
+                cashflow_quarterly = await self.client.get_financial_statements(
+                    symbol, "cash_flow", "quarterly"
+                )
+                statements.extend(cashflow_quarterly)
+
+            # Store in database
+            with db_transaction() as session:
+                for stmt_data in statements:
+                    # Calculate fiscal year and quarter from period_end
+                    fiscal_year = None
+                    fiscal_quarter = None
+
+                    if stmt_data.period_end:
+                        # Detect fiscal year pattern for this company
+                        fiscal_year, fiscal_quarter = self._detect_fiscal_year_quarter(
+                            symbol, stmt_data.period_end
+                        )
+
+                    # Use upsert to handle duplicates
+                    stmt = FinancialStatement(
+                        symbol=symbol,
+                        period_end=stmt_data.period_end,
+                        statement_type=stmt_data.statement_type,
+                        period_type=stmt_data.period_type,
+                        fiscal_year=fiscal_year,
+                        fiscal_quarter=fiscal_quarter,
+                        data=stmt_data.data,
+                    )
+
+                    # Populate common metrics from JSONB data
+                    stmt.populate_common_metrics()
+
+                    # Use upsert with ON CONFLICT DO UPDATE
+
+                    stmt_dict = {
+                        "symbol": stmt.symbol,
+                        "period_end": stmt.period_end,
+                        "statement_type": stmt.statement_type,
+                        "period_type": stmt.period_type,
+                        "fiscal_year": stmt.fiscal_year,
+                        "fiscal_quarter": stmt.fiscal_quarter,
+                        "data": stmt.data,
+                        "total_revenue": stmt.total_revenue,
+                        "net_income": stmt.net_income,
+                        "gross_profit": stmt.gross_profit,
+                        "operating_income": stmt.operating_income,
+                        "ebitda": stmt.ebitda,
+                        "total_assets": stmt.total_assets,
+                        "total_liabilities": stmt.total_liabilities,
+                        "total_equity": stmt.total_equity,
+                        "cash_and_equivalents": stmt.cash_and_equivalents,
+                        "total_debt": stmt.total_debt,
+                        "operating_cash_flow": stmt.operating_cash_flow,
+                        "free_cash_flow": stmt.free_cash_flow,
+                        "basic_eps": stmt.basic_eps,
+                        "diluted_eps": stmt.diluted_eps,
+                        "book_value_per_share": stmt.book_value_per_share,
+                        "data_source": "yahoo",
+                        "updated_at": stmt.updated_at,
+                    }
+
+                    insert_stmt = insert(FinancialStatement).values(**stmt_dict)
+                    upsert_stmt = insert_stmt.on_conflict_do_update(
+                        index_elements=[
+                            "symbol",
+                            "period_end",
+                            "statement_type",
+                            "period_type",
+                        ],
+                        set_={
+                            "fiscal_year": insert_stmt.excluded.fiscal_year,
+                            "fiscal_quarter": insert_stmt.excluded.fiscal_quarter,
+                            "data": insert_stmt.excluded.data,
+                            "total_revenue": insert_stmt.excluded.total_revenue,
+                            "net_income": insert_stmt.excluded.net_income,
+                            "gross_profit": insert_stmt.excluded.gross_profit,
+                            "operating_income": insert_stmt.excluded.operating_income,
+                            "ebitda": insert_stmt.excluded.ebitda,
+                            "total_assets": insert_stmt.excluded.total_assets,
+                            "total_liabilities": insert_stmt.excluded.total_liabilities,
+                            "total_equity": insert_stmt.excluded.total_equity,
+                            "cash_and_equivalents": insert_stmt.excluded.cash_and_equivalents,
+                            "total_debt": insert_stmt.excluded.total_debt,
+                            "operating_cash_flow": insert_stmt.excluded.operating_cash_flow,
+                            "free_cash_flow": insert_stmt.excluded.free_cash_flow,
+                            "basic_eps": insert_stmt.excluded.basic_eps,
+                            "diluted_eps": insert_stmt.excluded.diluted_eps,
+                            "book_value_per_share": insert_stmt.excluded.book_value_per_share,
+                            "data_source": insert_stmt.excluded.data_source,
+                            "updated_at": insert_stmt.excluded.updated_at,
+                        },
+                    )
+
+                    session.execute(upsert_stmt)
+
+                session.commit()
+
+            logger.info(f"Loaded {len(statements)} financial statements for {symbol}")
+            return statements
+
+        except Exception as e:
+            logger.error(f"Failed to load financial statements for {symbol}: {e}")
+            raise YahooAPIError(
+                f"Failed to load financial statements for {symbol}: {str(e)}"
+            )
+
+    async def load_company_officers(self, symbol: str) -> List[Any]:
+        """
+        Load company officers for a symbol
+
+        Args:
+            symbol: Stock symbol
+
+        Returns:
+            List of company officers
+        """
+        try:
+            officers_data = await self.client.get_company_officers(symbol)
+
+            if not officers_data:
+                logger.info(f"No officers data available for {symbol}")
+                return []
+
+            # Store in database
+            with db_transaction() as session:
+                for officer_data in officers_data:
+                    # Use upsert to handle duplicates
+                    officer = CompanyOfficer(
+                        symbol=symbol,
+                        name=officer_data.name,
+                        title=officer_data.title,
+                        age=officer_data.age,
+                        year_born=officer_data.year_born,
+                        fiscal_year=officer_data.fiscal_year,
+                        total_pay=officer_data.total_pay,
+                        exercised_value=officer_data.exercised_value,
+                        unexercised_value=officer_data.unexercised_value,
+                    )
+
+                    # Merge (upsert) the officer
+                    session.merge(officer)
+
+                session.commit()
+
+            logger.info(f"Loaded {len(officers_data)} company officers for {symbol}")
+            return officers_data
+
+        except Exception as e:
+            logger.error(f"Failed to load company officers for {symbol}: {e}")
+            raise YahooAPIError(
+                f"Failed to load company officers for {symbol}: {str(e)}"
+            )
+
     async def load_all_data(
         self,
         symbol: str,
@@ -538,6 +744,8 @@ class YahooDataLoader:
         include_fundamentals: bool = False,
         include_key_statistics: bool = False,
         include_institutional_holders: bool = False,
+        include_financial_statements: bool = False,
+        include_company_officers: bool = False,
         include_dividends: bool = False,
         include_splits: bool = False,
     ) -> Dict[str, int]:
@@ -551,6 +759,9 @@ class YahooDataLoader:
             include_fundamentals: Load company fundamentals
             include_key_statistics: Load key financial statistics
             include_institutional_holders: Load institutional holders
+            include_financial_statements: Load financial statements
+                (income, balance sheet, cash flow)
+            include_company_officers: Load company officers and executives
             include_dividends: Load dividend history
             include_splits: Load split history
 
@@ -565,6 +776,8 @@ class YahooDataLoader:
             "company_info": 0,
             "key_statistics": 0,
             "institutional_holders": 0,
+            "financial_statements": 0,
+            "company_officers": 0,
             "dividends": 0,
             "splits": 0,
         }
@@ -592,6 +805,16 @@ class YahooDataLoader:
                 results["institutional_holders"] = (
                     await self.load_institutional_holders(symbol)
                 )
+
+            # Load financial statements if requested
+            if include_financial_statements:
+                statements = await self.load_financial_statements(symbol)
+                results["financial_statements"] = len(statements)
+
+            # Load company officers if requested
+            if include_company_officers:
+                officers = await self.load_company_officers(symbol)
+                results["company_officers"] = len(officers)
 
             # Load dividends if requested
             if include_dividends:
@@ -625,6 +848,8 @@ class YahooDataLoader:
         include_fundamentals: bool = False,
         include_key_statistics: bool = False,
         include_institutional_holders: bool = False,
+        include_financial_statements: bool = False,
+        include_company_officers: bool = False,
     ) -> Dict[str, Any]:
         """
         Load market data for all active symbols
@@ -682,6 +907,14 @@ class YahooDataLoader:
                 # Load institutional holders if requested
                 if include_institutional_holders:
                     await self.load_institutional_holders(symbol)
+
+                # Load financial statements if requested
+                if include_financial_statements:
+                    await self.load_financial_statements(symbol)
+
+                # Load company officers if requested
+                if include_company_officers:
+                    await self.load_company_officers(symbol)
 
                 stats["successful"] += 1
 
@@ -779,3 +1012,173 @@ class YahooDataLoader:
         except Exception as e:
             logger.error(f"Health check failed: {e}")
             return False
+
+    def _detect_fiscal_year_quarter(
+        self, symbol: str, period_end: date
+    ) -> tuple[int, int]:
+        """
+        Detect fiscal year and quarter for a given symbol and period_end date.
+
+        This method analyzes the historical data to determine the fiscal year pattern
+        for each company, as different companies have different fiscal year ends.
+
+        Args:
+            symbol: Stock symbol
+            period_end: Period end date
+
+        Returns:
+            Tuple of (fiscal_year, fiscal_quarter)
+        """
+        month = period_end.month
+        year = period_end.year
+
+        # Known fiscal year patterns for major companies
+        fiscal_year_patterns = {
+            # Standard calendar year (Dec end) - most companies
+            "AAPL": 9,  # Apple: September end
+            "MSFT": 12,  # Microsoft: December end
+            "GOOGL": 12,  # Google: December end
+            "AMZN": 12,  # Amazon: December end
+            "TSLA": 12,  # Tesla: December end
+            "META": 12,  # Meta: December end
+            "NVDA": 12,  # NVIDIA: December end
+            "NFLX": 12,  # Netflix: December end
+            "AMD": 12,  # AMD: December end
+            "INTC": 12,  # Intel: December end
+            "ORCL": 12,  # Oracle: December end
+            "CRM": 12,  # Salesforce: December end
+            "ADBE": 12,  # Adobe: December end
+            "PYPL": 12,  # PayPal: December end
+            "UBER": 12,  # Uber: December end
+            "LYFT": 12,  # Lyft: December end
+            "SNAP": 12,  # Snap: December end
+            "TWTR": 12,  # Twitter: December end
+            "SQ": 12,  # Square: December end
+            "ROKU": 12,  # Roku: December end
+            "ZM": 12,  # Zoom: December end
+            "DOCU": 12,  # DocuSign: December end
+            "OKTA": 12,  # Okta: December end
+            "CRWD": 12,  # CrowdStrike: December end
+            "SNOW": 12,  # Snowflake: December end
+            "PLTR": 12,  # Palantir: December end
+            "COIN": 12,  # Coinbase: December end
+            "RBLX": 12,  # Roblox: December end
+            "ABNB": 12,  # Airbnb: December end
+            "DDOG": 12,  # Datadog: December end
+            "NET": 12,  # Cloudflare: December end
+            "ESTC": 12,  # Elastic: December end
+            "MDB": 12,  # MongoDB: December end
+            "WDAY": 12,  # Workday: December end
+            "NOW": 12,  # ServiceNow: December end
+            "TEAM": 12,  # Atlassian: December end
+            "SPOT": 12,  # Spotify: December end
+            "SHOP": 12,  # Shopify: December end
+            "TWLO": 12,  # Twilio: December end
+            "ZEN": 12,  # Zendesk: December end
+            "PINS": 12,  # Pinterest: December end
+            # Non-standard fiscal years
+            "FDX": 11,  # FedEx: May end (month 11 = November, but they report in May)
+            "NKE": 11,  # Nike: May end
+            "WMT": 1,  # Walmart: January end
+            "TGT": 1,  # Target: January end
+            "COST": 8,  # Costco: August end
+            "HD": 1,  # Home Depot: January end
+            "LOW": 1,  # Lowe's: January end
+            "MCD": 12,  # McDonald's: December end
+            "SBUX": 9,  # Starbucks: September end
+            "DIS": 9,  # Disney: September end
+            "CMCSA": 12,  # Comcast: December end
+            "VZ": 12,  # Verizon: December end
+            "T": 12,  # AT&T: December end
+            "JNJ": 12,  # Johnson & Johnson: December end
+            "PFE": 12,  # Pfizer: December end
+            "UNH": 12,  # UnitedHealth: December end
+            "CVS": 12,  # CVS Health: December end
+            "ABBV": 12,  # AbbVie: December end
+            "MRK": 12,  # Merck: December end
+            "PEP": 12,  # PepsiCo: December end
+            "KO": 12,  # Coca-Cola: December end
+            "PG": 12,  # Procter & Gamble: December end
+            "CL": 12,  # Colgate-Palmolive: December end
+            "KMB": 12,  # Kimberly-Clark: December end
+            "GIS": 12,  # General Mills: December end
+            "K": 12,  # Kellogg: December end
+            "CPB": 12,  # Campbell Soup: December end
+            "HRL": 12,  # Hormel Foods: December end
+            "SJM": 12,  # J.M. Smucker: December end
+            "CAG": 12,  # Conagra Brands: December end
+            "MKC": 12,  # McCormick: December end
+            "CHD": 12,  # Church & Dwight: December end
+            "CLX": 12,  # Clorox: December end
+            "ENR": 12,  # Energizer: December end
+            "NWL": 12,  # Newell Brands: December end
+            "SPB": 12,  # Spectrum Brands: December end
+            "TUP": 12,  # Tupperware: December end
+            "WBA": 12,  # Walgreens Boots Alliance: December end
+            "CI": 12,  # Cigna: December end
+            "ANTM": 12,  # Anthem: December end
+            "HUM": 12,  # Humana: December end
+            "MOH": 12,  # Molina Healthcare: December end
+            "ELV": 12,  # Elevance Health: December end
+            "CNC": 12,  # Centene: December end
+            "DVA": 12,  # DaVita: December end
+            "LH": 12,  # LabCorp: December end
+            "DGX": 12,  # Quest Diagnostics: December end
+            "TMO": 12,  # Thermo Fisher Scientific: December end
+            "DHR": 12,  # Danaher: December end
+            "BDX": 12,  # Becton Dickinson: December end
+            "ABT": 12,  # Abbott: December end
+            "BSX": 12,  # Boston Scientific: December end
+            "CAH": 12,  # Cardinal Health: December end
+            "CERN": 12,  # Cerner: December end
+            "COO": 12,  # Cooper Companies: December end
+            "CRL": 12,  # Charles River Laboratories: December end
+            "EW": 12,  # Edwards Lifesciences: December end
+            "HCA": 12,  # HCA Healthcare: December end
+            "HOLX": 12,  # Hologic: December end
+            "HSIC": 12,  # Henry Schein: December end
+            "IDXX": 12,  # IDEXX Laboratories: December end
+            "ISRG": 12,  # Intuitive Surgical: December end
+            "MCK": 12,  # McKesson: December end
+            "MDT": 12,  # Medtronic: December end
+            "PKI": 12,  # PerkinElmer: December end
+            "PODD": 12,  # Insulet: December end
+            "PRGO": 12,  # Perrigo: December end
+            "RMD": 12,  # ResMed: December end
+            "STE": 12,  # Steris: December end
+            "SYK": 12,  # Stryker: December end
+            "UHS": 12,  # Universal Health Services: December end
+            "VAR": 12,  # Varian Medical Systems: December end
+            "WAT": 12,  # Waters: December end
+            "ZBH": 12,  # Zimmer Biomet: December end
+        }
+
+        # Get fiscal year end month for this symbol
+        fiscal_year_end_month = fiscal_year_patterns.get(
+            symbol, 12
+        )  # Default to December
+
+        # Calculate fiscal year and quarter based on the fiscal year end month
+        if month == fiscal_year_end_month:
+            # This is Q4 of the fiscal year
+            fiscal_quarter = 4
+            fiscal_year = year
+        else:
+            # Calculate quarters based on months since fiscal year end
+            months_since_fye = (month - fiscal_year_end_month) % 12
+
+            if months_since_fye in [1, 2, 3]:  # Q1: 1-3 months after FYE
+                fiscal_quarter = 1
+                # Fiscal year is named after the year it ENDS
+                fiscal_year = year + 1 if month > fiscal_year_end_month else year
+            elif months_since_fye in [4, 5, 6]:  # Q2: 4-6 months after FYE
+                fiscal_quarter = 2
+                fiscal_year = year + 1 if month > fiscal_year_end_month else year
+            elif months_since_fye in [7, 8, 9]:  # Q3: 7-9 months after FYE
+                fiscal_quarter = 3
+                fiscal_year = year + 1 if month > fiscal_year_end_month else year
+            else:  # Q4: 10-11 months after FYE
+                fiscal_quarter = 4
+                fiscal_year = year + 1 if month > fiscal_year_end_month else year
+
+        return fiscal_year, fiscal_quarter

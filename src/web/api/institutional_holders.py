@@ -8,9 +8,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import select
 
 from src.shared.database.base import db_transaction
-from src.shared.database.models.institutional_holders import (
-    InstitutionalHolder,
-)
+from src.shared.database.models.institutional_holders import InstitutionalHolder
 
 router = APIRouter(prefix="/api/institutional-holders", tags=["institutional-holders"])
 

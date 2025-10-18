@@ -44,6 +44,7 @@ Professional multi-pane trading charts with advanced technical analysis:
   - Timeframe selection (1W, 1M, 3M, 6M, 1Y)
 - **Market Statistics**: Live data cards showing total symbols, records, and last update
 - **Real-time Data**: Live price information bar with symbol, price, change, volume, high/low
+- **Institutional Holders**: Advanced ownership visualization with horizontal bars
 
 ### 4. Strategy Management (`/strategies`)
 Strategy configuration and monitoring:
@@ -57,6 +58,60 @@ System information and user preferences:
 - **System Information**: Version, configuration, and status
 - **API Configuration**: Alpaca API settings and connectivity
 - **Preferences**: User interface and notification settings
+
+## Institutional Holders Visualization
+
+### Overview
+
+The Institutional Holders feature provides an advanced visualization of major shareholders for any stock symbol, displaying ownership percentages using horizontal bars for easy comparison.
+
+### Features
+
+#### Horizontal Bar Visualization
+- **Blue Gradient Bars**: Visual representation of ownership percentages
+- **Consistent Text Positioning**: Black text positioned to the right of bars for optimal readability
+- **Responsive Design**: Bars scale with container width and adapt to different screen sizes
+- **Percentage Display**: Precise percentage values shown for each holder
+
+#### Data Sources
+- **Yahoo Finance Integration**: Primary data source for institutional ownership
+- **Automatic Calculations**: System calculates missing percentages using:
+  - Shares outstanding from Key Statistics
+  - Relative percentages based on total institutional shares
+- **Real-time Updates**: Data refreshed automatically when available
+
+#### Visual Design
+- **Clean Interface**: Transparent background with blue gradient fills
+- **Consistent Styling**: Matches overall dashboard theme and design language
+- **Accessibility**: High contrast text for readability across different backgrounds
+
+### Usage
+
+1. **Navigate to Analysis Page**: Go to `/analysis` in the dashboard
+2. **Select Symbol**: Choose any stock symbol from the dropdown
+3. **View Institutional Holders**: The table automatically loads with horizontal bars
+4. **Compare Ownership**: Bars provide quick visual comparison of ownership percentages
+
+### Technical Implementation
+
+#### Frontend Components
+- **CSS Styling**: Custom percentage bar styles with gradients and positioning
+- **JavaScript**: Dynamic bar width calculation and text positioning
+- **Responsive Design**: Mobile-friendly layout that adapts to screen size
+
+#### Backend API
+- **Endpoint**: `/api/institutional-holders/{symbol}`
+- **Automatic Calculation**: Missing percentages calculated server-side
+- **Error Handling**: Graceful fallbacks for missing or incomplete data
+
+### Example Display
+
+```
+Vanguard Group Inc      [████████████████████████████████████████] 23.62%
+BlackRock Inc          [████████████████████████████]             15.47%
+State Street Corp      [████████████████████████]                 12.31%
+Berkshire Hathaway     [████████████████████]                     9.85%
+```
 
 ## Reusable Card Components
 

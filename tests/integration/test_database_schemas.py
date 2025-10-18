@@ -102,7 +102,8 @@ class TestDatabaseStructure:
 
             result = conn.execute(
                 text(
-                    f"SELECT pg_encoding_to_char(encoding) FROM pg_database WHERE datname = '{db_name}'"
+                    f"SELECT pg_encoding_to_char(encoding) FROM pg_database "
+                    f"WHERE datname = '{db_name}'"
                 )
             )
             encoding = result.fetchone()[0]
