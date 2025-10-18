@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import HTTPException
+
 from src.web.api.company_officers import (
     get_company_officers,
     get_compensation_summary,

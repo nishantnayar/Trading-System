@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import HTTPException
+
 from src.web.api.institutional_holders import (
     _calculate_missing_percentages,
     get_institutional_holders,

@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import HTTPException
+
 from src.web.api.financial_statements import (
     get_financial_statements,
     get_latest_financial_statements,

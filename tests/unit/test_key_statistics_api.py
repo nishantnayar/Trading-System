@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import HTTPException
+
 from src.web.api.key_statistics import get_key_statistics, list_available_symbols
 
 
