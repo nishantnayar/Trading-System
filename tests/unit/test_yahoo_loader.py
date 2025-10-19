@@ -428,12 +428,24 @@ class TestYahooDataLoader:
         """Test successful loading of all symbols data"""
         with (
             patch.object(loader, "_get_active_symbols", return_value=["AAPL", "MSFT"]),
-            patch.object(loader, "load_market_data", return_value=10) as mock_market_data,
-            patch.object(loader, "load_company_info", return_value=True) as mock_company_info,
-            patch.object(loader, "load_key_statistics", return_value=True) as mock_key_stats,
-            patch.object(loader, "load_institutional_holders", return_value=5) as mock_holders,
-            patch.object(loader, "load_financial_statements", return_value=[]) as mock_financial,
-            patch.object(loader, "load_company_officers", return_value=3) as mock_officers,
+            patch.object(
+                loader, "load_market_data", return_value=10
+            ) as mock_market_data,
+            patch.object(
+                loader, "load_company_info", return_value=True
+            ) as mock_company_info,
+            patch.object(
+                loader, "load_key_statistics", return_value=True
+            ) as mock_key_stats,
+            patch.object(
+                loader, "load_institutional_holders", return_value=5
+            ) as mock_holders,
+            patch.object(
+                loader, "load_financial_statements", return_value=[]
+            ) as mock_financial,
+            patch.object(
+                loader, "load_company_officers", return_value=3
+            ) as mock_officers,
         ):
 
             result = await loader.load_all_symbols_data()
@@ -450,9 +462,15 @@ class TestYahooDataLoader:
         """Test loading all symbols data with specific options"""
         with (
             patch.object(loader, "_get_active_symbols", return_value=["AAPL"]),
-            patch.object(loader, "load_market_data", return_value=15) as mock_market_data,
-            patch.object(loader, "load_key_statistics", return_value=True) as mock_key_stats,
-            patch.object(loader, "load_institutional_holders", return_value=8) as mock_holders,
+            patch.object(
+                loader, "load_market_data", return_value=15
+            ) as mock_market_data,
+            patch.object(
+                loader, "load_key_statistics", return_value=True
+            ) as mock_key_stats,
+            patch.object(
+                loader, "load_institutional_holders", return_value=8
+            ) as mock_holders,
         ):
 
             result = await loader.load_all_symbols_data(
