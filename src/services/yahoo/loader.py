@@ -5,6 +5,7 @@ Loads market data and fundamentals from Yahoo Finance into the database.
 """
 
 import asyncio
+import math
 from datetime import date
 from typing import Any, Dict, List, Optional
 
@@ -22,6 +23,49 @@ from src.shared.database.models.symbols import Symbol
 
 from .client import YahooClient
 from .exceptions import YahooAPIError
+
+
+def safe_float_conversion(
+    value: Any, max_value: float = 999999999.99
+) -> Optional[float]:
+    """
+    Safely convert a value to float, handling infinity and NaN cases.
+
+    Args:
+        value: The value to convert
+        max_value: Maximum allowed value (default: 999999999.99 to fit NUMERIC(10,2))
+
+    Returns:
+        Converted float value or None if invalid/infinite
+    """
+    if value is None:
+        return None
+
+    try:
+        float_val = float(value)
+
+        # Check for infinity or NaN
+        if math.isinf(float_val) or math.isnan(float_val):
+            logger.warning(
+                f"Encountered invalid numeric value: {value}, converting to None"
+            )
+            return None
+
+        # Check if value exceeds database precision limits
+        if abs(float_val) > max_value:
+            logger.warning(
+                f"Value {float_val} exceeds maximum allowed value "
+                f"{max_value}, converting to None"
+            )
+            return None
+
+        return float_val
+
+    except (ValueError, TypeError) as e:
+        logger.warning(
+            f"Failed to convert value {value} to float: {e}, converting to None"
+        )
+        return None
 
 
 class YahooDataLoader:
@@ -200,167 +244,71 @@ class YahooDataLoader:
                     # Valuation metrics
                     market_cap=stats_data.market_cap,
                     enterprise_value=stats_data.enterprise_value,
-                    trailing_pe=(
-                        float(stats_data.trailing_pe)
-                        if stats_data.trailing_pe
-                        else None
+                    trailing_pe=safe_float_conversion(stats_data.trailing_pe),
+                    forward_pe=safe_float_conversion(stats_data.forward_pe),
+                    peg_ratio=safe_float_conversion(stats_data.peg_ratio),
+                    price_to_book=safe_float_conversion(stats_data.price_to_book),
+                    price_to_sales=safe_float_conversion(stats_data.price_to_sales),
+                    enterprise_to_revenue=safe_float_conversion(
+                        stats_data.enterprise_to_revenue
                     ),
-                    forward_pe=(
-                        float(stats_data.forward_pe) if stats_data.forward_pe else None
-                    ),
-                    peg_ratio=(
-                        float(stats_data.peg_ratio) if stats_data.peg_ratio else None
-                    ),
-                    price_to_book=(
-                        float(stats_data.price_to_book)
-                        if stats_data.price_to_book
-                        else None
-                    ),
-                    price_to_sales=(
-                        float(stats_data.price_to_sales)
-                        if stats_data.price_to_sales
-                        else None
-                    ),
-                    enterprise_to_revenue=(
-                        float(stats_data.enterprise_to_revenue)
-                        if stats_data.enterprise_to_revenue
-                        else None
-                    ),
-                    enterprise_to_ebitda=(
-                        float(stats_data.enterprise_to_ebitda)
-                        if stats_data.enterprise_to_ebitda
-                        else None
+                    enterprise_to_ebitda=safe_float_conversion(
+                        stats_data.enterprise_to_ebitda
                     ),
                     # Profitability metrics
-                    profit_margin=(
-                        float(stats_data.profit_margin)
-                        if stats_data.profit_margin
-                        else None
-                    ),
-                    operating_margin=(
-                        float(stats_data.operating_margin)
-                        if stats_data.operating_margin
-                        else None
-                    ),
-                    return_on_assets=(
-                        float(stats_data.return_on_assets)
-                        if stats_data.return_on_assets
-                        else None
-                    ),
-                    return_on_equity=(
-                        float(stats_data.return_on_equity)
-                        if stats_data.return_on_equity
-                        else None
-                    ),
-                    gross_margin=(
-                        float(stats_data.gross_margin)
-                        if stats_data.gross_margin
-                        else None
-                    ),
-                    ebitda_margin=(
-                        float(stats_data.ebitda_margin)
-                        if stats_data.ebitda_margin
-                        else None
-                    ),
+                    profit_margin=safe_float_conversion(stats_data.profit_margin),
+                    operating_margin=safe_float_conversion(stats_data.operating_margin),
+                    return_on_assets=safe_float_conversion(stats_data.return_on_assets),
+                    return_on_equity=safe_float_conversion(stats_data.return_on_equity),
+                    gross_margin=safe_float_conversion(stats_data.gross_margin),
+                    ebitda_margin=safe_float_conversion(stats_data.ebitda_margin),
                     # Financial health
                     revenue=stats_data.revenue,
-                    revenue_per_share=(
-                        float(stats_data.revenue_per_share)
-                        if stats_data.revenue_per_share
-                        else None
+                    revenue_per_share=safe_float_conversion(
+                        stats_data.revenue_per_share
                     ),
-                    earnings_per_share=(
-                        float(stats_data.earnings_per_share)
-                        if stats_data.earnings_per_share
-                        else None
+                    earnings_per_share=safe_float_conversion(
+                        stats_data.earnings_per_share
                     ),
                     total_cash=stats_data.total_cash,
                     total_debt=stats_data.total_debt,
-                    debt_to_equity=(
-                        float(stats_data.debt_to_equity)
-                        if stats_data.debt_to_equity
-                        else None
-                    ),
-                    current_ratio=(
-                        float(stats_data.current_ratio)
-                        if stats_data.current_ratio
-                        else None
-                    ),
-                    quick_ratio=(
-                        float(stats_data.quick_ratio)
-                        if stats_data.quick_ratio
-                        else None
-                    ),
+                    debt_to_equity=safe_float_conversion(stats_data.debt_to_equity),
+                    current_ratio=safe_float_conversion(stats_data.current_ratio),
+                    quick_ratio=safe_float_conversion(stats_data.quick_ratio),
                     free_cash_flow=stats_data.free_cash_flow,
                     operating_cash_flow=stats_data.operating_cash_flow,
                     # Growth metrics
-                    revenue_growth=(
-                        float(stats_data.revenue_growth)
-                        if stats_data.revenue_growth
-                        else None
-                    ),
-                    earnings_growth=(
-                        float(stats_data.earnings_growth)
-                        if stats_data.earnings_growth
-                        else None
-                    ),
+                    revenue_growth=safe_float_conversion(stats_data.revenue_growth),
+                    earnings_growth=safe_float_conversion(stats_data.earnings_growth),
                     # Trading metrics
-                    beta=float(stats_data.beta) if stats_data.beta else None,
-                    fifty_two_week_high=(
-                        float(stats_data.fifty_two_week_high)
-                        if stats_data.fifty_two_week_high
-                        else None
+                    beta=safe_float_conversion(stats_data.beta),
+                    fifty_two_week_high=safe_float_conversion(
+                        stats_data.fifty_two_week_high
                     ),
-                    fifty_two_week_low=(
-                        float(stats_data.fifty_two_week_low)
-                        if stats_data.fifty_two_week_low
-                        else None
+                    fifty_two_week_low=safe_float_conversion(
+                        stats_data.fifty_two_week_low
                     ),
-                    fifty_day_average=(
-                        float(stats_data.fifty_day_average)
-                        if stats_data.fifty_day_average
-                        else None
+                    fifty_day_average=safe_float_conversion(
+                        stats_data.fifty_day_average
                     ),
-                    two_hundred_day_average=(
-                        float(stats_data.two_hundred_day_average)
-                        if stats_data.two_hundred_day_average
-                        else None
+                    two_hundred_day_average=safe_float_conversion(
+                        stats_data.two_hundred_day_average
                     ),
                     average_volume=stats_data.average_volume,
                     # Dividend metrics
-                    dividend_yield=(
-                        float(stats_data.dividend_yield)
-                        if stats_data.dividend_yield
-                        else None
-                    ),
-                    dividend_rate=(
-                        float(stats_data.dividend_rate)
-                        if stats_data.dividend_rate
-                        else None
-                    ),
-                    payout_ratio=(
-                        float(stats_data.payout_ratio)
-                        if stats_data.payout_ratio
-                        else None
-                    ),
+                    dividend_yield=safe_float_conversion(stats_data.dividend_yield),
+                    dividend_rate=safe_float_conversion(stats_data.dividend_rate),
+                    payout_ratio=safe_float_conversion(stats_data.payout_ratio),
                     # Share information
                     shares_outstanding=stats_data.shares_outstanding,
                     float_shares=stats_data.float_shares,
                     shares_short=stats_data.shares_short,
-                    short_ratio=(
-                        float(stats_data.short_ratio)
-                        if stats_data.short_ratio
-                        else None
+                    short_ratio=safe_float_conversion(stats_data.short_ratio),
+                    held_percent_insiders=safe_float_conversion(
+                        stats_data.held_percent_insiders
                     ),
-                    held_percent_insiders=(
-                        float(stats_data.held_percent_insiders)
-                        if stats_data.held_percent_insiders
-                        else None
-                    ),
-                    held_percent_institutions=(
-                        float(stats_data.held_percent_institutions)
-                        if stats_data.held_percent_institutions
-                        else None
+                    held_percent_institutions=safe_float_conversion(
+                        stats_data.held_percent_institutions
                     ),
                 )
 
@@ -404,7 +352,9 @@ class YahooDataLoader:
                         "fifty_two_week_high": stmt.excluded.fifty_two_week_high,
                         "fifty_two_week_low": stmt.excluded.fifty_two_week_low,
                         "fifty_day_average": stmt.excluded.fifty_day_average,
-                        "two_hundred_day_average": stmt.excluded.two_hundred_day_average,
+                        "two_hundred_day_average": (
+                            stmt.excluded.two_hundred_day_average
+                        ),
                         "average_volume": stmt.excluded.average_volume,
                         # Dividend metrics
                         "dividend_yield": stmt.excluded.dividend_yield,
@@ -416,7 +366,9 @@ class YahooDataLoader:
                         "shares_short": stmt.excluded.shares_short,
                         "short_ratio": stmt.excluded.short_ratio,
                         "held_percent_insiders": stmt.excluded.held_percent_insiders,
-                        "held_percent_institutions": stmt.excluded.held_percent_institutions,
+                        "held_percent_institutions": (
+                            stmt.excluded.held_percent_institutions
+                        ),
                         # Update metadata
                         "updated_at": stmt.excluded.updated_at,
                     },
@@ -666,18 +618,26 @@ class YahooDataLoader:
                             "total_revenue": insert_stmt.excluded.total_revenue,
                             "net_income": insert_stmt.excluded.net_income,
                             "gross_profit": insert_stmt.excluded.gross_profit,
-                            "operating_income": insert_stmt.excluded.operating_income,
+                            "operating_income": (insert_stmt.excluded.operating_income),
                             "ebitda": insert_stmt.excluded.ebitda,
                             "total_assets": insert_stmt.excluded.total_assets,
-                            "total_liabilities": insert_stmt.excluded.total_liabilities,
+                            "total_liabilities": (
+                                insert_stmt.excluded.total_liabilities
+                            ),
                             "total_equity": insert_stmt.excluded.total_equity,
-                            "cash_and_equivalents": insert_stmt.excluded.cash_and_equivalents,
+                            "cash_and_equivalents": (
+                                insert_stmt.excluded.cash_and_equivalents
+                            ),
                             "total_debt": insert_stmt.excluded.total_debt,
-                            "operating_cash_flow": insert_stmt.excluded.operating_cash_flow,
+                            "operating_cash_flow": (
+                                insert_stmt.excluded.operating_cash_flow
+                            ),
                             "free_cash_flow": insert_stmt.excluded.free_cash_flow,
                             "basic_eps": insert_stmt.excluded.basic_eps,
                             "diluted_eps": insert_stmt.excluded.diluted_eps,
-                            "book_value_per_share": insert_stmt.excluded.book_value_per_share,
+                            "book_value_per_share": (
+                                insert_stmt.excluded.book_value_per_share
+                            ),
                             "data_source": insert_stmt.excluded.data_source,
                             "updated_at": insert_stmt.excluded.updated_at,
                         },

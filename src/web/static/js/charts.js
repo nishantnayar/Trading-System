@@ -220,6 +220,13 @@ class TradingChartsDashboard {
      * Initialize all chart instances
      */
     initializeCharts() {
+        // Check if LightweightCharts is available
+        if (typeof LightweightCharts === 'undefined') {
+            console.error('LightweightCharts library not loaded');
+            this.showError('Chart library not loaded. Please reload the page.');
+            return;
+        }
+
         // Clear existing charts
         Object.values(this.charts).forEach(chart => {
             try {
@@ -391,6 +398,13 @@ class TradingChartsDashboard {
             return;
         }
 
+        // Check if charts were initialized properly
+        if (!this.charts.price || !this.charts.volume || !this.charts.macd || !this.charts.rsi) {
+            console.error('Charts not properly initialized, skipping render');
+            this.showError('Charts not properly initialized. Please reload the page.');
+            return;
+        }
+
         console.log('Rendering charts with', this.rawData.length, 'data points');
 
         // Prepare data
@@ -445,62 +459,83 @@ class TradingChartsDashboard {
 
         console.log('Valid data points:', candlestickData.length);
 
-        // Set candlestick and volume data
-        this.series.candlestick.setData(candlestickData);
-        this.series.volume.setData(volumeData);
+        // Set candlestick and volume data (with safety checks)
+        if (this.series.candlestick) {
+            this.series.candlestick.setData(candlestickData);
+        } else {
+            console.error('Candlestick series not initialized');
+        }
+        
+        if (this.series.volume) {
+            this.series.volume.setData(volumeData);
+        } else {
+            console.error('Volume series not initialized');
+        }
 
         // Calculate and set moving averages
         const sma20 = TechnicalIndicators.SMA(closePrices, 20);
         const sma50 = TechnicalIndicators.SMA(closePrices, 50);
 
-        this.series.sma20.setData(
-            sma20.map((value, index) => ({
-                time: timestamps[index],
-                value: value,
-            })).filter(item => item.value !== null)
-        );
+        if (this.series.sma20) {
+            this.series.sma20.setData(
+                sma20.map((value, index) => ({
+                    time: timestamps[index],
+                    value: value,
+                })).filter(item => item.value !== null)
+            );
+        }
 
-        this.series.sma50.setData(
-            sma50.map((value, index) => ({
-                time: timestamps[index],
-                value: value,
-            })).filter(item => item.value !== null)
-        );
+        if (this.series.sma50) {
+            this.series.sma50.setData(
+                sma50.map((value, index) => ({
+                    time: timestamps[index],
+                    value: value,
+                })).filter(item => item.value !== null)
+            );
+        }
 
         // Calculate and set MACD
         const macd = TechnicalIndicators.MACD(closePrices, 12, 26, 9);
         
-        this.series.macdLine.setData(
-            macd.macd.map((value, index) => ({
-                time: timestamps[index],
-                value: value,
-            })).filter(item => item.value !== null)
-        );
+        if (this.series.macdLine) {
+            this.series.macdLine.setData(
+                macd.macd.map((value, index) => ({
+                    time: timestamps[index],
+                    value: value,
+                })).filter(item => item.value !== null)
+            );
+        }
 
-        this.series.signalLine.setData(
-            macd.signal.map((value, index) => ({
-                time: timestamps[index],
-                value: value,
-            })).filter(item => item.value !== null)
-        );
+        if (this.series.signalLine) {
+            this.series.signalLine.setData(
+                macd.signal.map((value, index) => ({
+                    time: timestamps[index],
+                    value: value,
+                })).filter(item => item.value !== null)
+            );
+        }
 
-        this.series.macdHistogram.setData(
-            macd.histogram.map((value, index) => ({
-                time: timestamps[index],
-                value: value,
-                color: value >= 0 ? '#26a69a80' : '#ef535080',
-            })).filter(item => item.value !== null)
-        );
+        if (this.series.macdHistogram) {
+            this.series.macdHistogram.setData(
+                macd.histogram.map((value, index) => ({
+                    time: timestamps[index],
+                    value: value,
+                    color: value >= 0 ? '#26a69a80' : '#ef535080',
+                })).filter(item => item.value !== null)
+            );
+        }
 
         // Calculate and set RSI
         const rsi = TechnicalIndicators.RSI(closePrices, 14);
         
-        this.series.rsi.setData(
-            rsi.map((value, index) => ({
-                time: timestamps[index],
-                value: value,
-            })).filter(item => item.value !== null)
-        );
+        if (this.series.rsi) {
+            this.series.rsi.setData(
+                rsi.map((value, index) => ({
+                    time: timestamps[index],
+                    value: value,
+                })).filter(item => item.value !== null)
+            );
+        }
 
         // Set RSI reference lines
         const rsiTimes = rsi
@@ -508,15 +543,19 @@ class TradingChartsDashboard {
             .filter((_, index) => rsi[index] !== null);
 
         if (rsiTimes.length > 0) {
-            this.series.rsiUpper.setData([
-                { time: rsiTimes[0], value: 70 },
-                { time: rsiTimes[rsiTimes.length - 1], value: 70 },
-            ]);
+            if (this.series.rsiUpper) {
+                this.series.rsiUpper.setData([
+                    { time: rsiTimes[0], value: 70 },
+                    { time: rsiTimes[rsiTimes.length - 1], value: 70 },
+                ]);
+            }
 
-            this.series.rsiLower.setData([
-                { time: rsiTimes[0], value: 30 },
-                { time: rsiTimes[rsiTimes.length - 1], value: 30 },
-            ]);
+            if (this.series.rsiLower) {
+                this.series.rsiLower.setData([
+                    { time: rsiTimes[0], value: 30 },
+                    { time: rsiTimes[rsiTimes.length - 1], value: 30 },
+                ]);
+            }
         }
 
         // Fit content for all charts

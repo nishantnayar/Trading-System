@@ -183,3 +183,4 @@ cython_debug/
 /.vscode
 YAHOO_FINANCE_SUMMARY.md
 KEY_STATISTICS_LOADER.md
+/logs

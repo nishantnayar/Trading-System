@@ -23,9 +23,9 @@
 
 A production-grade algorithmic trading system designed for local deployment, focusing on equities trading through Alpaca with paper trading capabilities. Built with modern Python technologies and microservices architecture for scalability and maintainability.
 
-## 🎯 System Status
+## 🎯 Overview
 
-**Production-Ready Trading System** with comprehensive data integration and testing infrastructure.
+A comprehensive algorithmic trading platform built for modern financial markets, featuring real-time data processing, advanced analytics, and professional-grade risk management capabilities.
 
 ## 🏗️ Architecture
 
@@ -419,14 +419,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 | 💬 **Discussions** | Community discussions and Q&A | [GitHub Discussions](https://github.com/nishantnayar/trading-system/discussions) |
 | 📧 **Contact** | Direct contact for support | nishant.nayar@hotmail.com |
 
-## 🔄 Version History
+## 🔄 Roadmap
 
 | Version | Status | Features |
 |---------|--------|----------|
-| **v1.0.0** | ✅ Current | Paper trading, market data integration, web dashboard |
-| **v1.1.0** | 🚧 Planned | Strategy engine implementation, backtesting |
-| **v1.2.0** | 📋 Roadmap | Prefect orchestration, automated workflows |
-| **v1.3.0** | 📋 Roadmap | Microservices architecture, cloud deployment |
+| **v1.0.0** | Current | Paper trading, market data integration, web dashboard |
+| **v1.1.0** | Planned | Strategy engine implementation, backtesting |
+| **v1.2.0** | Roadmap | Prefect orchestration, automated workflows |
+| **v1.3.0** | Roadmap | Microservices architecture, cloud deployment |
 
 ## 🏆 Acknowledgments
 
