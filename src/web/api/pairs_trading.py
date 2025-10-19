@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-import yaml
+import yaml  # type: ignore
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -81,7 +81,7 @@ def load_pairs_config() -> Dict[str, Any]:
     config_path = os.path.join(os.path.dirname(__file__), "../../../config/pairs.yaml")
     try:
         with open(config_path, "r") as file:
-            return yaml.safe_load(file)
+            return yaml.safe_load(file)  # type: ignore
     except FileNotFoundError:
         logger.error(f"Pairs configuration file not found: {config_path}")
         return {"pairs": [], "global_settings": {}}
@@ -97,7 +97,7 @@ def load_strategy_config() -> Dict[str, Any]:
     )
     try:
         with open(config_path, "r") as file:
-            return yaml.safe_load(file)
+            return yaml.safe_load(file)  # type: ignore
     except FileNotFoundError:
         logger.error(f"Strategy configuration file not found: {config_path}")
         return {"strategies": [], "global_settings": {}}
@@ -107,7 +107,7 @@ def load_strategy_config() -> Dict[str, Any]:
 
 
 @router.get("/active", response_model=Dict[str, List[PairData]])
-async def get_active_pairs():
+async def get_active_pairs() -> Dict[str, List[PairData]]:
     """Get currently active trading pairs"""
     try:
         pairs_config = load_pairs_config()
@@ -141,7 +141,7 @@ async def get_active_pairs():
 
 
 @router.get("/performance", response_model=PerformanceData)
-async def get_performance_data():
+async def get_performance_data() -> PerformanceData:
     """Get strategy performance metrics"""
     try:
         # Simulate performance data - in real implementation, this would come from database
@@ -162,7 +162,7 @@ async def get_performance_data():
 
 
 @router.get("/config", response_model=PairConfig)
-async def get_configuration():
+async def get_configuration() -> PairConfig:
     """Get current strategy configuration"""
     try:
         strategy_config = load_strategy_config()
@@ -202,7 +202,7 @@ async def get_configuration():
 
 
 @router.post("/config")
-async def save_configuration(config: PairConfig):
+async def save_configuration(config: PairConfig) -> Dict[str, str]:
     """Save strategy configuration"""
     try:
         strategy_config = load_strategy_config()
@@ -246,7 +246,7 @@ async def save_configuration(config: PairConfig):
 
 
 @router.post("/start")
-async def start_strategy():
+async def start_strategy() -> Dict[str, str]:
     """Start the pairs trading strategy"""
     try:
         # In real implementation, this would start the strategy engine
@@ -259,7 +259,7 @@ async def start_strategy():
 
 
 @router.post("/stop")
-async def stop_strategy():
+async def stop_strategy() -> Dict[str, str]:
     """Stop the pairs trading strategy"""
     try:
         # In real implementation, this would stop the strategy engine
@@ -272,7 +272,7 @@ async def stop_strategy():
 
 
 @router.post("/emergency-stop")
-async def emergency_stop():
+async def emergency_stop() -> Dict[str, str]:
     """Emergency stop all positions"""
     try:
         # In real implementation, this would immediately close all positions
@@ -285,7 +285,7 @@ async def emergency_stop():
 
 
 @router.get("/{pair_id}/history")
-async def get_pair_history(pair_id: str, days: int = 30):
+async def get_pair_history(pair_id: str, days: int = 30) -> Dict[str, Any]:
     """Get historical data for a specific pair"""
     try:
         # Simulate historical data - in real implementation, this would come from database
@@ -323,7 +323,7 @@ async def get_pair_history(pair_id: str, days: int = 30):
 
 
 @router.get("/{pair_id}/details")
-async def get_pair_details(pair_id: str):
+async def get_pair_details(pair_id: str) -> Dict[str, Any]:
     """Get detailed information for a specific pair"""
     try:
         pairs_config = load_pairs_config()
@@ -371,7 +371,7 @@ async def get_pair_details(pair_id: str):
 
 
 @router.get("/{pair_id}/config")
-async def get_pair_config(pair_id: str):
+async def get_pair_config(pair_id: str) -> Dict[str, Any]:
     """Get configuration for a specific pair"""
     try:
         pairs_config = load_pairs_config()
@@ -386,7 +386,7 @@ async def get_pair_config(pair_id: str):
         if not pair_info:
             raise HTTPException(status_code=404, detail="Pair not found")
 
-        return pair_info.get("parameters", {})
+        return pair_info.get("parameters", {})  # type: ignore
 
     except HTTPException:
         raise
@@ -396,7 +396,7 @@ async def get_pair_config(pair_id: str):
 
 
 @router.post("/{pair_id}/close")
-async def close_pair(pair_id: str):
+async def close_pair(pair_id: str) -> Dict[str, str]:
     """Close a specific pair position"""
     try:
         # In real implementation, this would close the position via trading API
@@ -409,7 +409,7 @@ async def close_pair(pair_id: str):
 
 
 @router.post("/backtest")
-async def run_backtest(config: BacktestConfig):
+async def run_backtest(config: BacktestConfig) -> Dict[str, Any]:
     """Run backtest for the pairs trading strategy"""
     try:
         # Simulate backtest results - in real implementation, this would run actual backtest
@@ -457,7 +457,7 @@ async def run_backtest(config: BacktestConfig):
 
 
 @router.get("/status", response_model=StrategyStatus)
-async def get_strategy_status():
+async def get_strategy_status() -> StrategyStatus:
     """Get current strategy status"""
     try:
         pairs_config = load_pairs_config()
