@@ -119,6 +119,10 @@ class YahooDataLoader:
         Returns:
             True if successful
         """
+        # Validate input
+        if not symbol or symbol.strip() == "":
+            raise ValueError("Symbol cannot be empty or None")
+        
         symbol = symbol.upper()
         logger.info(f"Loading company info for {symbol} from Yahoo Finance")
 
@@ -158,9 +162,12 @@ class YahooDataLoader:
             logger.info(f"Successfully loaded company info for {symbol}")
             return True
 
+        except YahooAPIError:
+            # Re-raise YahooAPIError as-is
+            raise
         except Exception as e:
             logger.error(f"Failed to load company info for {symbol}: {e}")
-            return False
+            raise YahooAPIError(f"Failed to load company info for {symbol}: {e}")
 
     async def load_key_statistics(
         self, symbol: str, stats_date: Optional[date] = None
@@ -931,6 +938,10 @@ class YahooDataLoader:
 
         logger.info(f"Completed loading data. Stats: {stats}")
         return stats
+
+    async def get_all_symbols(self) -> List[str]:
+        """Get list of all symbols from database"""
+        return await self._get_active_symbols()
 
     async def _get_active_symbols(self) -> List[str]:
         """Get list of active symbols from database"""

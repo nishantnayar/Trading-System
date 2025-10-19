@@ -87,7 +87,7 @@ class FinancialStatement(Base):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses"""
-        return {
+        result = {
             "id": self.id,
             "symbol": self.symbol,
             "period_end": self.period_end.isoformat() if self.period_end else None,
@@ -100,6 +100,16 @@ class FinancialStatement(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+        
+        # Add common metrics if they exist
+        if hasattr(self, 'total_revenue') and self.total_revenue is not None:
+            result["total_revenue"] = self.total_revenue
+        if hasattr(self, 'net_income') and self.net_income is not None:
+            result["net_income"] = self.net_income
+        if hasattr(self, 'basic_eps') and self.basic_eps is not None:
+            result["basic_eps"] = float(self.basic_eps)
+            
+        return result
 
     def get_line_item(self, line_item: str) -> Optional[float]:
         """Get a specific line item from the financial data"""
@@ -161,16 +171,16 @@ class FinancialStatement(Base):
         if format_type == "currency":
             return f"${value:,.0f}" if value >= 0 else f"-${abs(value):,.0f}"
         elif format_type == "percentage":
-            return f"{value:.2f}%"
+            return f"{value * 100:.2f}%"
         elif format_type == "number":
             if abs(value) >= 1_000_000_000:
-                return f"{value / 1_000_000_000:.2f}B"
-            elif abs(value) >= 1_000_000:
-                return f"{value / 1_000_000:.2f}M"
-            elif abs(value) >= 1_000:
-                return f"{value / 1_000:.2f}K"
-            else:
                 return f"{value:,.0f}"
+            elif abs(value) >= 1_000_000:
+                return f"{value:,.0f}"
+            elif abs(value) >= 1_000:
+                return f"{value:,.0f}"
+            else:
+                return f"{value:,.2f}" if isinstance(value, float) else f"{value:,.0f}"
         else:
             return str(value)
 
@@ -181,7 +191,7 @@ class FinancialStatement(Base):
             return f"FY{self.fiscal_year}" if self.fiscal_year else "Annual"
         elif self.period_type == "quarterly":
             if self.fiscal_year and self.fiscal_quarter:
-                return f"Q{self.fiscal_quarter} FY{self.fiscal_year}"
+                return f"Q{self.fiscal_quarter} {self.fiscal_year}"
             else:
                 return "Quarterly"
         else:

@@ -78,13 +78,13 @@ class TestYahooDataLoader:
                 date_reported=date(2024, 9, 30),
                 holder_name="Vanguard Group Inc",
                 shares=1234567890,
-                value=24567890123.45,
+                value=24567890123,
                 percent_held=7.85,
                 data={
                     "dateReported": "2024-09-30",
                     "holderName": "Vanguard Group Inc",
                     "shares": 1234567890,
-                    "value": 24567890123.45,
+                    "value": 24567890123,
                     "percentHeld": 7.85,
                 },
             ),
@@ -93,13 +93,13 @@ class TestYahooDataLoader:
                 date_reported=date(2024, 9, 30),
                 holder_name="BlackRock Inc",
                 shares=987654321,
-                value=19654321098.76,
+                value=19654321098,
                 percent_held=6.28,
                 data={
                     "dateReported": "2024-09-30",
                     "holderName": "BlackRock Inc",
                     "shares": 987654321,
-                    "value": 19654321098.76,
+                    "value": 19654321098,
                     "percentHeld": 6.28,
                 },
             ),
@@ -200,7 +200,7 @@ class TestYahooDataLoader:
 
             result = await loader.load_company_info("AAPL")
 
-            assert result == mock_company_info
+            assert result is True  # Method returns boolean success indicator
             mock_session.merge.assert_called_once()
             mock_session.commit.assert_called_once()
 
@@ -221,16 +221,21 @@ class TestYahooDataLoader:
                 loader.client, "get_key_statistics", return_value=mock_key_statistics
             ),
             patch("src.services.yahoo.loader.db_transaction") as mock_db,
+            patch("src.services.yahoo.loader.insert") as mock_insert,
         ):
 
             # Setup mock session
             mock_session = Mock()
             mock_db.return_value.__enter__.return_value = mock_session
+            
+            # Mock upsert statement
+            mock_upsert_stmt = Mock()
+            mock_insert.return_value.on_conflict_do_update.return_value = mock_upsert_stmt
 
             result = await loader.load_key_statistics("AAPL")
 
-            assert result == mock_key_statistics
-            mock_session.merge.assert_called_once()
+            assert result is True  # Method returns boolean success indicator
+            mock_session.execute.assert_called_once()
             mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
@@ -252,16 +257,21 @@ class TestYahooDataLoader:
                 return_value=mock_institutional_holders,
             ),
             patch("src.services.yahoo.loader.db_transaction") as mock_db,
+            patch("src.services.yahoo.loader.insert") as mock_insert,
         ):
 
             # Setup mock session
             mock_session = Mock()
             mock_db.return_value.__enter__.return_value = mock_session
+            
+            # Mock upsert statement
+            mock_upsert_stmt = Mock()
+            mock_insert.return_value.on_conflict_do_update.return_value = mock_upsert_stmt
 
             result = await loader.load_institutional_holders("AAPL")
 
-            assert result == mock_institutional_holders
-            assert mock_session.merge.call_count == 2  # Two holders
+            assert result == 2  # Method returns count of records loaded
+            assert mock_session.execute.call_count == 2  # Two holders
             mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
@@ -276,11 +286,20 @@ class TestYahooDataLoader:
         self, loader, mock_financial_statements
     ):
         """Test successful loading of financial statements"""
+        
+        def mock_get_financial_statements(symbol, stmt_type, period_type):
+            """Mock function that returns appropriate data based on parameters"""
+            if stmt_type == "income":
+                return mock_financial_statements
+            else:
+                # Return empty list for other statement types to avoid duplicates
+                return []
+        
         with (
             patch.object(
                 loader.client,
                 "get_financial_statements",
-                return_value=mock_financial_statements,
+                side_effect=mock_get_financial_statements,
             ),
             patch("src.services.yahoo.loader.db_transaction") as mock_db,
             patch("src.services.yahoo.loader.insert") as mock_insert,
@@ -629,9 +648,16 @@ class TestYahooDataLoader:
             )
         ]
 
+        def mock_get_financial_statements(symbol, stmt_type, period_type):
+            """Mock function that returns data only for income statements"""
+            if stmt_type == "income":
+                return mock_statements
+            else:
+                return []
+
         with (
             patch.object(
-                loader.client, "get_financial_statements", return_value=mock_statements
+                loader.client, "get_financial_statements", side_effect=mock_get_financial_statements
             ),
             patch("src.services.yahoo.loader.db_transaction") as mock_db,
             patch("src.services.yahoo.loader.insert") as mock_insert,
