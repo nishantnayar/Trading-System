@@ -2,10 +2,21 @@
 
 ## Overview
 
-The trading system uses a **two-tier testing approach**:
+The trading system uses a **comprehensive testing approach** with multiple layers:
 
 1. **Quick Verification Scripts** - For troubleshooting and quick checks
-2. **Comprehensive Test Suite** - For full testing and CI/CD
+2. **Unit Test Suite** - For individual component testing
+3. **Integration Test Suite** - For component interaction testing
+4. **Database Schema Tests** - For data integrity and schema validation
+
+## Test Coverage
+
+The system maintains comprehensive test coverage across all core components:
+
+- **Model Testing**: Database models with validation and formatting
+- **Service Testing**: Data ingestion and processing services  
+- **Integration Testing**: Database schema and component interactions
+- **Code Quality**: Automated formatting and type checking
 
 ## Quick Verification Scripts
 
@@ -61,20 +72,30 @@ python scripts/run_tests.py tests/unit/test_database_connections.py
 
 ### 1. Unit Tests (`tests/unit/`)
 - **Purpose**: Test individual components in isolation
-- **Scope**: Database connections, configuration, schemas
+- **Scope**: Model validation, data formatting, business logic
 - **Execution**: Fast, no external dependencies
-- **Markers**: `@pytest.mark.unit`, `@pytest.mark.database`
+- **Coverage**: Database models, data processing, logging systems
+- **Markers**: `@pytest.mark.unit`, `@pytest.mark.model`
 
 ### 2. Integration Tests (`tests/integration/`)
-- **Purpose**: Test component interactions
+- **Purpose**: Test component interactions and database schemas
 - **Scope**: Schema creation, database structure, data integrity
 - **Execution**: Medium speed, requires database
+- **Coverage**: Database schema validation, table creation
 - **Markers**: `@pytest.mark.integration`, `@pytest.mark.database`
 
-### 3. End-to-End Tests (Future)
+### 3. Database Schema Tests (`tests/conftest.py`)
+- **Purpose**: Ensure proper database setup and schema validation
+- **Scope**: Table creation, fixture setup, data isolation
+- **Execution**: Fast, with database fixtures
+- **Coverage**: Core database tables and relationships
+- **Features**: Automatic cleanup, test isolation
+
+### 4. End-to-End Tests (Future)
 - **Purpose**: Test complete workflows
 - **Scope**: Full trading system functionality
 - **Execution**: Slow, requires full system
+- **Status**: 📋 **Planned**
 - **Markers**: `@pytest.mark.e2e`, `@pytest.mark.slow`
 
 ## Test Execution Commands
@@ -206,6 +227,10 @@ jobs:
 - Mark slow tests appropriately
 - Use parallel execution when possible
 
+## Testing Best Practices
+
+The system follows industry-standard testing practices with comprehensive coverage and automated quality checks.
+
 ## Troubleshooting
 
 ### Common Issues
@@ -235,6 +260,24 @@ jobs:
    
    # Verify src directory
    ls -la src/
+   ```
+
+4. **MyPy Type Errors**
+   ```bash
+   # Run type checking
+   mypy src/ --ignore-missing-imports
+   
+   # Check specific file
+   mypy src/shared/database/models/company_officers.py
+   ```
+
+5. **Black Formatting Issues**
+   ```bash
+   # Check formatting
+   black --check --diff .
+   
+   # Apply formatting
+   black .
    ```
 
 ### Debug Mode

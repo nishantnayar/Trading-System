@@ -7,21 +7,30 @@ The Data Ingestion Service is a critical component of the trading system respons
 **Current Data Sources:**
 - **Polygon.io Free Tier** (Historical end-of-day data for backtesting)
 - **Alpaca Markets** (Real-time trading data and account information)
+- **Yahoo Finance** (Company fundamentals, financial statements, key statistics)
 
 **Hybrid Strategy:**
 - **Polygon.io**: Historical data, backtesting, strategy development, symbol management
 - **Alpaca**: Real-time trading, position management, order execution
+- **Yahoo Finance**: Company information, financial statements, institutional holdings
 
 **Symbol Management:**
 - **Database-driven symbol tracking** with automatic delisting detection
 - **100 initial symbols** configured for data collection
 - **Active/delisted status tracking** to avoid unnecessary API calls
 - **Data ingestion status monitoring** per symbol and date
+- **Comprehensive company data** including financial statements and key metrics
+
+**Yahoo Finance Integration:**
+- **Company Information**: Basic company details, sector, industry, employees
+- **Financial Statements**: Income statements, balance sheets, cash flow statements
+- **Key Statistics**: Market cap, P/E ratios, financial metrics
+- **Institutional Holdings**: Major institutional investors and holdings
+- **Company Officers**: Executive compensation and leadership information
 
 **Future Data Sources:**
 - Alpha Vantage (Real-time data alternative)
 - IEX Cloud (Additional market data)
-- Yahoo Finance (Free real-time quotes)
 - Custom data feeds
 
 ## Architecture Overview
