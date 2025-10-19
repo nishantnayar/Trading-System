@@ -325,7 +325,9 @@ class TestYahooDataLoader:
 
             # The method calls get_financial_statements for income statements twice (annual and quarterly)
             # So we expect the mock data to be duplicated (2 statements × 2 calls = 4 total)
-            expected_count = len(mock_financial_statements) * 2  # Annual + Quarterly calls
+            expected_count = (
+                len(mock_financial_statements) * 2
+            )  # Annual + Quarterly calls
             assert len(result) == expected_count
             assert mock_session.execute.call_count >= 2  # At least 2 statements
             mock_session.commit.assert_called_once()
@@ -387,7 +389,9 @@ class TestYahooDataLoader:
             assert result["company_info"] == 0  # Not loaded by default
             assert result["key_statistics"] == 0  # Not loaded by default
             assert result["institutional_holders"] == 0
-            assert result["financial_statements"] == 0  # load_financial_statements returns [], len([]) = 0
+            assert (
+                result["financial_statements"] == 0
+            )  # load_financial_statements returns [], len([]) = 0
             assert result["company_officers"] == 0
 
     @pytest.mark.asyncio

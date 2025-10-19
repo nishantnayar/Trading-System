@@ -63,7 +63,7 @@ class TestLoggingCore:
         # In CI/test environments, logging might not create files
         # Just verify the logger works without errors
         logger.info("Logging test completed successfully")
-        
+
         # Try to verify log files if they exist, but don't fail if they don't
         logs_dir = Path("logs")
         if logs_dir.exists():
@@ -71,9 +71,11 @@ class TestLoggingCore:
             trading_log_exists = Path("logs/trading.log").exists()
             errors_log_exists = Path("logs/errors.log").exists()
             system_log_exists = Path("logs/system.log").exists()
-            
+
             # Log the status for debugging
-            logger.info(f"Log files status - trading: {trading_log_exists}, errors: {errors_log_exists}, system: {system_log_exists}")
+            logger.info(
+                f"Log files status - trading: {trading_log_exists}, errors: {errors_log_exists}, system: {system_log_exists}"
+            )
 
     def test_service_detection(self):
         """Test automatic service detection"""
