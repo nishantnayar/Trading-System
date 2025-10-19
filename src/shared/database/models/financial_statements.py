@@ -100,15 +100,15 @@ class FinancialStatement(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
-        
+
         # Add common metrics if they exist
-        if hasattr(self, 'total_revenue') and self.total_revenue is not None:
+        if hasattr(self, "total_revenue") and self.total_revenue is not None:
             result["total_revenue"] = self.total_revenue
-        if hasattr(self, 'net_income') and self.net_income is not None:
+        if hasattr(self, "net_income") and self.net_income is not None:
             result["net_income"] = self.net_income
-        if hasattr(self, 'basic_eps') and self.basic_eps is not None:
+        if hasattr(self, "basic_eps") and self.basic_eps is not None:
             result["basic_eps"] = float(self.basic_eps)
-            
+
         return result
 
     def get_line_item(self, line_item: str) -> Optional[float]:

@@ -227,10 +227,12 @@ class TestYahooDataLoader:
             # Setup mock session
             mock_session = Mock()
             mock_db.return_value.__enter__.return_value = mock_session
-            
+
             # Mock upsert statement
             mock_upsert_stmt = Mock()
-            mock_insert.return_value.on_conflict_do_update.return_value = mock_upsert_stmt
+            mock_insert.return_value.on_conflict_do_update.return_value = (
+                mock_upsert_stmt
+            )
 
             result = await loader.load_key_statistics("AAPL")
 
@@ -263,10 +265,12 @@ class TestYahooDataLoader:
             # Setup mock session
             mock_session = Mock()
             mock_db.return_value.__enter__.return_value = mock_session
-            
+
             # Mock upsert statement
             mock_upsert_stmt = Mock()
-            mock_insert.return_value.on_conflict_do_update.return_value = mock_upsert_stmt
+            mock_insert.return_value.on_conflict_do_update.return_value = (
+                mock_upsert_stmt
+            )
 
             result = await loader.load_institutional_holders("AAPL")
 
@@ -286,7 +290,7 @@ class TestYahooDataLoader:
         self, loader, mock_financial_statements
     ):
         """Test successful loading of financial statements"""
-        
+
         def mock_get_financial_statements(symbol, stmt_type, period_type):
             """Mock function that returns appropriate data based on parameters"""
             if stmt_type == "income":
@@ -294,7 +298,7 @@ class TestYahooDataLoader:
             else:
                 # Return empty list for other statement types to avoid duplicates
                 return []
-        
+
         with (
             patch.object(
                 loader.client,
@@ -657,7 +661,9 @@ class TestYahooDataLoader:
 
         with (
             patch.object(
-                loader.client, "get_financial_statements", side_effect=mock_get_financial_statements
+                loader.client,
+                "get_financial_statements",
+                side_effect=mock_get_financial_statements,
             ),
             patch("src.services.yahoo.loader.db_transaction") as mock_db,
             patch("src.services.yahoo.loader.insert") as mock_insert,

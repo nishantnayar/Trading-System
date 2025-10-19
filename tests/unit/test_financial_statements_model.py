@@ -343,10 +343,11 @@ class TestFinancialStatementModel:
         # For unit tests, they might be None until saved to database
         # We'll test that they can be set manually
         from datetime import datetime, timezone
+
         now = datetime.now(timezone.utc)
         stmt.created_at = now
         stmt.updated_at = now
-        
+
         assert stmt.created_at is not None
         assert stmt.updated_at is not None
         assert isinstance(stmt.created_at, datetime)
