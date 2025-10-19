@@ -110,7 +110,7 @@ async def get_officers_by_title(
             # Group by title
             officers_by_title: Dict[str, List[Dict[str, Any]]] = {}
             for officer in results:
-                title = officer.title or "Unknown"
+                title = str(officer.title) if officer.title else "Unknown"
                 if title not in officers_by_title:
                     officers_by_title[title] = []
                 officers_by_title[title].append(officer.to_dict())

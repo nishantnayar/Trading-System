@@ -103,32 +103,32 @@ class FinancialStatement(Base):
 
     def get_line_item(self, line_item: str) -> Optional[float]:
         """Get a specific line item from the financial data"""
-        return self.data.get(line_item)
+        return self.data.get(line_item)  # type: ignore
 
     def populate_common_metrics(self) -> None:
         """Populate common metrics columns from JSONB data"""
         # Income statement metrics
-        self.total_revenue = self._safe_get_int("Total Revenue")
-        self.net_income = self._safe_get_int("Net Income")
-        self.gross_profit = self._safe_get_int("Gross Profit")
-        self.operating_income = self._safe_get_int("Operating Income")
-        self.ebitda = self._safe_get_int("EBITDA")
+        self.total_revenue = self._safe_get_int("Total Revenue")  # type: ignore
+        self.net_income = self._safe_get_int("Net Income")  # type: ignore
+        self.gross_profit = self._safe_get_int("Gross Profit")  # type: ignore
+        self.operating_income = self._safe_get_int("Operating Income")  # type: ignore
+        self.ebitda = self._safe_get_int("EBITDA")  # type: ignore
 
         # Balance sheet metrics
-        self.total_assets = self._safe_get_int("Total Assets")
-        self.total_liabilities = self._safe_get_int("Total Liabilities")
-        self.total_equity = self._safe_get_int("Total Equity")
-        self.cash_and_equivalents = self._safe_get_int("Cash And Cash Equivalents")
-        self.total_debt = self._safe_get_int("Total Debt")
+        self.total_assets = self._safe_get_int("Total Assets")  # type: ignore
+        self.total_liabilities = self._safe_get_int("Total Liabilities")  # type: ignore
+        self.total_equity = self._safe_get_int("Total Equity")  # type: ignore
+        self.cash_and_equivalents = self._safe_get_int("Cash And Cash Equivalents")  # type: ignore
+        self.total_debt = self._safe_get_int("Total Debt")  # type: ignore
 
         # Cash flow metrics
-        self.operating_cash_flow = self._safe_get_int("Operating Cash Flow")
-        self.free_cash_flow = self._safe_get_int("Free Cash Flow")
+        self.operating_cash_flow = self._safe_get_int("Operating Cash Flow")  # type: ignore
+        self.free_cash_flow = self._safe_get_int("Free Cash Flow")  # type: ignore
 
         # Per-share metrics
-        self.basic_eps = self._safe_get_decimal("Basic EPS")
-        self.diluted_eps = self._safe_get_decimal("Diluted EPS")
-        self.book_value_per_share = self._safe_get_decimal("Book Value Per Share")
+        self.basic_eps = self._safe_get_decimal("Basic EPS")  # type: ignore
+        self.diluted_eps = self._safe_get_decimal("Diluted EPS")  # type: ignore
+        self.book_value_per_share = self._safe_get_decimal("Book Value Per Share")  # type: ignore
 
     def _safe_get_int(self, key: str) -> Optional[int]:
         """Safely get integer value from JSONB data"""
@@ -147,7 +147,7 @@ class FinancialStatement(Base):
             return None
         try:
             return Decimal(str(value))
-        except (ValueError, TypeError, Decimal.InvalidOperation):
+        except (ValueError, TypeError, Exception):
             return None
 
     def get_formatted_line_item(
@@ -190,11 +190,12 @@ class FinancialStatement(Base):
     @property
     def statement_display(self) -> str:
         """Get human-readable statement type"""
+        stmt_type = str(self.statement_type) if self.statement_type else "unknown"
         return {
             "income": "Income Statement",
             "balance_sheet": "Balance Sheet",
             "cash_flow": "Cash Flow Statement",
-        }.get(self.statement_type, self.statement_type.title())
+        }.get(stmt_type, stmt_type.title())
 
     def __repr__(self) -> str:
         return (
