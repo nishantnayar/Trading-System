@@ -395,7 +395,9 @@ class TestYahooDataLoader:
             assert result["company_officers"] == 0
 
     @pytest.mark.asyncio
-    async def test_load_all_data_with_options(self, loader, mock_company_info, setup_test_tables):
+    async def test_load_all_data_with_options(
+        self, loader, mock_company_info, setup_test_tables
+    ):
         """Test loading all data with specific options"""
         with (
             patch.object(loader, "load_company_info", return_value=True),
@@ -425,10 +427,13 @@ class TestYahooDataLoader:
     async def test_load_all_symbols_data_success(self, loader, setup_test_tables):
         """Test successful loading of all symbols data"""
         with (
-            patch.object(loader, "get_all_symbols", return_value=["AAPL", "MSFT"]),
-            patch.object(
-                loader, "load_all_data", return_value={"company_info": None}
-            ) as mock_load_all,
+            patch.object(loader, "_get_active_symbols", return_value=["AAPL", "MSFT"]),
+            patch.object(loader, "load_market_data", return_value=10) as mock_market_data,
+            patch.object(loader, "load_company_info", return_value=True) as mock_company_info,
+            patch.object(loader, "load_key_statistics", return_value=True) as mock_key_stats,
+            patch.object(loader, "load_institutional_holders", return_value=5) as mock_holders,
+            patch.object(loader, "load_financial_statements", return_value=[]) as mock_financial,
+            patch.object(loader, "load_company_officers", return_value=3) as mock_officers,
         ):
 
             result = await loader.load_all_symbols_data()
@@ -437,16 +442,17 @@ class TestYahooDataLoader:
             assert result["total_symbols"] == 2
             assert result["successful"] == 2
             assert result["failed"] == 0
-            assert mock_load_all.call_count == 2
+            assert result["total_records"] == 20  # 2 symbols × 10 records each
+            assert mock_market_data.call_count == 2
 
     @pytest.mark.asyncio
     async def test_load_all_symbols_data_with_options(self, loader, setup_test_tables):
         """Test loading all symbols data with specific options"""
         with (
-            patch.object(loader, "get_all_symbols", return_value=["AAPL"]),
-            patch.object(
-                loader, "load_all_data", return_value={"company_info": None}
-            ) as mock_load_all,
+            patch.object(loader, "_get_active_symbols", return_value=["AAPL"]),
+            patch.object(loader, "load_market_data", return_value=15) as mock_market_data,
+            patch.object(loader, "load_key_statistics", return_value=True) as mock_key_stats,
+            patch.object(loader, "load_institutional_holders", return_value=8) as mock_holders,
         ):
 
             result = await loader.load_all_symbols_data(
@@ -457,13 +463,10 @@ class TestYahooDataLoader:
             assert result["total_symbols"] == 1
             assert result["successful"] == 1
             assert result["failed"] == 0
-            mock_load_all.assert_called_once_with(
-                "AAPL",
-                include_key_statistics=True,
-                include_institutional_holders=True,
-                include_financial_statements=False,
-                include_company_officers=False,
-            )
+            assert result["total_records"] == 15  # 1 symbol × 15 records
+            assert mock_market_data.call_count == 1
+            assert mock_key_stats.call_count == 1
+            assert mock_holders.call_count == 1
 
     def test_detect_fiscal_year_quarter_apple(self, loader):
         """Test fiscal year and quarter detection for Apple (September end)"""
