@@ -79,8 +79,11 @@ class CompanyOfficer(Base):
     @property
     def total_pay_display(self) -> str:
         """Get formatted total pay"""
-        if self.total_pay is None or self.total_pay == 0:
+        if self.total_pay is None:
             return "N/A"
+        
+        if self.total_pay == 0:
+            return "$0"
 
         # Convert from cents to dollars
         amount = self.total_pay / 100
@@ -95,8 +98,11 @@ class CompanyOfficer(Base):
     @property
     def exercised_value_display(self) -> str:
         """Get formatted exercised value"""
-        if self.exercised_value is None or self.exercised_value == 0:
+        if self.exercised_value is None:
             return "N/A"
+        
+        if self.exercised_value == 0:
+            return "$0"
 
         # Convert from cents to dollars
         amount = self.exercised_value / 100
@@ -111,8 +117,11 @@ class CompanyOfficer(Base):
     @property
     def unexercised_value_display(self) -> str:
         """Get formatted unexercised value"""
-        if self.unexercised_value is None or self.unexercised_value == 0:
+        if self.unexercised_value is None:
             return "N/A"
+        
+        if self.unexercised_value == 0:
+            return "$0"
 
         # Convert from cents to dollars
         amount = self.unexercised_value / 100
