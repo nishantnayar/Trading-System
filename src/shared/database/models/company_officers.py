@@ -81,57 +81,54 @@ class CompanyOfficer(Base):
         """Get formatted total pay"""
         if self.total_pay is None:
             return "N/A"
-
-        if self.total_pay == 0:
+        elif self.total_pay == 0:
             return "$0"
-
-        # Convert from cents to dollars
-        amount = self.total_pay / 100
-
-        if amount >= 1_000_000:
-            return f"${amount / 1_000_000:.1f}M"
-        elif amount >= 1_000:
-            return f"${amount / 1_000:.1f}K"
         else:
-            return f"${amount:,.0f}"
+            # Convert from cents to dollars
+            amount = self.total_pay / 100
+
+            if amount >= 1_000_000:
+                return f"${amount / 1_000_000:.1f}M"
+            elif amount >= 1_000:
+                return f"${amount / 1_000:.1f}K"
+            else:
+                return f"${amount:,.0f}"
 
     @property
     def exercised_value_display(self) -> str:
         """Get formatted exercised value"""
         if self.exercised_value is None:
             return "N/A"
-
-        if self.exercised_value == 0:
+        elif self.exercised_value == 0:
             return "$0"
-
-        # Convert from cents to dollars
-        amount = self.exercised_value / 100
-
-        if amount >= 1_000_000:
-            return f"${amount / 1_000_000:.1f}M"
-        elif amount >= 1_000:
-            return f"${amount / 1_000:.1f}K"
         else:
-            return f"${amount:,.0f}"
+            # Convert from cents to dollars
+            amount = self.exercised_value / 100
+
+            if amount >= 1_000_000:
+                return f"${amount / 1_000_000:.1f}M"
+            elif amount >= 1_000:
+                return f"${amount / 1_000:.1f}K"
+            else:
+                return f"${amount:,.0f}"
 
     @property
     def unexercised_value_display(self) -> str:
         """Get formatted unexercised value"""
         if self.unexercised_value is None:
             return "N/A"
-
-        if self.unexercised_value == 0:
+        elif self.unexercised_value == 0:
             return "$0"
-
-        # Convert from cents to dollars
-        amount = self.unexercised_value / 100
-
-        if amount >= 1_000_000:
-            return f"${amount / 1_000_000:.1f}M"
-        elif amount >= 1_000:
-            return f"${amount / 1_000:.1f}K"
         else:
-            return f"${amount:,.0f}"
+            # Convert from cents to dollars
+            amount = self.unexercised_value / 100
+
+            if amount >= 1_000_000:
+                return f"${amount / 1_000_000:.1f}M"
+            elif amount >= 1_000:
+                return f"${amount / 1_000:.1f}K"
+            else:
+                return f"${amount:,.0f}"
 
     def __repr__(self) -> str:
         return f"<CompanyOfficer(symbol={self.symbol}, name={self.name}, title={self.title})>"
