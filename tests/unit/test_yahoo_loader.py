@@ -370,7 +370,7 @@ class TestYahooDataLoader:
 
     @pytest.mark.asyncio
     async def test_load_all_data_success(
-        self, loader, mock_company_info, mock_key_statistics
+        self, loader, mock_company_info, mock_key_statistics, setup_test_tables
     ):
         """Test successful loading of all data types"""
         with (
@@ -395,7 +395,7 @@ class TestYahooDataLoader:
             assert result["company_officers"] == 0
 
     @pytest.mark.asyncio
-    async def test_load_all_data_with_options(self, loader, mock_company_info):
+    async def test_load_all_data_with_options(self, loader, mock_company_info, setup_test_tables):
         """Test loading all data with specific options"""
         with (
             patch.object(loader, "load_company_info", return_value=True),
@@ -422,7 +422,7 @@ class TestYahooDataLoader:
             assert result["company_officers"] == 0
 
     @pytest.mark.asyncio
-    async def test_load_all_symbols_data_success(self, loader):
+    async def test_load_all_symbols_data_success(self, loader, setup_test_tables):
         """Test successful loading of all symbols data"""
         with (
             patch.object(loader, "get_all_symbols", return_value=["AAPL", "MSFT"]),
@@ -440,7 +440,7 @@ class TestYahooDataLoader:
             assert mock_load_all.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_load_all_symbols_data_with_options(self, loader):
+    async def test_load_all_symbols_data_with_options(self, loader, setup_test_tables):
         """Test loading all symbols data with specific options"""
         with (
             patch.object(loader, "get_all_symbols", return_value=["AAPL"]),
