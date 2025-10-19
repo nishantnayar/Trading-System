@@ -81,7 +81,7 @@ class CompanyOfficer(Base):
         """Get formatted total pay"""
         if self.total_pay is None:
             return "N/A"
-        
+
         if self.total_pay == 0:
             return "$0"
 
@@ -100,7 +100,7 @@ class CompanyOfficer(Base):
         """Get formatted exercised value"""
         if self.exercised_value is None:
             return "N/A"
-        
+
         if self.exercised_value == 0:
             return "$0"
 
@@ -119,7 +119,7 @@ class CompanyOfficer(Base):
         """Get formatted unexercised value"""
         if self.unexercised_value is None:
             return "N/A"
-        
+
         if self.unexercised_value == 0:
             return "$0"
 
