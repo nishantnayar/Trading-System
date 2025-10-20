@@ -121,27 +121,28 @@ class YahooClient:
             if not info or len(info) == 0:
                 raise YahooSymbolNotFoundError(f"No info available for {symbol}")
 
-            # Extract core fields
-            company_info = CompanyInfo(
-                symbol=symbol,
-                name=info.get("longName") or info.get("shortName"),
-                sector=info.get("sector"),
-                industry=info.get("industry"),
-                description=info.get("longBusinessSummary"),
-                website=info.get("website"),
-                phone=info.get("phone"),
-                address=info.get("address1"),
-                city=info.get("city"),
-                state=info.get("state"),
-                zip=info.get("zip"),
-                country=info.get("country"),
-                employees=info.get("fullTimeEmployees"),
-                market_cap=info.get("marketCap"),
-                currency=info.get("currency"),
-                exchange=info.get("exchange"),
-                quote_type=info.get("quoteType"),
-                additional_data=info,  # Store full info dict
-            )
+            # Build with alias-aware keys using model_validate
+            company_payload = {
+                "symbol": symbol,
+                "name": info.get("longName") or info.get("shortName"),
+                "sector": info.get("sector"),
+                "industry": info.get("industry"),
+                "longBusinessSummary": info.get("longBusinessSummary"),
+                "website": info.get("website"),
+                "phone": info.get("phone"),
+                "address1": info.get("address1"),
+                "city": info.get("city"),
+                "state": info.get("state"),
+                "zip": info.get("zip"),
+                "country": info.get("country"),
+                "fullTimeEmployees": info.get("fullTimeEmployees"),
+                "marketCap": info.get("marketCap"),
+                "currency": info.get("currency"),
+                "exchange": info.get("exchange"),
+                "quoteType": info.get("quoteType"),
+                "additional_data": info,
+            }
+            company_info = CompanyInfo.model_validate(company_payload)
 
             logger.info(f"Fetched company info for {symbol}")
             return company_info
@@ -197,17 +198,18 @@ class YahooClient:
                     year_born = self._clean_year_value(officer_data.get("yearBorn"))
                     fiscal_year = self._clean_year_value(officer_data.get("fiscalYear"))
 
-                    officer = CompanyOfficer(
-                        symbol=symbol,
-                        name=name,
-                        title=officer_data.get("title", "").strip() or None,
-                        age=age,
-                        year_born=year_born,
-                        fiscal_year=fiscal_year,
-                        total_pay=total_pay,
-                        exercised_value=exercised_value,
-                        unexercised_value=unexercised_value,
-                    )
+                    officer_payload = {
+                        "symbol": symbol,
+                        "name": name,
+                        "title": officer_data.get("title", "").strip() or None,
+                        "age": age,
+                        "yearBorn": year_born,
+                        "fiscalYear": fiscal_year,
+                        "totalPay": total_pay,
+                        "exercisedValue": exercised_value,
+                        "unexercisedValue": unexercised_value,
+                    }
+                    officer = CompanyOfficer.model_validate(officer_payload)
                     officers.append(officer)
                     
                 except Exception as e:
@@ -287,52 +289,53 @@ class YahooClient:
             if not info:
                 raise YahooDataError(f"No statistics available for {symbol}")
 
-            stats = KeyStatistics(
-                symbol=symbol,
-                date=date.today(),
-                market_cap=info.get("marketCap"),
-                enterprise_value=info.get("enterpriseValue"),
-                trailing_pe=info.get("trailingPE"),
-                forward_pe=info.get("forwardPE"),
-                peg_ratio=info.get("pegRatio"),
-                price_to_book=info.get("priceToBook"),
-                price_to_sales=info.get("priceToSalesTrailing12Months"),
-                enterprise_to_revenue=info.get("enterpriseToRevenue"),
-                enterprise_to_ebitda=info.get("enterpriseToEbitda"),
-                profit_margin=info.get("profitMargins"),
-                operating_margin=info.get("operatingMargins"),
-                return_on_assets=info.get("returnOnAssets"),
-                return_on_equity=info.get("returnOnEquity"),
-                gross_margin=info.get("grossMargins"),
-                ebitda_margin=info.get("ebitdaMargins"),
-                revenue=info.get("totalRevenue"),
-                revenue_per_share=info.get("revenuePerShare"),
-                earnings_per_share=info.get("trailingEps"),
-                total_cash=info.get("totalCash"),
-                total_debt=info.get("totalDebt"),
-                debt_to_equity=info.get("debtToEquity"),
-                current_ratio=info.get("currentRatio"),
-                quick_ratio=info.get("quickRatio"),
-                free_cash_flow=info.get("freeCashflow"),
-                operating_cash_flow=info.get("operatingCashflow"),
-                revenue_growth=info.get("revenueGrowth"),
-                earnings_growth=info.get("earningsGrowth"),
-                beta=info.get("beta"),
-                fifty_two_week_high=info.get("fiftyTwoWeekHigh"),
-                fifty_two_week_low=info.get("fiftyTwoWeekLow"),
-                fifty_day_average=info.get("fiftyDayAverage"),
-                two_hundred_day_average=info.get("twoHundredDayAverage"),
-                average_volume=info.get("averageVolume"),
-                dividend_yield=info.get("dividendYield"),
-                dividend_rate=info.get("dividendRate"),
-                payout_ratio=info.get("payoutRatio"),
-                shares_outstanding=info.get("sharesOutstanding"),
-                float_shares=info.get("floatShares"),
-                shares_short=info.get("sharesShort"),
-                short_ratio=info.get("shortRatio"),
-                held_percent_insiders=info.get("heldPercentInsiders"),
-                held_percent_institutions=info.get("heldPercentInstitutions"),
-            )
+            stats_payload = {
+                "symbol": symbol,
+                "date": date.today(),
+                "marketCap": info.get("marketCap"),
+                "enterpriseValue": info.get("enterpriseValue"),
+                "trailingPE": info.get("trailingPE"),
+                "forwardPE": info.get("forwardPE"),
+                "pegRatio": info.get("pegRatio"),
+                "priceToBook": info.get("priceToBook"),
+                "priceToSalesTrailing12Months": info.get("priceToSalesTrailing12Months"),
+                "enterpriseToRevenue": info.get("enterpriseToRevenue"),
+                "enterpriseToEbitda": info.get("enterpriseToEbitda"),
+                "profitMargins": info.get("profitMargins"),
+                "operatingMargins": info.get("operatingMargins"),
+                "returnOnAssets": info.get("returnOnAssets"),
+                "returnOnEquity": info.get("returnOnEquity"),
+                "grossMargins": info.get("grossMargins"),
+                "ebitdaMargins": info.get("ebitdaMargins"),
+                "totalRevenue": info.get("totalRevenue"),
+                "revenuePerShare": info.get("revenuePerShare"),
+                "trailingEps": info.get("trailingEps"),
+                "totalCash": info.get("totalCash"),
+                "totalDebt": info.get("totalDebt"),
+                "debtToEquity": info.get("debtToEquity"),
+                "currentRatio": info.get("currentRatio"),
+                "quickRatio": info.get("quickRatio"),
+                "freeCashflow": info.get("freeCashflow"),
+                "operatingCashflow": info.get("operatingCashflow"),
+                "revenueGrowth": info.get("revenueGrowth"),
+                "earningsGrowth": info.get("earningsGrowth"),
+                "beta": info.get("beta"),
+                "fiftyTwoWeekHigh": info.get("fiftyTwoWeekHigh"),
+                "fiftyTwoWeekLow": info.get("fiftyTwoWeekLow"),
+                "fiftyDayAverage": info.get("fiftyDayAverage"),
+                "twoHundredDayAverage": info.get("twoHundredDayAverage"),
+                "averageVolume": info.get("averageVolume"),
+                "dividendYield": info.get("dividendYield"),
+                "dividendRate": info.get("dividendRate"),
+                "payoutRatio": info.get("payoutRatio"),
+                "sharesOutstanding": info.get("sharesOutstanding"),
+                "floatShares": info.get("floatShares"),
+                "sharesShort": info.get("sharesShort"),
+                "shortRatio": info.get("shortRatio"),
+                "heldPercentInsiders": info.get("heldPercentInsiders"),
+                "heldPercentInstitutions": info.get("heldPercentInstitutions"),
+            }
+            stats = KeyStatistics.model_validate(stats_payload)
 
             logger.info(f"Fetched key statistics for {symbol}")
             return stats
@@ -464,16 +467,15 @@ class YahooClient:
             holders = []
             for _, row in holders_df.iterrows():
                 try:
-                    holder = InstitutionalHolder(
-                        symbol=symbol,
-                        date_reported=pd.to_datetime(row["Date Reported"]).date(),
-                        holder_name=row["Holder"],
-                        shares=int(row["Shares"]) if pd.notna(row["Shares"]) else None,
-                        value=int(row["Value"]) if pd.notna(row["Value"]) else None,
-                        percent_held=(
-                            float(row["% Out"]) if pd.notna(row.get("% Out")) else None
-                        ),
-                    )
+                    holder_payload = {
+                        "symbol": symbol,
+                        "date_reported": pd.to_datetime(row["Date Reported"]).date(),
+                        "holder_name": row["Holder"],
+                        "shares": int(row["Shares"]) if pd.notna(row["Shares"]) else None,
+                        "value": int(row["Value"]) if pd.notna(row["Value"]) else None,
+                        "pctHeld": float(row["% Out"]) if pd.notna(row.get("% Out")) else None,
+                    }
+                    holder = InstitutionalHolder.model_validate(holder_payload)
                     holders.append(holder)
                 except Exception as e:
                     logger.warning(f"Failed to parse holder: {e}")
@@ -510,16 +512,17 @@ class YahooClient:
             recommendations = []
             for _, row in recs_df.iterrows():
                 try:
-                    rec = AnalystRecommendation(
-                        symbol=symbol,
-                        date=date.today(),
-                        period=row["period"],
-                        strong_buy=int(row["strongBuy"]),
-                        buy=int(row["buy"]),
-                        hold=int(row["hold"]),
-                        sell=int(row["sell"]),
-                        strong_sell=int(row["strongSell"]),
-                    )
+                    rec_payload = {
+                        "symbol": symbol,
+                        "date": date.today(),
+                        "period": row["period"],
+                        "strongBuy": int(row["strongBuy"]),
+                        "buy": int(row["buy"]),
+                        "hold": int(row["hold"]),
+                        "sell": int(row["sell"]),
+                        "strongSell": int(row["strongSell"]),
+                    }
+                    rec = AnalystRecommendation.model_validate(rec_payload)
                     recommendations.append(rec)
                 except Exception as e:
                     logger.warning(f"Failed to parse recommendation: {e}")
@@ -631,18 +634,19 @@ class YahooClient:
 
             esg_data = esg_df.iloc[:, 0].to_dict() if not esg_df.empty else {}
 
-            esg = ESGScore(
-                symbol=symbol,
-                date=date.today(),
-                total_esg=esg_data.get("totalEsg"),
-                environment_score=esg_data.get("environmentScore"),
-                social_score=esg_data.get("socialScore"),
-                governance_score=esg_data.get("governanceScore"),
-                controversy_level=esg_data.get("highestControversy"),
-                esg_performance=esg_data.get("esgPerformance"),
-                peer_group=esg_data.get("peerGroup"),
-                peer_count=esg_data.get("peerCount"),
-            )
+            esg_payload = {
+                "symbol": symbol,
+                "date": date.today(),
+                "totalEsg": esg_data.get("totalEsg"),
+                "environmentScore": esg_data.get("environmentScore"),
+                "socialScore": esg_data.get("socialScore"),
+                "governanceScore": esg_data.get("governanceScore"),
+                "highestControversy": esg_data.get("highestControversy"),
+                "esgPerformance": esg_data.get("esgPerformance"),
+                "peerGroup": esg_data.get("peerGroup"),
+                "peerCount": esg_data.get("peerCount"),
+            }
+            esg = ESGScore.model_validate(esg_payload)
 
             logger.info(f"Fetched ESG scores for {symbol}")
             return esg
