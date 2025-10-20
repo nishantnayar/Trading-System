@@ -699,7 +699,7 @@ class YahooDataLoader:
                 logger.info(f"No officers data available for {symbol}")
                 return []
 
-            # Store in database with improved error handling using PostgreSQL upsert
+            # Store in database using session.merge for each officer
             stored_count = 0
             with db_transaction() as session:
                 for i, officer_data in enumerate(officers_data):
@@ -709,38 +709,20 @@ class YahooDataLoader:
                             logger.warning(f"Skipping officer {i+1} for {symbol}: empty name")
                             continue
 
-                        # Use PostgreSQL upsert (ON CONFLICT) to handle duplicates
-                        from sqlalchemy.dialects.postgresql import insert
-                        
-                        officer_dict = {
-                            'symbol': symbol,
-                            'name': officer_data.name.strip(),
-                            'title': officer_data.title.strip() if officer_data.title else None,
-                            'age': officer_data.age,
-                            'year_born': officer_data.year_born,
-                            'fiscal_year': officer_data.fiscal_year,
-                            'total_pay': officer_data.total_pay,
-                            'exercised_value': officer_data.exercised_value,
-                            'unexercised_value': officer_data.unexercised_value,
-                            'data_source': 'yahoo',
-                        }
-
-                        # Create upsert statement
-                        upsert_stmt = insert(CompanyOfficer).values(officer_dict)
-                        upsert_stmt = upsert_stmt.on_conflict_do_update(
-                            constraint='uk_company_officers_unique',
-                            set_={
-                                'age': upsert_stmt.excluded.age,
-                                'year_born': upsert_stmt.excluded.year_born,
-                                'fiscal_year': upsert_stmt.excluded.fiscal_year,
-                                'total_pay': upsert_stmt.excluded.total_pay,
-                                'exercised_value': upsert_stmt.excluded.exercised_value,
-                                'unexercised_value': upsert_stmt.excluded.unexercised_value,
-                                'updated_at': upsert_stmt.excluded.updated_at,
-                            }
+                        officer_record = CompanyOfficer(
+                            symbol=symbol,
+                            name=officer_data.name.strip(),
+                            title=officer_data.title.strip() if officer_data.title else None,
+                            age=officer_data.age,
+                            year_born=officer_data.year_born,
+                            fiscal_year=officer_data.fiscal_year,
+                            total_pay=officer_data.total_pay,
+                            exercised_value=officer_data.exercised_value,
+                            unexercised_value=officer_data.unexercised_value,
+                            data_source='yahoo',
                         )
-                        
-                        session.execute(upsert_stmt)
+
+                        session.merge(officer_record)
                         stored_count += 1
 
                     except Exception as e:
