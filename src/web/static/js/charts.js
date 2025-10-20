@@ -238,112 +238,128 @@ class TradingChartsDashboard {
         this.charts = {};
         this.series = {};
 
-        // Check if chart containers exist
-        const priceChartEl = document.getElementById('priceChart');
-        const volumeChartEl = document.getElementById('volumeChart');
-        const macdChartEl = document.getElementById('macdChart');
-        const rsiChartEl = document.getElementById('rsiChart');
+        // Wait a bit for DOM to be ready if containers aren't found immediately
+        const checkContainers = () => {
+            const priceChartEl = document.getElementById('priceChart');
+            const volumeChartEl = document.getElementById('volumeChart');
+            const macdChartEl = document.getElementById('macdChart');
+            const rsiChartEl = document.getElementById('rsiChart');
 
-        if (!priceChartEl || !volumeChartEl || !macdChartEl || !rsiChartEl) {
-            console.error('Chart container elements not found');
-            this.showError('Chart containers not found. Please reload the page.');
-            return;
+            if (!priceChartEl || !volumeChartEl || !macdChartEl || !rsiChartEl) {
+                console.warn('Chart containers not found, retrying in 100ms...');
+                setTimeout(checkContainers, 100);
+                return;
+            }
+
+            this.createCharts(priceChartEl, volumeChartEl, macdChartEl, rsiChartEl);
+        };
+
+        checkContainers();
+    }
+
+    /**
+     * Create chart instances with proper error handling
+     */
+    createCharts(priceChartEl, volumeChartEl, macdChartEl, rsiChartEl) {
+        try {
+            // Check container dimensions
+            console.log('Chart container dimensions:');
+            console.log('  priceChart:', priceChartEl.offsetWidth, 'x', priceChartEl.offsetHeight);
+            console.log('  volumeChart:', volumeChartEl.offsetWidth, 'x', volumeChartEl.offsetHeight);
+            console.log('  macdChart:', macdChartEl.offsetWidth, 'x', macdChartEl.offsetHeight);
+            console.log('  rsiChart:', rsiChartEl.offsetWidth, 'x', rsiChartEl.offsetHeight);
+
+            const chartOptions = this.getChartThemeOptions();
+
+            // Price Chart
+            this.charts.price = LightweightCharts.createChart(
+                priceChartEl,
+                { ...chartOptions, height: 400 }
+            );
+            this.series.candlestick = this.charts.price.addCandlestickSeries({
+                upColor: '#26a69a',
+                downColor: '#ef5350',
+                borderUpColor: '#26a69a',
+                borderDownColor: '#ef5350',
+                wickUpColor: '#26a69a',
+                wickDownColor: '#ef5350',
+            });
+
+            // Add moving averages to price chart
+            this.series.sma20 = this.charts.price.addLineSeries({
+                color: '#2962ff',
+                lineWidth: 2,
+                title: 'SMA 20',
+            });
+            this.series.sma50 = this.charts.price.addLineSeries({
+                color: '#f23645',
+                lineWidth: 2,
+                title: 'SMA 50',
+            });
+
+            // Volume Chart
+            this.charts.volume = LightweightCharts.createChart(
+                volumeChartEl,
+                { ...chartOptions, height: 120 }
+            );
+            this.series.volume = this.charts.volume.addHistogramSeries({
+                color: '#26a69a',
+                priceFormat: {
+                    type: 'volume',
+                },
+            });
+
+            // MACD Chart
+            this.charts.macd = LightweightCharts.createChart(
+                macdChartEl,
+                { ...chartOptions, height: 150 }
+            );
+            this.series.macdLine = this.charts.macd.addLineSeries({
+                color: '#2962ff',
+                lineWidth: 2,
+                title: 'MACD',
+            });
+            this.series.signalLine = this.charts.macd.addLineSeries({
+                color: '#f23645',
+                lineWidth: 2,
+                title: 'Signal',
+            });
+            this.series.macdHistogram = this.charts.macd.addHistogramSeries({
+                color: '#26a69a',
+                title: 'Histogram',
+            });
+
+            // RSI Chart
+            this.charts.rsi = LightweightCharts.createChart(
+                rsiChartEl,
+                { ...chartOptions, height: 150 }
+            );
+            this.series.rsi = this.charts.rsi.addLineSeries({
+                color: '#2962ff',
+                lineWidth: 2,
+                title: 'RSI',
+            });
+
+            // Add RSI reference lines
+            this.series.rsiUpper = this.charts.rsi.addLineSeries({
+                color: '#787b86',
+                lineWidth: 1,
+                lineStyle: LightweightCharts.LineStyle.Dashed,
+                title: 'Overbought (70)',
+            });
+            this.series.rsiLower = this.charts.rsi.addLineSeries({
+                color: '#787b86',
+                lineWidth: 1,
+                lineStyle: LightweightCharts.LineStyle.Dashed,
+                title: 'Oversold (30)',
+            });
+
+            // Note: Synchronization will be enabled after first data render
+            console.log('Charts initialized successfully');
+        } catch (error) {
+            console.error('Error creating charts:', error);
+            this.showError('Failed to initialize charts. Please reload the page.');
         }
-
-        // Check container dimensions
-        console.log('Chart container dimensions:');
-        console.log('  priceChart:', priceChartEl.offsetWidth, 'x', priceChartEl.offsetHeight);
-        console.log('  volumeChart:', volumeChartEl.offsetWidth, 'x', volumeChartEl.offsetHeight);
-        console.log('  macdChart:', macdChartEl.offsetWidth, 'x', macdChartEl.offsetHeight);
-        console.log('  rsiChart:', rsiChartEl.offsetWidth, 'x', rsiChartEl.offsetHeight);
-
-        const chartOptions = this.getChartThemeOptions();
-
-        // Price Chart
-        this.charts.price = LightweightCharts.createChart(
-            priceChartEl,
-            { ...chartOptions, height: 400 }
-        );
-        this.series.candlestick = this.charts.price.addCandlestickSeries({
-            upColor: '#26a69a',
-            downColor: '#ef5350',
-            borderUpColor: '#26a69a',
-            borderDownColor: '#ef5350',
-            wickUpColor: '#26a69a',
-            wickDownColor: '#ef5350',
-        });
-
-        // Add moving averages to price chart
-        this.series.sma20 = this.charts.price.addLineSeries({
-            color: '#2962ff',
-            lineWidth: 2,
-            title: 'SMA 20',
-        });
-        this.series.sma50 = this.charts.price.addLineSeries({
-            color: '#f23645',
-            lineWidth: 2,
-            title: 'SMA 50',
-        });
-
-        // Volume Chart
-        this.charts.volume = LightweightCharts.createChart(
-            volumeChartEl,
-            { ...chartOptions, height: 120 }
-        );
-        this.series.volume = this.charts.volume.addHistogramSeries({
-            color: '#26a69a',
-            priceFormat: {
-                type: 'volume',
-            },
-        });
-
-        // MACD Chart
-        this.charts.macd = LightweightCharts.createChart(
-            macdChartEl,
-            { ...chartOptions, height: 150 }
-        );
-        this.series.macdLine = this.charts.macd.addLineSeries({
-            color: '#2962ff',
-            lineWidth: 2,
-            title: 'MACD',
-        });
-        this.series.signalLine = this.charts.macd.addLineSeries({
-            color: '#f23645',
-            lineWidth: 2,
-            title: 'Signal',
-        });
-        this.series.macdHistogram = this.charts.macd.addHistogramSeries({
-            color: '#26a69a',
-            title: 'Histogram',
-        });
-
-        // RSI Chart
-        this.charts.rsi = LightweightCharts.createChart(
-            rsiChartEl,
-            { ...chartOptions, height: 150 }
-        );
-        this.series.rsi = this.charts.rsi.addLineSeries({
-            color: '#2962ff',
-            lineWidth: 2,
-            title: 'RSI',
-        });
-
-        // Add RSI reference lines
-        this.series.rsiUpper = this.charts.rsi.addLineSeries({
-            color: '#787b86',
-            lineWidth: 1,
-            lineStyle: LightweightCharts.LineStyle.Dashed,
-            title: 'Overbought (70)',
-        });
-        this.series.rsiLower = this.charts.rsi.addLineSeries({
-            color: '#787b86',
-            lineWidth: 1,
-            lineStyle: LightweightCharts.LineStyle.Dashed,
-            title: 'Oversold (30)',
-        });
-
-        // Note: Synchronization will be enabled after first data render
-        console.log('Charts initialized successfully');
     }
 
     /**
@@ -460,81 +476,136 @@ class TradingChartsDashboard {
         console.log('Valid data points:', candlestickData.length);
 
         // Set candlestick and volume data (with safety checks)
-        if (this.series.candlestick) {
-            this.series.candlestick.setData(candlestickData);
-        } else {
-            console.error('Candlestick series not initialized');
+        try {
+            if (this.series.candlestick && typeof this.series.candlestick.setData === 'function') {
+                this.series.candlestick.setData(candlestickData);
+                console.log('Candlestick data set successfully');
+            } else {
+                console.error('Candlestick series not initialized or setData method missing');
+                this.showError('Chart series not properly initialized');
+                return;
+            }
+        } catch (error) {
+            console.error('Error setting candlestick data:', error);
+            this.showError('Failed to set candlestick data');
+            return;
         }
         
-        if (this.series.volume) {
-            this.series.volume.setData(volumeData);
-        } else {
-            console.error('Volume series not initialized');
+        try {
+            if (this.series.volume && typeof this.series.volume.setData === 'function') {
+                this.series.volume.setData(volumeData);
+                console.log('Volume data set successfully');
+            } else {
+                console.error('Volume series not initialized or setData method missing');
+                this.showError('Chart series not properly initialized');
+                return;
+            }
+        } catch (error) {
+            console.error('Error setting volume data:', error);
+            this.showError('Failed to set volume data');
+            return;
+        }
+
+        // Check if TechnicalIndicators is available
+        if (typeof TechnicalIndicators === 'undefined') {
+            console.error('TechnicalIndicators library not loaded');
+            this.showError('Technical indicators library not loaded. Please reload the page.');
+            return;
         }
 
         // Calculate and set moving averages
         const sma20 = TechnicalIndicators.SMA(closePrices, 20);
         const sma50 = TechnicalIndicators.SMA(closePrices, 50);
 
-        if (this.series.sma20) {
-            this.series.sma20.setData(
-                sma20.map((value, index) => ({
-                    time: timestamps[index],
-                    value: value,
-                })).filter(item => item.value !== null)
-            );
+        try {
+            if (this.series.sma20 && typeof this.series.sma20.setData === 'function') {
+                this.series.sma20.setData(
+                    sma20.map((value, index) => ({
+                        time: timestamps[index],
+                        value: value,
+                    })).filter(item => item.value !== null)
+                );
+                console.log('SMA 20 data set successfully');
+            }
+        } catch (error) {
+            console.error('Error setting SMA 20 data:', error);
         }
 
-        if (this.series.sma50) {
-            this.series.sma50.setData(
-                sma50.map((value, index) => ({
-                    time: timestamps[index],
-                    value: value,
-                })).filter(item => item.value !== null)
-            );
+        try {
+            if (this.series.sma50 && typeof this.series.sma50.setData === 'function') {
+                this.series.sma50.setData(
+                    sma50.map((value, index) => ({
+                        time: timestamps[index],
+                        value: value,
+                    })).filter(item => item.value !== null)
+                );
+                console.log('SMA 50 data set successfully');
+            }
+        } catch (error) {
+            console.error('Error setting SMA 50 data:', error);
         }
 
         // Calculate and set MACD
         const macd = TechnicalIndicators.MACD(closePrices, 12, 26, 9);
         
-        if (this.series.macdLine) {
-            this.series.macdLine.setData(
-                macd.macd.map((value, index) => ({
-                    time: timestamps[index],
-                    value: value,
-                })).filter(item => item.value !== null)
-            );
+        try {
+            if (this.series.macdLine && typeof this.series.macdLine.setData === 'function') {
+                this.series.macdLine.setData(
+                    macd.macd.map((value, index) => ({
+                        time: timestamps[index],
+                        value: value,
+                    })).filter(item => item.value !== null)
+                );
+                console.log('MACD line data set successfully');
+            }
+        } catch (error) {
+            console.error('Error setting MACD line data:', error);
         }
 
-        if (this.series.signalLine) {
-            this.series.signalLine.setData(
-                macd.signal.map((value, index) => ({
-                    time: timestamps[index],
-                    value: value,
-                })).filter(item => item.value !== null)
-            );
+        try {
+            if (this.series.signalLine && typeof this.series.signalLine.setData === 'function') {
+                this.series.signalLine.setData(
+                    macd.signal.map((value, index) => ({
+                        time: timestamps[index],
+                        value: value,
+                    })).filter(item => item.value !== null)
+                );
+                console.log('MACD signal line data set successfully');
+            }
+        } catch (error) {
+            console.error('Error setting MACD signal line data:', error);
         }
 
-        if (this.series.macdHistogram) {
-            this.series.macdHistogram.setData(
-                macd.histogram.map((value, index) => ({
-                    time: timestamps[index],
-                    value: value,
-                    color: value >= 0 ? '#26a69a80' : '#ef535080',
-                })).filter(item => item.value !== null)
-            );
+        try {
+            if (this.series.macdHistogram && typeof this.series.macdHistogram.setData === 'function') {
+                this.series.macdHistogram.setData(
+                    macd.histogram.map((value, index) => ({
+                        time: timestamps[index],
+                        value: value,
+                        color: value >= 0 ? '#26a69a80' : '#ef535080',
+                    })).filter(item => item.value !== null)
+                );
+                console.log('MACD histogram data set successfully');
+            }
+        } catch (error) {
+            console.error('Error setting MACD histogram data:', error);
         }
 
         // Calculate and set RSI
         const rsi = TechnicalIndicators.RSI(closePrices, 14);
         
-        if (this.series.rsi) {
-            this.series.rsi.setData(
-                rsi.map((value, index) => ({
-                    time: timestamps[index],
-                    value: value,
-                })).filter(item => item.value !== null)
-            );
+        try {
+            if (this.series.rsi && typeof this.series.rsi.setData === 'function') {
+                this.series.rsi.setData(
+                    rsi.map((value, index) => ({
+                        time: timestamps[index],
+                        value: value,
+                    })).filter(item => item.value !== null)
+                );
+                console.log('RSI data set successfully');
+            }
+        } catch (error) {
+            console.error('Error setting RSI data:', error);
         }
 
         // Set RSI reference lines
@@ -543,18 +614,28 @@ class TradingChartsDashboard {
             .filter((_, index) => rsi[index] !== null);
 
         if (rsiTimes.length > 0) {
-            if (this.series.rsiUpper) {
-                this.series.rsiUpper.setData([
-                    { time: rsiTimes[0], value: 70 },
-                    { time: rsiTimes[rsiTimes.length - 1], value: 70 },
-                ]);
+            try {
+                if (this.series.rsiUpper && typeof this.series.rsiUpper.setData === 'function') {
+                    this.series.rsiUpper.setData([
+                        { time: rsiTimes[0], value: 70 },
+                        { time: rsiTimes[rsiTimes.length - 1], value: 70 },
+                    ]);
+                    console.log('RSI upper line data set successfully');
+                }
+            } catch (error) {
+                console.error('Error setting RSI upper line data:', error);
             }
 
-            if (this.series.rsiLower) {
-                this.series.rsiLower.setData([
-                    { time: rsiTimes[0], value: 30 },
-                    { time: rsiTimes[rsiTimes.length - 1], value: 30 },
-                ]);
+            try {
+                if (this.series.rsiLower && typeof this.series.rsiLower.setData === 'function') {
+                    this.series.rsiLower.setData([
+                        { time: rsiTimes[0], value: 30 },
+                        { time: rsiTimes[rsiTimes.length - 1], value: 30 },
+                    ]);
+                    console.log('RSI lower line data set successfully');
+                }
+            } catch (error) {
+                console.error('Error setting RSI lower line data:', error);
             }
         }
 

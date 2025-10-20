@@ -50,6 +50,29 @@ class HistoricalDataLoader:
         self.detect_delisted = detect_delisted
         self.symbol_service = SymbolService() if detect_delisted else None
 
+    async def _update_symbol_status(
+        self, 
+        symbol: str, 
+        status: str, 
+        error_message: Optional[str] = None
+    ) -> None:
+        """Update symbol data ingestion status"""
+        try:
+            # Always create symbol service for status tracking
+            if not self.symbol_service:
+                self.symbol_service = SymbolService()
+            
+            await self.symbol_service.update_symbol_data_status(
+                symbol=symbol,
+                date=date.today(),
+                data_source=self.data_source,
+                status=status,
+                error_message=error_message,
+            )
+        except Exception as e:
+            # Make this non-blocking - log warning but don't fail the main process
+            logger.warning(f"Failed to update symbol status for {symbol}: {e}")
+
     async def load_symbol_data(
         self,
         symbol: str,
@@ -288,6 +311,9 @@ class HistoricalDataLoader:
 
                 stats["successful"] += 1
                 stats["total_records"] += records_count
+                
+                # Update status for successful data loading
+                await self._update_symbol_status(symbol, "success")
 
                 # Add delay between requests to respect rate limits
                 if i < len(symbols):
@@ -298,6 +324,9 @@ class HistoricalDataLoader:
                 error_msg = f"Symbol {symbol}: {str(e)}"
                 stats["errors"].append(error_msg)
                 logger.error(error_msg)
+                
+                # Update status for failed data loading
+                await self._update_symbol_status(symbol, "failed", error_msg)
 
                 # Continue with next symbol
                 continue

@@ -184,3 +184,5 @@ cython_debug/
 YAHOO_FINANCE_SUMMARY.md
 KEY_STATISTICS_LOADER.md
 /logs
+symbols.txt
+simple_symbol_loader.py

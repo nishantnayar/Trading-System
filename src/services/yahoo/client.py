@@ -5,7 +5,7 @@ Client for fetching market data from Yahoo Finance using yfinance library.
 """
 
 from datetime import date, datetime, timezone
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import pandas as pd
 import yfinance as yf
@@ -162,38 +162,113 @@ class YahooClient:
             List of company officers
         """
         try:
+            symbol = symbol.upper().strip()
+            if not symbol:
+                raise ValueError("Symbol cannot be empty")
+
             ticker = yf.Ticker(symbol)
             info = ticker.info
 
+            # Check if symbol exists
+            if not info or not info.get("symbol"):
+                raise YahooSymbolNotFoundError(f"Symbol {symbol} not found")
+
             officers_data = info.get("companyOfficers", [])
             if not officers_data:
-                logger.warning(f"No officers data available for {symbol}")
+                logger.info(f"No officers data available for {symbol}")
                 return []
 
             officers = []
-            for officer_data in officers_data:
+            for i, officer_data in enumerate(officers_data):
                 try:
+                    # Validate and clean officer data
+                    name = officer_data.get("name", "").strip()
+                    if not name or name.lower() == "unknown":
+                        logger.warning(f"Skipping officer {i+1} for {symbol}: invalid name")
+                        continue
+
+                    # Clean and validate compensation data
+                    total_pay = self._clean_compensation_value(officer_data.get("totalPay"))
+                    exercised_value = self._clean_compensation_value(officer_data.get("exercisedValue"))
+                    unexercised_value = self._clean_compensation_value(officer_data.get("unexercisedValue"))
+
+                    # Validate age and year_born
+                    age = self._clean_age_value(officer_data.get("age"))
+                    year_born = self._clean_year_value(officer_data.get("yearBorn"))
+                    fiscal_year = self._clean_year_value(officer_data.get("fiscalYear"))
+
                     officer = CompanyOfficer(
                         symbol=symbol,
-                        name=officer_data.get("name", "Unknown"),
-                        title=officer_data.get("title"),
-                        age=officer_data.get("age"),
-                        year_born=officer_data.get("yearBorn"),
-                        fiscal_year=officer_data.get("fiscalYear"),
-                        total_pay=officer_data.get("totalPay"),
-                        exercised_value=officer_data.get("exercisedValue"),
-                        unexercised_value=officer_data.get("unexercisedValue"),
+                        name=name,
+                        title=officer_data.get("title", "").strip() or None,
+                        age=age,
+                        year_born=year_born,
+                        fiscal_year=fiscal_year,
+                        total_pay=total_pay,
+                        exercised_value=exercised_value,
+                        unexercised_value=unexercised_value,
                     )
                     officers.append(officer)
+                    
                 except Exception as e:
-                    logger.warning(f"Failed to parse officer data: {e}")
+                    logger.warning(f"Failed to parse officer {i+1} for {symbol}: {e}")
                     continue
 
-            logger.info(f"Fetched {len(officers)} officers for {symbol}")
+            logger.info(f"Successfully fetched {len(officers)} officers for {symbol}")
             return officers
 
+        except YahooSymbolNotFoundError:
+            raise
         except Exception as e:
+            logger.error(f"Failed to get officers for {symbol}: {e}")
             raise YahooAPIError(f"Failed to get officers for {symbol}: {str(e)}")
+
+    def _clean_compensation_value(self, value: Any) -> Optional[int]:
+        """Clean and validate compensation values"""
+        if value is None:
+            return None
+        
+        try:
+            # Convert to int if it's a number
+            if isinstance(value, (int, float)):
+                # Convert to cents and ensure it's reasonable
+                cents_value = int(value * 100) if isinstance(value, float) else int(value)
+                if cents_value < 0:
+                    return None
+                if cents_value > 10_000_000_000_000:  # 100 billion dollars in cents
+                    logger.warning(f"Compensation value seems too high: {value}")
+                    return None
+                return cents_value
+            return None
+        except (ValueError, TypeError):
+            return None
+
+    def _clean_age_value(self, value: Any) -> Optional[int]:
+        """Clean and validate age values"""
+        if value is None:
+            return None
+        
+        try:
+            age = int(value)
+            if 18 <= age <= 120:  # Reasonable age range
+                return age
+            return None
+        except (ValueError, TypeError):
+            return None
+
+    def _clean_year_value(self, value: Any) -> Optional[int]:
+        """Clean and validate year values"""
+        if value is None:
+            return None
+        
+        try:
+            year = int(value)
+            current_year = datetime.now().year
+            if 1900 <= year <= current_year + 1:  # Reasonable year range
+                return year
+            return None
+        except (ValueError, TypeError):
+            return None
 
     async def get_key_statistics(self, symbol: str) -> KeyStatistics:
         """

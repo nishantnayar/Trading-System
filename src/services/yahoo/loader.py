@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 from loguru import logger
 from sqlalchemy.dialects.postgresql import insert
 
+from src.services.data_ingestion.symbols import SymbolService
 from src.shared.database.base import db_transaction
 from src.shared.database.models.company_info import CompanyInfo
 from src.shared.database.models.company_officers import CompanyOfficer
@@ -89,6 +90,26 @@ class YahooDataLoader:
         self.batch_size = batch_size
         self.delay_between_requests = delay_between_requests
         self.data_source = data_source
+        self.symbol_service = SymbolService()
+
+    async def _update_symbol_status(
+        self, 
+        symbol: str, 
+        status: str, 
+        error_message: Optional[str] = None
+    ) -> None:
+        """Update symbol data ingestion status"""
+        try:
+            await self.symbol_service.update_symbol_data_status(
+                symbol=symbol,
+                date=date.today(),
+                data_source=self.data_source,
+                status=status,
+                error_message=error_message,
+            )
+        except Exception as e:
+            # Make this non-blocking - log warning but don't fail the main process
+            logger.warning(f"Failed to update symbol status for {symbol}: {e}")
 
     async def load_market_data(
         self,
@@ -666,35 +687,69 @@ class YahooDataLoader:
         Returns:
             List of company officers
         """
+        symbol = symbol.upper().strip()
+        if not symbol:
+            raise ValueError("Symbol cannot be empty")
+
         try:
+            logger.info(f"Loading company officers for {symbol}")
             officers_data = await self.client.get_company_officers(symbol)
 
             if not officers_data:
                 logger.info(f"No officers data available for {symbol}")
                 return []
 
-            # Store in database
+            # Store in database with improved error handling using PostgreSQL upsert
+            stored_count = 0
             with db_transaction() as session:
-                for officer_data in officers_data:
-                    # Use upsert to handle duplicates
-                    officer = CompanyOfficer(
-                        symbol=symbol,
-                        name=officer_data.name,
-                        title=officer_data.title,
-                        age=officer_data.age,
-                        year_born=officer_data.year_born,
-                        fiscal_year=officer_data.fiscal_year,
-                        total_pay=officer_data.total_pay,
-                        exercised_value=officer_data.exercised_value,
-                        unexercised_value=officer_data.unexercised_value,
-                    )
+                for i, officer_data in enumerate(officers_data):
+                    try:
+                        # Validate officer data before storing
+                        if not officer_data.name or not officer_data.name.strip():
+                            logger.warning(f"Skipping officer {i+1} for {symbol}: empty name")
+                            continue
 
-                    # Merge (upsert) the officer
-                    session.merge(officer)
+                        # Use PostgreSQL upsert (ON CONFLICT) to handle duplicates
+                        from sqlalchemy.dialects.postgresql import insert
+                        
+                        officer_dict = {
+                            'symbol': symbol,
+                            'name': officer_data.name.strip(),
+                            'title': officer_data.title.strip() if officer_data.title else None,
+                            'age': officer_data.age,
+                            'year_born': officer_data.year_born,
+                            'fiscal_year': officer_data.fiscal_year,
+                            'total_pay': officer_data.total_pay,
+                            'exercised_value': officer_data.exercised_value,
+                            'unexercised_value': officer_data.unexercised_value,
+                            'data_source': 'yahoo',
+                        }
+
+                        # Create upsert statement
+                        upsert_stmt = insert(CompanyOfficer).values(officer_dict)
+                        upsert_stmt = upsert_stmt.on_conflict_do_update(
+                            constraint='uk_company_officers_unique',
+                            set_={
+                                'age': upsert_stmt.excluded.age,
+                                'year_born': upsert_stmt.excluded.year_born,
+                                'fiscal_year': upsert_stmt.excluded.fiscal_year,
+                                'total_pay': upsert_stmt.excluded.total_pay,
+                                'exercised_value': upsert_stmt.excluded.exercised_value,
+                                'unexercised_value': upsert_stmt.excluded.unexercised_value,
+                                'updated_at': upsert_stmt.excluded.updated_at,
+                            }
+                        )
+                        
+                        session.execute(upsert_stmt)
+                        stored_count += 1
+
+                    except Exception as e:
+                        logger.warning(f"Failed to store officer {i+1} for {symbol}: {e}")
+                        continue
 
                 session.commit()
 
-            logger.info(f"Loaded {len(officers_data)} company officers for {symbol}")
+            logger.info(f"Successfully loaded {stored_count}/{len(officers_data)} company officers for {symbol}")
             return officers_data
 
         except Exception as e:
@@ -884,6 +939,9 @@ class YahooDataLoader:
                     await self.load_company_officers(symbol)
 
                 stats["successful"] += 1
+                
+                # Update status for successful data loading
+                await self._update_symbol_status(symbol, "success")
 
                 # Add delay between requests
                 if i < len(symbols):
@@ -894,6 +952,9 @@ class YahooDataLoader:
                 error_msg = f"Symbol {symbol}: {str(e)}"
                 stats["errors"].append(error_msg)
                 logger.error(error_msg)
+                
+                # Update status for failed data loading
+                await self._update_symbol_status(symbol, "failed", error_msg)
                 continue
 
         logger.info(f"Completed loading data. Stats: {stats}")

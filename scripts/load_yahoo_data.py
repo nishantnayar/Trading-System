@@ -14,7 +14,7 @@ import asyncio
 import os
 import sys
 from datetime import date, datetime, timedelta
-from typing import List, Optional
+from typing import Optional
 
 import click
 
@@ -171,7 +171,7 @@ def main(
     dividends: bool,
     splits: bool,
     health_check: bool,
-) -> None:
+) -> int:
     """
     Load market data from Yahoo Finance
 
@@ -455,6 +455,42 @@ def main(
                     logger.info(f"  Total statements: {total_statements}")
 
                     return 0 if failed == 0 else 1
+                elif company_officers_only:
+                    # Load company officers for all symbols
+                    symbols_list = await loader._get_active_symbols()
+                    if max_symbols:
+                        symbols_list = symbols_list[:max_symbols]
+
+                    logger.info(
+                        f"Loading company officers for {len(symbols_list)} symbols"
+                    )
+                    successful = 0
+                    failed = 0
+                    total_officers = 0
+
+                    for i, sym in enumerate(symbols_list, 1):
+                        logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
+                        try:
+                            officers = await loader.load_company_officers(sym)
+                            if officers:
+                                successful += 1
+                                total_officers += len(officers)
+                            else:
+                                failed += 1
+                        except Exception as e:
+                            logger.error(f"Failed to load officers for {sym}: {e}")
+                            failed += 1
+
+                        if i < len(symbols_list):
+                            await asyncio.sleep(loader.delay_between_requests)
+
+                    logger.info(f"Company officers loading completed:")
+                    logger.info(f"  Total symbols: {len(symbols_list)}")
+                    logger.info(f"  Successful: {successful}")
+                    logger.info(f"  Failed: {failed}")
+                    logger.info(f"  Total officers: {total_officers}")
+
+                    return 0 if failed == 0 else 1
                 else:
                     # Load all symbols
                     stats = await loader.load_all_symbols_data(
@@ -466,6 +502,7 @@ def main(
                         include_key_statistics=key_statistics,
                         include_institutional_holders=institutional_holders,
                         include_financial_statements=financial_statements,
+                        include_company_officers=company_officers,
                     )
 
                 logger.info("Loading completed:")

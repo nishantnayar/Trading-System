@@ -186,7 +186,7 @@ Yahoo Finance provides free, unlimited market data including OHLCV, fundamentals
 
 **Fundamental Data:**
 - ✅ Company profile (name, sector, industry, description)
-- ✅ Key statistics (market cap, PE ratio, EPS, beta)
+- ✅ Key statistics (50+ metrics: market cap, PE ratios, profitability, financial health, growth, trading, ownership)
 - ✅ Financial statements (income, balance sheet, cash flow)
 - ✅ Earnings history and estimates
 - ✅ Analyst recommendations
@@ -655,6 +655,9 @@ await loader.load_company_info(symbol="AAPL")
 # Load key statistics
 await loader.load_key_statistics(symbol="AAPL")
 
+# Load key statistics with specific date
+await loader.load_key_statistics(symbol="AAPL", stats_date=date(2024, 1, 15))
+
 # Load financial statements
 await loader.load_financials(
     symbol="AAPL",
@@ -716,6 +719,15 @@ python scripts/load_yahoo_data.py --symbol AAPL \
     --fundamentals \
     --dividends \
     --splits
+
+# Load key statistics only
+python scripts/load_yahoo_data.py --symbol AAPL --key-statistics-only
+
+# Load key statistics for all symbols
+python scripts/load_yahoo_data.py --all-symbols --key-statistics-only --max-symbols 10
+
+# Load market data + key statistics
+python scripts/load_yahoo_data.py --symbol AAPL --days 30 --key-statistics
 
 # Load fundamentals only (no market data)
 python scripts/load_yahoo_data.py --all-symbols --fundamentals-only
