@@ -33,7 +33,7 @@ This system uses a **modular monolithic architecture** with clear service bounda
 
 - **Service-Oriented Modules**: Data Ingestion, Strategy Engine, Execution, Risk Management, Analytics, and Notification
 - **Modern Tech Stack**: Python + FastAPI + PostgreSQL + Redis + pandas
-- **Professional Frontend**: HTMX + Lightweight Charts + Tailwind CSS
+- **Professional Frontend**: Streamlit + Plotly Charts + Custom CSS
 - **Scalable Design**: Prepared for future microservices migration
 - **Comprehensive Monitoring**: Loguru logging with structured data
 
@@ -47,12 +47,24 @@ This system uses a **modular monolithic architecture** with clear service bounda
 | ⚡ **Risk Management** | Built-in position sizing and risk controls |
 | 📈 **Analytics** | Interactive charts and performance tracking with Plotly |
 | 🔄 **Backtesting** | Historical strategy validation framework |
-| 📱 **Web Dashboard** | Modern HTMX + Tailwind CSS responsive interface |
+| 📱 **Web Dashboard** | Modern Streamlit multipage interface with session state |
 | 🔧 **Modular Design** | Scalable, maintainable service-oriented architecture |
 | 🗄️ **Database** | PostgreSQL with comprehensive schema design |
 | 📊 **Data Quality** | Automated data validation and quality monitoring |
 
 ## 🚀 Quick Start
+
+### Streamlit UI
+
+The trading system now features a modern **Streamlit multipage interface** with:
+
+- **Portfolio Management**: Real-time portfolio tracking and performance metrics
+- **Market Analysis**: Interactive charts with technical indicators
+- **System Information**: Team details and system architecture
+- **Settings**: User preferences and session state management
+- **Session State**: Persistent data sharing across all pages
+
+**Access the UI**: http://localhost:8501
 
 ### Prerequisites
 
@@ -157,7 +169,7 @@ The following API endpoints are available:
 **Getting Help:**
 - Check the console logs for detailed error messages
 - Verify your Alpaca account status in the dashboard
-- Test your credentials by accessing the dashboard at `http://localhost:8002/dashboard`
+- Test your credentials by accessing the Streamlit UI at `http://localhost:8501`
 
 ### Installation
 
@@ -202,8 +214,8 @@ python deployment/scripts/start_services.py
 ```
 
 #### 6. Access Dashboard
-- **URL**: http://localhost:8002
-- **API Docs**: http://localhost:8002/docs
+- **Streamlit UI**: http://localhost:8501
+- **API Docs**: http://localhost:8001/docs
 
 </details>
 
@@ -320,7 +332,7 @@ mkdocs build
 
 ### 🛠️ Development Features
 - **Modular Architecture**: Service-oriented design ready for scaling
-- **Modern Frontend**: HTMX + Lightweight Charts + Tailwind CSS interface
+- **Modern Frontend**: Streamlit + Plotly Charts + Custom CSS interface
 - **Comprehensive Logging**: Structured logging with Loguru
 - **Code Quality**: Black, Flake8, mypy, and pre-commit hooks
 - **Testing Suite**: Comprehensive test coverage across all components
@@ -366,7 +378,7 @@ risk_management:
    python main.py
    ```
 
-2. **Access web dashboard**: http://localhost:8002
+2. **Access Streamlit UI**: http://localhost:8501
 
 3. **Monitor logs**: Check `logs/` directory for system logs
 

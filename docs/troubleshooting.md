@@ -60,7 +60,7 @@ A: Check these in order:
 1. Database connectivity: `python scripts/test_database_connections.py`
 2. Environment variables: `cat .env`
 3. Service logs: `tail -f logs/trading.log`
-4. Port availability: Ensure ports 8000, 4200, 5432, 6379 are free
+4. Port availability: Ensure ports 8001, 8501, 4200, 5432, 6379 are free
 
 **Q: How do I check if all services are running?**
 A: Use the health check script:
@@ -68,7 +68,51 @@ A: Use the health check script:
 python scripts/run_tests.py check
 ```
 
+**Q: How do I access the Streamlit UI?**
+A: The Streamlit UI is available at `http://localhost:8501`. If it's not running, start it with:
+```bash
+python streamlit_ui/run_streamlit.py
+```
+
 ## Common Issues
+
+### Streamlit UI Issues
+
+**Error**: `ModuleNotFoundError: No module named 'streamlit'`
+
+**Solution**: Install Streamlit and dependencies:
+```bash
+pip install streamlit plotly
+```
+
+**Error**: `Port 8501 is already in use`
+
+**Solution**: Either stop the existing Streamlit process or use a different port:
+```bash
+# Kill existing process
+pkill -f streamlit
+
+# Or use different port
+streamlit run streamlit_ui/streamlit_app.py --server.port 8502
+```
+
+**Error**: `Session state not persisting across pages`
+
+**Solution**: Ensure session state is properly initialized in the main app:
+```python
+# In streamlit_app.py
+def initialize_session_state():
+    if 'selected_symbol' not in st.session_state:
+        st.session_state.selected_symbol = 'AAPL'
+```
+
+**Error**: `Charts not displaying properly`
+
+**Solution**: Check Plotly installation and data format:
+```bash
+pip install plotly
+# Ensure data is in correct format for Plotly charts
+```
 
 ### Database Connection Issues
 

@@ -42,7 +42,7 @@ python scripts/setup_databases.py
 python main.py
 ```
 
-**Access your dashboard**: http://localhost:8002
+**Access your Streamlit UI**: http://localhost:8501
 
 ---
 
@@ -129,9 +129,9 @@ graph TB
 - ✅ **Modular Architecture** - Service-oriented design ready for scaling
 - ✅ **Type Safety** - Pydantic for data validation
 - ✅ **Data Processing** - pandas for analytics and manipulation
-- ✅ **Modern UI** - FastAPI + HTMX + Lightweight Charts + Tailwind CSS
-- ✅ **Professional Charts** - Multi-pane trading charts with technical indicators
-- ✅ **Theme Support** - Light/Dark chart themes with persistence
+- ✅ **Modern UI** - Streamlit + Plotly Charts + Custom CSS
+- ✅ **Professional Charts** - Interactive financial visualizations with Plotly
+- ✅ **Session State** - Persistent data sharing across pages
 - ✅ **Comprehensive Logging** - Structured logging with Loguru
 - ✅ **Database Design** - PostgreSQL with comprehensive schema
 - ✅ **Data Quality** - Automated validation and monitoring
@@ -146,15 +146,14 @@ graph TB
 
 ## 📊 **Dashboard Preview**
 
-Your trading dashboard provides:
+Your Streamlit trading interface provides:
 
-- **Professional Trading Charts** - Multi-pane charts with candlesticks, volume, MACD, and RSI
-- **Real-time Market Data** - Live price feeds and synchronized chart updates
-- **Technical Analysis** - Professional-grade indicators with theme customization
-- **Strategy Performance** - P&L tracking and analytics
-- **Risk Metrics** - Position sizing and exposure
-- **Order Management** - Trade execution and monitoring
-- **System Health** - Service status and logs
+- **Portfolio Management** - Real-time portfolio tracking and performance metrics
+- **Market Analysis** - Interactive charts with technical indicators using Plotly
+- **System Information** - Team details and system architecture
+- **Settings** - User preferences and session state management
+- **Session State** - Persistent data sharing across all pages
+- **Modern UI** - Clean, professional Streamlit interface
 
 ---
 
@@ -177,8 +176,8 @@ LOG_RETENTION_DAYS=30
 ```
 
 ### **Service Ports**
-- **Dashboard**: http://localhost:8002
-- **API Docs**: http://localhost:8002/docs
+- **Streamlit UI**: http://localhost:8501
+- **API Docs**: http://localhost:8001/docs
 - **PostgreSQL**: localhost:5432
 - **Redis**: localhost:6379
 

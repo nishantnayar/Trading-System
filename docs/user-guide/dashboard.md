@@ -1,361 +1,310 @@
-# Dashboard Overview
+# Streamlit UI Overview
 
-This guide covers the main dashboard interface and the reusable card components used throughout the application.
+This guide covers the modern Streamlit multipage interface with session state management for the trading system.
 
 ## Features
 
-- **Real-time Portfolio Monitoring**: Live account balance, positions, and P&L tracking
-- **Market Data Analytics**: Interactive charts and market data visualization with Plotly
-- **Strategy Management**: Configure and monitor trading strategies
-- **Performance Metrics**: Comprehensive performance tracking and analytics
-- **Order Management**: View and manage open orders and trade history
-- **System Health**: Monitor service status and system performance
-- **Reusable Card Components**: Consistent styling and user experience
+- **Portfolio Management**: Real-time portfolio tracking and performance metrics
+- **Market Analysis**: Interactive charts with technical indicators using Plotly
+- **System Information**: Team details and system architecture
+- **Settings**: User preferences and session state management
+- **Session State**: Persistent data sharing across all pages
+- **Modern UI**: Clean, professional Streamlit interface
 
-## Dashboard Pages
+## Streamlit Pages
 
-### 1. Main Dashboard (`/dashboard`)
-The primary dashboard provides an overview of your trading system:
-- **Portfolio Summary**: Account balance, buying power, and portfolio value
-- **Position Overview**: Current holdings with unrealized P&L
-- **Order Status**: Open orders and recent trade history
-- **Market Status**: Real-time market clock and trading hours
-- **System Health**: Service status indicators
+### 1. Portfolio Page
+Real-time portfolio tracking and performance metrics:
+- **Portfolio Metrics**: Total value, daily change, and performance indicators
+- **Performance Charts**: Interactive charts showing portfolio performance over time
+- **Asset Allocation**: Visual breakdown of portfolio holdings
+- **Recent Activity**: Latest trades and transactions
+- **Risk Metrics**: Portfolio risk indicators and exposure
 
-### 2. Trading Interface (`/trading`)
-Interactive trading interface for order management:
-- **Account Information**: Detailed account status and buying power
-- **Position Management**: View and close positions
-- **Order Placement**: Place new market and limit orders
-- **Order History**: Track order status and execution
+### 2. Analysis Page
+Interactive market analysis with technical indicators:
+- **Symbol Selection**: Choose from available trading symbols
+- **Price Charts**: Interactive Plotly charts with candlesticks and volume
+- **Technical Indicators**: Moving averages, RSI, MACD, and other indicators
+- **Volume Analysis**: Trading volume visualization
+- **Session State**: Selected symbol and timeframe persist across page navigation
 
-### 3. Market Analysis (`/analysis`)
-Professional multi-pane trading charts with advanced technical analysis:
-- **Professional Charts**: Lightweight Charts library for high-performance visualization
-- **Multi-Pane Layout**: 
-  - Price Chart with candlesticks and moving averages (SMA 20/50)
-  - Volume chart with color-coded bars
-  - MACD indicator (12, 26, 9) with histogram
-  - RSI indicator (14) with overbought/oversold levels
-- **Interactive Features**:
-  - Synchronized crosshairs across all charts
-  - Zoom and pan functionality
-  - Theme toggle (Light/Dark mode)
-  - Timeframe selection (1W, 1M, 3M, 6M, 1Y)
-- **Market Statistics**: Live data cards showing total symbols, records, and last update
-- **Real-time Data**: Live price information bar with symbol, price, change, volume, high/low
-- **Institutional Holders**: Advanced ownership visualization with horizontal bars
+### 3. Author Page
+System information and team details:
+- **System Overview**: Trading system features and capabilities
+- **Technology Stack**: Detailed technology information
+- **Architecture**: System architecture and design
+- **Development Team**: Team information and contact details
+- **Session State Display**: Current session state information for debugging
 
-### 4. Strategy Management (`/strategies`)
-Strategy configuration and monitoring:
-- **Strategy Overview**: Active and available strategies
-- **Performance Tracking**: Strategy-specific performance metrics
-- **Configuration**: Strategy parameters and settings
-- **Backtesting Results**: Historical strategy performance
+### 4. Settings Page
+User preferences and system configuration:
+- **User Preferences**: Interface and display settings
+- **Portfolio Settings**: Portfolio configuration options
+- **Trading Parameters**: Trading-related settings
+- **Session State Management**: Reset, clear, and export session state
+- **System Configuration**: Application settings and preferences
 
-### 5. User Profile (`/profile`)
-System information and user preferences:
-- **System Information**: Version, configuration, and status
-- **API Configuration**: Alpaca API settings and connectivity
-- **Preferences**: User interface and notification settings
-
-## Institutional Holders Visualization
+## Session State Management
 
 ### Overview
 
-The Institutional Holders feature provides an advanced visualization of major shareholders for any stock symbol, displaying ownership percentages using horizontal bars for easy comparison.
+The Streamlit UI uses session state to maintain data persistence across different pages, allowing for seamless navigation and data sharing.
 
 ### Features
 
-#### Horizontal Bar Visualization
-- **Blue Gradient Bars**: Visual representation of ownership percentages
-- **Consistent Text Positioning**: Black text positioned to the right of bars for optimal readability
-- **Responsive Design**: Bars scale with container width and adapt to different screen sizes
-- **Percentage Display**: Precise percentage values shown for each holder
+#### Persistent Data
+- **Selected Symbol**: Maintains selected trading symbol across pages
+- **Timeframe**: Preserves selected chart timeframe
+- **User Preferences**: Stores user interface settings
+- **Portfolio Data**: Caches portfolio information for performance
 
-#### Data Sources
-- **Yahoo Finance Integration**: Primary data source for institutional ownership
-- **Automatic Calculations**: System calculates missing percentages using:
-  - Shares outstanding from Key Statistics
-  - Relative percentages based on total institutional shares
-- **Real-time Updates**: Data refreshed automatically when available
-
-#### Visual Design
-- **Clean Interface**: Transparent background with blue gradient fills
-- **Consistent Styling**: Matches overall dashboard theme and design language
-- **Accessibility**: High contrast text for readability across different backgrounds
+#### State Management
+- **Automatic Initialization**: Session state is initialized on app startup
+- **Cross-Page Sharing**: Data persists when navigating between pages
+- **State Updates**: Pages can modify session state variables
+- **State Debugging**: Settings page shows current session state
 
 ### Usage
 
-1. **Navigate to Analysis Page**: Go to `/analysis` in the dashboard
-2. **Select Symbol**: Choose any stock symbol from the dropdown
-3. **View Institutional Holders**: The table automatically loads with horizontal bars
-4. **Compare Ownership**: Bars provide quick visual comparison of ownership percentages
+1. **Navigate Between Pages**: Use the sidebar navigation to switch pages
+2. **Data Persistence**: Selected symbols and settings are maintained
+3. **State Management**: Use the Settings page to manage session state
+4. **Debug Information**: View current session state in the Author page
 
 ### Technical Implementation
 
-#### Frontend Components
-- **CSS Styling**: Custom percentage bar styles with gradients and positioning
-- **JavaScript**: Dynamic bar width calculation and text positioning
-- **Responsive Design**: Mobile-friendly layout that adapts to screen size
+#### Session State Variables
+- `selected_symbol`: Currently selected trading symbol
+- `timeframe`: Selected chart timeframe
+- `portfolio_data`: Cached portfolio information
+- `user_preferences`: User interface settings
 
-#### Backend API
-- **Endpoint**: `/api/institutional-holders/{symbol}`
-- **Automatic Calculation**: Missing percentages calculated server-side
-- **Error Handling**: Graceful fallbacks for missing or incomplete data
+#### State Operations
+- **Initialize**: Set default values on app startup
+- **Update**: Modify values from any page
+- **Reset**: Clear all session state
+- **Export**: View current state for debugging
 
-### Example Display
+## Streamlit Components
 
-```
-Vanguard Group Inc      [████████████████████████████████████████] 23.62%
-BlackRock Inc          [████████████████████████████]             15.47%
-State Street Corp      [████████████████████████]                 12.31%
-Berkshire Hathaway     [████████████████████]                     9.85%
-```
-
-## Reusable Card Components
-
-This section covers the reusable card components located in `src/web/templates/components/` for consistent styling across the application.
+This section covers the Streamlit components and styling used throughout the application.
 
 ### Available Components
 
-#### 1. Card Macro (`card_macro.html`)
+#### 1. Metrics Display
+```python
+import streamlit as st
 
-Provides Jinja2 macros for different types of cards:
-
-##### `stat_card` - For displaying metrics with values
-```jinja2
-{% from 'components/card_macro.html' import stat_card %}
-
-{{ stat_card(
-    icon='fas fa-wallet',
-    title='Total Portfolio Value',
-    value='$0.00',
-    description='Loading...',
-    color='blue',
-    value_id='portfolio-value',
-    description_id='portfolio-change-text'
-) }}
+# Display key metrics
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    st.metric("Portfolio Value", "$10,000", "+5.2%")
+with col2:
+    st.metric("Daily P&L", "+$250", "+2.5%")
+with col3:
+    st.metric("Total Return", "$1,234", "+12.3%")
+with col4:
+    st.metric("Sharpe Ratio", "1.85", "+0.15")
 ```
 
-##### `feature_card` - For displaying features without values
-```jinja2
-{% from 'components/card_macro.html' import feature_card %}
+#### 2. Interactive Charts
+```python
+import plotly.graph_objects as go
 
-{{ feature_card(
-    icon='fas fa-database',
-    title='Data Ingestion',
-    description='Real-time market data processing and storage',
-    color='green'
-) }}
+# Create interactive charts
+fig = go.Figure(data=go.Candlestick(
+    x=df['date'],
+    open=df['open'],
+    high=df['high'],
+    low=df['low'],
+    close=df['close']
+))
+st.plotly_chart(fig, use_container_width=True)
 ```
 
-##### `info_card` - For displaying information without icons
-```jinja2
-{% from 'components/card_macro.html' import info_card %}
+#### 3. Session State Management
+```python
+# Initialize session state
+if 'selected_symbol' not in st.session_state:
+    st.session_state.selected_symbol = 'AAPL'
 
-{{ info_card(
-    title='System Status',
-    content='All systems operational',
-    color='green'
-) }}
+# Update session state
+symbol = st.selectbox('Select Symbol', ['AAPL', 'MSFT', 'GOOGL'])
+st.session_state.selected_symbol = symbol
 ```
 
-##### `large_stat_card` - For prominent metrics
-```jinja2
-{% from 'components/card_macro.html' import large_stat_card %}
+#### 4. Data Display
+```python
+# Display data tables
+st.dataframe(df, use_container_width=True)
 
-{{ large_stat_card(
-    icon='fas fa-chart-line',
-    title='Total Profit',
-    value='$1,234.56',
-    subtitle='Last 30 days',
-    color='green',
-    value_id='total-profit'
-) }}
+# Display JSON data
+st.json(session_state_data)
+
+# Display code
+st.code("""
+def calculate_returns(prices):
+    return prices.pct_change()
+""", language='python')
 ```
 
-#### 2. Include-based Card (`card.html`)
+### Custom Styling
 
-For simpler use cases with include syntax:
-
-```jinja2
-{% include 'components/card.html' with {
-    'icon': 'fas fa-wallet',
-    'title': 'Total Portfolio Value',
-    'value': '$0.00',
-    'description': 'Loading...',
-    'color': 'blue',
-    'value_id': 'portfolio-value',
-    'description_id': 'portfolio-change-text'
-} %}
+#### CSS Customization
+```python
+# Load custom CSS
+def load_css():
+    with open("streamlit_ui/styles.css") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 ```
 
-### Color Options
+#### Theme Configuration
+```python
+# Configure page
+st.set_page_config(
+    page_title="Trading System",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+```
 
-Available colors for the `color` parameter:
-- `blue` - Blue gradient
-- `green` - Green gradient  
-- `red` - Red gradient
-- `yellow` - Yellow-orange gradient
-- `purple` - Purple gradient
-- `indigo` - Indigo gradient
-- `pink` - Pink gradient
-- `gray` - Gray gradient
+### Layout Components
 
-### Parameters
+#### Sidebar Navigation
+```python
+# Sidebar navigation
+with st.sidebar:
+    st.title("Trading System")
+    page = st.selectbox("Navigate", ["Portfolio", "Analysis", "Settings"])
+```
 
-#### Common Parameters
-- `icon` - FontAwesome icon class (default: 'fas fa-chart-line')
-- `title` - Card title
-- `color` - Color theme (default: 'blue')
-- `extra_classes` - Additional CSS classes
+#### Columns Layout
+```python
+# Multi-column layout
+col1, col2 = st.columns([2, 1])
+with col1:
+    st.plotly_chart(chart)
+with col2:
+    st.metric("Price", "$150.25")
+```
 
-#### stat_card Specific
-- `value` - Display value
-- `description` - Description text
-- `value_id` - HTML ID for the value element
-- `description_id` - HTML ID for the description element
+#### Tabs
+```python
+# Tabbed interface
+tab1, tab2, tab3 = st.tabs(["Overview", "Charts", "Settings"])
+with tab1:
+    st.write("Portfolio overview")
+with tab2:
+    st.plotly_chart(chart)
+with tab3:
+    st.write("Settings")
+```
 
-#### feature_card Specific
-- `description` - Feature description
+### Interactive Elements
 
-#### info_card Specific
-- `content` - Information content (can include HTML)
-
-#### large_stat_card Specific
-- `value` - Display value
-- `subtitle` - Optional subtitle
-- `value_id` - HTML ID for the value element
-
-### Usage Examples
-
-#### Dashboard Stats
-```jinja2
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    {{ stat_card(
-        icon='fas fa-wallet',
-        title='Portfolio Value',
-        value='$10,000',
-        description='+5.2% today',
-        color='blue',
-        value_id='portfolio-value'
-    ) }}
+#### Form Controls
+```python
+# Form for user input
+with st.form("trading_form"):
+    symbol = st.text_input("Symbol")
+    quantity = st.number_input("Quantity")
+    submitted = st.form_submit_button("Place Order")
     
-    {{ stat_card(
-        icon='fas fa-chart-line',
-        title='Today\'s P&L',
-        value='+$250',
-        description='+2.5%',
-        color='green',
-        value_id='daily-pnl'
-    ) }}
-</div>
+    if submitted:
+        st.success(f"Order placed for {quantity} shares of {symbol}")
 ```
 
-#### Feature Grid
-```jinja2
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    {{ feature_card(
-        icon='fas fa-database',
-        title='Data Ingestion',
-        description='Real-time market data processing',
-        color='green'
-    ) }}
-    
-    {{ feature_card(
-        icon='fas fa-cogs',
-        title='Strategy Engine',
-        description='Advanced trading algorithms',
-        color='blue'
-    ) }}
-</div>
+#### File Upload
+```python
+# File upload
+uploaded_file = st.file_uploader("Upload CSV", type="csv")
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    st.dataframe(df)
 ```
 
-### Styling
+### Performance Optimization
 
-All cards use consistent styling:
-- White background with rounded corners
-- Shadow effects with hover animations
-- Gradient icon containers
-- Responsive design
-- Smooth transitions
+#### Caching
+```python
+@st.cache_data
+def load_market_data(symbol):
+    # Expensive data loading operation
+    return data
 
-The components automatically handle:
-- Color theming
-- Responsive layouts
-- Hover effects
-- Icon sizing and positioning
-- Typography hierarchy
+@st.cache_resource
+def get_database_connection():
+    # Database connection
+    return connection
+```
+
+#### Session State Best Practices
+```python
+# Initialize once
+if 'data' not in st.session_state:
+    st.session_state.data = load_expensive_data()
+
+# Use cached data
+st.write(st.session_state.data)
+```
 
 ## Chart Features
 
-### Professional Trading Charts
+### Interactive Financial Charts
 
-The Market Analysis page (`/analysis`) features professional-grade multi-pane trading charts built with Lightweight Charts library for optimal performance and professional appearance.
+The Analysis page features interactive financial charts built with Plotly for professional visualization and analysis.
 
-#### Chart Panels
+#### Chart Types
 
-1. **Price Chart (400px height)**
-   - Candlestick chart with green (up) and red (down) bars
-   - Simple Moving Average 20 (blue line)
-   - Simple Moving Average 50 (red line)
+1. **Candlestick Charts**
    - Professional OHLC data visualization
+   - Green (up) and red (down) candlesticks
+   - Interactive hover with detailed information
+   - Zoom and pan functionality
 
-2. **Volume Chart (120px height)**
-   - Color-coded volume bars matching price movement
-   - Green bars for up days, red for down days
-   - Semi-transparent overlay for better readability
+2. **Line Charts**
+   - Moving averages and trend lines
+   - Multiple series on same chart
+   - Customizable colors and styles
+   - Interactive legend and toggles
 
-3. **MACD Indicator (150px height)**
-   - MACD line (blue) - difference between 12 and 26-period EMAs
-   - Signal line (red) - 9-period EMA of MACD line
-   - Histogram (green/red) - difference between MACD and signal lines
-   - Professional technical analysis standard
+3. **Volume Charts**
+   - Color-coded volume bars
+   - Green for up days, red for down days
+   - Volume analysis and patterns
+   - Synchronized with price charts
 
-4. **RSI Indicator (150px height)**
-   - RSI line (blue) - 14-period Relative Strength Index
-   - Overbought level at 70 (gray dashed line)
-   - Oversold level at 30 (gray dashed line)
-   - Momentum oscillator for trend analysis
+#### Interactive Features
 
-#### Interactive Controls
-
-- **Symbol Selection**: Dropdown with all available symbols from your database
-- **Timeframe Buttons**: 1 Week, 1 Month, 3 Months, 6 Months, 1 Year
-- **Theme Toggle**: Switch between Light and Dark chart themes
-- **Live Info Bar**: Shows current symbol, price, change, volume, high, and low
-
-#### Theme Options
-
-**Light Theme (Default)**
-- White chart backgrounds
-- Light gray grid lines
-- Dark text for readability
-- Professional clean appearance
-
-**Dark Theme**
-- Dark blue-gray backgrounds (#131722)
-- Darker grid lines
-- Light text for contrast
-- Professional trading platform appearance
-
-Theme preference is automatically saved in browser localStorage.
-
-#### Synchronization Features
-
-- **Crosshair Sync**: Hover over any chart to see synchronized crosshairs across all panels
-- **Zoom Sync**: Zoom and pan operations are synchronized across all charts
-- **Time Range Sync**: Visible time ranges stay aligned across all panels
-- **Data Consistency**: All charts show the same time period and data points
+- **Symbol Selection**: Dropdown with available trading symbols
+- **Timeframe Selection**: Choose from multiple time periods
+- **Interactive Hover**: Detailed information on hover
+- **Zoom and Pan**: Navigate through historical data
+- **Legend Toggle**: Show/hide chart series
+- **Download Options**: Export charts as images
 
 #### Technical Indicators
 
-The system includes professional-grade technical indicator calculations:
+The system includes comprehensive technical analysis:
 
-- **Simple Moving Average (SMA)**: 20 and 50-period calculations
-- **MACD**: 12, 26, 9 parameter configuration
-- **RSI**: 14-period Relative Strength Index
-- **Volume Analysis**: Color-coded volume visualization
+- **Moving Averages**: SMA, EMA with customizable periods
+- **MACD**: Moving Average Convergence Divergence
+- **RSI**: Relative Strength Index
+- **Bollinger Bands**: Price volatility indicators
+- **Volume Analysis**: Trading volume patterns
 
-All indicators are calculated client-side for real-time updates and optimal performance.
+#### Chart Customization
+
+- **Color Themes**: Light and dark mode support
+- **Chart Sizes**: Responsive design for different screen sizes
+- **Interactive Elements**: Hover, click, and selection events
+- **Export Options**: Save charts as PNG, SVG, or PDF
+
+#### Performance Features
+
+- **Data Caching**: Efficient data loading and caching
+- **Session State**: Persistent chart settings across navigation
+- **Real-time Updates**: Live data integration capabilities
+- **Responsive Design**: Optimized for desktop and mobile

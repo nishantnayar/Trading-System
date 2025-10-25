@@ -268,10 +268,10 @@ python -m src.services.strategy_engine.main
 python -m src.services.execution.main
 ```
 
-### Step 3: Access the Dashboard
+### Step 3: Access the Streamlit UI
 
-1. **Open your browser** and go to `http://localhost:8002`
-2. **Check the dashboard** for system status
+1. **Open your browser** and go to `http://localhost:8501`
+2. **Check the Streamlit interface** for system status
 3. **Verify the application** is running correctly
 
 ## Verification
@@ -293,10 +293,11 @@ python scripts/run_tests.py all
 
 ```bash
 # Check if the application is running
-curl http://localhost:8002/health
+curl http://localhost:8001/health
 
 # Or open in browser
-# http://localhost:8002/docs for API documentation
+# http://localhost:8501 for Streamlit UI
+# http://localhost:8001/docs for API documentation
 ```
 
 ### Step 3: Verify Database
@@ -330,9 +331,9 @@ tail -f logs/strategy_engine.log
 
 ### 1. Explore the System
 
-- **Dashboard**: Navigate through the web interface at `http://localhost:8002`
-- **API Documentation**: Visit `http://localhost:8002/docs`
-- **Market Data**: Explore professional charts and analytics
+- **Streamlit UI**: Navigate through the multipage interface at `http://localhost:8501`
+- **API Documentation**: Visit `http://localhost:8001/docs`
+- **Market Data**: Explore interactive charts and analytics with Plotly
 
 ### 2. Configure Trading
 

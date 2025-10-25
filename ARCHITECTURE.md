@@ -34,8 +34,9 @@ A production-grade algorithmic trading system designed for local deployment, foc
 
 ### Frontend
 - **Backend**: FastAPI
-- **Frontend**: HTMX + Lightweight Charts + Tailwind CSS
-- **Charts**: Lightweight Charts library for financial visualizations
+- **Frontend**: Streamlit + Plotly Charts + Custom CSS
+- **Charts**: Plotly library for interactive financial visualizations
+- **Session State**: Persistent data sharing across pages
 - **Real-time**: Planned for future versions
 
 ### Development & Quality
@@ -137,7 +138,7 @@ The system is implemented as a **modular monolith** with clear service boundarie
 
 **Components**:
 - Performance calculation engine
-- Data visualization (Lightweight Charts)
+- Data visualization (Plotly Charts)
 - Market data analysis
 - Interactive dashboards
 
@@ -355,7 +356,7 @@ mypy src/
 │  ├── Analytics Module                                   │
 │  └── Shared Components (Database, Logging, Utils)       │
 ├─────────────────────────────────────────────────────────┤
-│  Frontend (HTMX + Lightweight Charts + Tailwind)        │
+│  Frontend (Streamlit + Plotly Charts + Custom CSS)      │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -363,7 +364,7 @@ mypy src/
 1. Start PostgreSQL and Redis
 2. Run database migrations (if needed)
 3. Start FastAPI application: `python main.py`
-4. Access dashboard at `http://localhost:8002`
+4. Access Streamlit UI at `http://localhost:8501`
 
 ### Future Microservices Deployment (v1.3.0+)
 ```
@@ -480,7 +481,7 @@ strategies:
 4. **Configure**: Set up API keys in `.env` file
 5. **Initialize Database**: `python scripts/setup_databases.py`
 6. **Start Application**: `python main.py`
-7. **Access Dashboard**: Open `http://localhost:8002`
+7. **Access Streamlit UI**: Open `http://localhost:8501`
 
 ## Architecture Evolution
 

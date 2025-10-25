@@ -320,30 +320,45 @@ curl http://localhost:8001/api/market-data/data/GOOGL/count
 curl "http://localhost:8001/api/market-data/data/AAPL/ohlc?period=1M"
 ```
 
-## Integration with Frontend
+## Integration with Streamlit UI
 
-The analytics API is designed to work seamlessly with the web dashboard:
+The analytics API is designed to work seamlessly with the Streamlit multipage interface:
 
 ### Chart Data
-```javascript
-// Fetch data for Plotly charts
-fetch('/api/market-data/data/AAPL?limit=100')
-  .then(response => response.json())
-  .then(data => {
-    // Process data for charting
-    const chartData = processChartData(data);
-    Plotly.newPlot('chart', chartData);
-  });
+```python
+import streamlit as st
+import plotly.graph_objects as go
+import requests
+
+# Fetch data for Plotly charts
+@st.cache_data
+def get_market_data(symbol, limit=100):
+    response = requests.get(f'http://localhost:8001/api/market-data/data/{symbol}?limit={limit}')
+    return response.json()
+
+# Create interactive charts
+data = get_market_data('AAPL')
+fig = go.Figure(data=go.Candlestick(
+    x=[d['timestamp'] for d in data],
+    open=[d['open'] for d in data],
+    high=[d['high'] for d in data],
+    low=[d['low'] for d in data],
+    close=[d['close'] for d in data]
+))
+st.plotly_chart(fig, use_container_width=True)
 ```
 
-### Real-time Updates
-```javascript
-// Poll for latest data updates
-setInterval(() => {
-  fetch('/api/market-data/data/AAPL/latest')
-    .then(response => response.json())
-    .then(data => updateLatestPrice(data));
-}, 30000); // Update every 30 seconds
+### Session State Integration
+```python
+# Use session state for persistent data
+if 'market_data' not in st.session_state:
+    st.session_state.market_data = get_market_data('AAPL')
+
+# Update data based on user selection
+symbol = st.selectbox('Select Symbol', ['AAPL', 'MSFT', 'GOOGL'])
+if symbol != st.session_state.get('selected_symbol'):
+    st.session_state.market_data = get_market_data(symbol)
+    st.session_state.selected_symbol = symbol
 ```
 
 ## Future Enhancements
