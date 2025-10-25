@@ -12,6 +12,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+
 def load_custom_css():
     """Load custom CSS from file and configuration"""
     css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
@@ -38,6 +39,12 @@ def analysis_page():
     st.title("📊 Analysis - Market Data & Charts")
     
     st.write("Analyze market trends, technical indicators, and trading opportunities.")
+    
+    # Initialize session state if not exists
+    if 'selected_symbol' not in st.session_state:
+        st.session_state.selected_symbol = "AAPL"
+    if 'selected_timeframe' not in st.session_state:
+        st.session_state.selected_timeframe = "1M"
     
     # Symbol selection with session state
     st.subheader("Symbol Analysis")

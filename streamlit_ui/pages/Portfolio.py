@@ -12,6 +12,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+
 def load_custom_css():
     """Load custom CSS from file and configuration"""
     css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
@@ -38,6 +39,16 @@ def portfolio_page():
     st.title("📈 Portfolio - Trading Dashboard")
     
     st.write("Monitor your portfolio performance and market activity.")
+    
+    # Initialize session state if not exists
+    if 'portfolio_value' not in st.session_state:
+        st.session_state.portfolio_value = 125000
+    if 'total_return' not in st.session_state:
+        st.session_state.total_return = 15.2
+    if 'active_positions' not in st.session_state:
+        st.session_state.active_positions = 8
+    if 'win_rate' not in st.session_state:
+        st.session_state.win_rate = 68
     
     # Key metrics with session state
     st.subheader("Portfolio Overview")

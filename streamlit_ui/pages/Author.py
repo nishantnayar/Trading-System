@@ -9,6 +9,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+
 def load_custom_css():
     """Load custom CSS from file and configuration"""
     css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
@@ -35,6 +36,26 @@ def author_page():
     st.title("👨‍💻 Author - About the Trading System")
     
     st.write("Learn about the Trading System, its features, and the development team.")
+    
+    # Initialize session state if not exists
+    if 'portfolio_value' not in st.session_state:
+        st.session_state.portfolio_value = 125000
+    if 'total_return' not in st.session_state:
+        st.session_state.total_return = 15.2
+    if 'active_positions' not in st.session_state:
+        st.session_state.active_positions = 8
+    if 'win_rate' not in st.session_state:
+        st.session_state.win_rate = 68
+    if 'selected_symbol' not in st.session_state:
+        st.session_state.selected_symbol = "AAPL"
+    if 'selected_timeframe' not in st.session_state:
+        st.session_state.selected_timeframe = "1M"
+    if 'user_preferences' not in st.session_state:
+        st.session_state.user_preferences = {
+            'theme': 'light',
+            'notifications': True,
+            'auto_refresh': False
+        }
     
     # System overview
     st.subheader("System Overview")

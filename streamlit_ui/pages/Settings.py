@@ -8,6 +8,7 @@ from datetime import datetime
 
 import streamlit as st
 
+
 def load_custom_css():
     """Load custom CSS from file and configuration"""
     css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
@@ -34,6 +35,33 @@ def settings_page():
     st.title("⚙️ Settings - System Configuration")
     
     st.write("Configure your trading system preferences and manage session state.")
+    
+    # Initialize session state if not exists
+    if 'portfolio_value' not in st.session_state:
+        st.session_state.portfolio_value = 125000
+    if 'total_return' not in st.session_state:
+        st.session_state.total_return = 15.2
+    if 'active_positions' not in st.session_state:
+        st.session_state.active_positions = 8
+    if 'win_rate' not in st.session_state:
+        st.session_state.win_rate = 68
+    if 'selected_symbol' not in st.session_state:
+        st.session_state.selected_symbol = "AAPL"
+    if 'selected_timeframe' not in st.session_state:
+        st.session_state.selected_timeframe = "1M"
+    if 'user_preferences' not in st.session_state:
+        st.session_state.user_preferences = {
+            'theme': 'light',
+            'notifications': True,
+            'auto_refresh': False
+        }
+    if 'trading_data' not in st.session_state:
+        st.session_state.trading_data = {
+            'last_update': datetime.now(),
+            'market_status': 'open',
+            'positions': [],
+            'orders': []
+        }
     
     # User Preferences
     st.subheader("User Preferences")
