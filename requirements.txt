@@ -39,3 +39,10 @@ prefect-sqlalchemy>=0.4.0
 # Documentation
 mkdocs>=1.5.0
 mkdocs-material>=9.0.0
+
+# Streamlit UI
+streamlit>=1.28.0
+plotly>=5.17.0
+streamlit-plotly-events>=0.0.6
+streamlit-option-menu>=0.3.6
+streamlit-aggrid>=0.3.4

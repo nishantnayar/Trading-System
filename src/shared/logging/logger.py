@@ -78,6 +78,7 @@ class LoggingManager:
             rotation=self.config.rotation.size,
             retention=self.config.rotation.retention,
             compression="gz" if self.config.rotation.compression else None,
+            enqueue=True,
             backtrace=True,
             diagnose=True,
         )
@@ -94,6 +95,7 @@ class LoggingManager:
                 else "90 days"
             ),
             compression="gz" if self.config.rotation.compression else None,
+            enqueue=True,
             backtrace=True,
             diagnose=True,
         )
@@ -106,6 +108,7 @@ class LoggingManager:
             rotation=self.config.rotation.size,
             retention=self.config.rotation.retention,
             compression="gz" if self.config.rotation.compression else None,
+            enqueue=True,
             backtrace=True,
             diagnose=True,
         )
@@ -119,6 +122,7 @@ class LoggingManager:
                 rotation=self.config.rotation.size,
                 retention=self.config.rotation.retention,
                 compression="gz" if self.config.rotation.compression else None,
+                enqueue=True,
                 backtrace=True,
                 diagnose=True,
                 filter=lambda record: record["extra"].get("log_type") == "performance",
@@ -140,6 +144,7 @@ class LoggingManager:
             rotation=self.config.rotation.size,
             retention=self.config.rotation.retention,
             compression="gz" if self.config.rotation.compression else None,
+            enqueue=True,
             backtrace=True,
             diagnose=True,
             filter=lambda record: record["extra"].get("service") == service_name,
