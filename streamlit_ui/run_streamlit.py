@@ -3,9 +3,9 @@ Run script for Streamlit Trading System UI
 Supports both single-file and multipage configurations
 """
 
+import os
 import subprocess
 import sys
-import os
 
 
 def run_streamlit():

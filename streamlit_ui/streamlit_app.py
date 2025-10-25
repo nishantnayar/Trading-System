@@ -3,9 +3,10 @@ Main Streamlit application for Trading System
 Handles session state initialization and global configuration
 """
 
-import streamlit as st
 import os
 from datetime import datetime
+
+import streamlit as st
 
 # Configure Streamlit page
 st.set_page_config(

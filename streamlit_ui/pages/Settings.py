@@ -3,9 +3,10 @@ Settings page for Trading System
 User preferences, system configuration, and session state management
 """
 
-import streamlit as st
 import os
 from datetime import datetime
+
+import streamlit as st
 
 def load_custom_css():
     """Load custom CSS from file and configuration"""

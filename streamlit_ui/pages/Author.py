@@ -3,10 +3,11 @@ Author page for Trading System
 System information, team details, and contact information
 """
 
-import streamlit as st
+import os
+
 import pandas as pd
 import plotly.graph_objects as go
-import os
+import streamlit as st
 
 def load_custom_css():
     """Load custom CSS from file and configuration"""
