@@ -5,6 +5,7 @@ Run script for Streamlit Trading System UI
 import subprocess
 import sys
 
+
 def run_streamlit():
     """Run Streamlit with correct settings"""
     try:

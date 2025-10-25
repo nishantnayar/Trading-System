@@ -15,8 +15,12 @@ from fastapi import FastAPI  # noqa: E402
 from src.web.api.alpaca_routes import router as alpaca_router  # noqa: E402
 from src.web.api.company_info import router as company_info_router  # noqa: E402
 from src.web.api.company_officers import router as company_officers_router  # noqa: E402
-from src.web.api.financial_statements import router as financial_statements_router  # noqa: E402
-from src.web.api.institutional_holders import router as institutional_holders_router  # noqa: E402
+from src.web.api.financial_statements import (  # noqa: E402
+    router as financial_statements_router,
+)
+from src.web.api.institutional_holders import (  # noqa: E402
+    router as institutional_holders_router,
+)
 from src.web.api.key_statistics import router as key_statistics_router  # noqa: E402
 from src.web.api.market_data import router as market_data_router  # noqa: E402
 from src.web.api.routes import router  # noqa: E402
