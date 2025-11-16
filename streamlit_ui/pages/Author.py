@@ -4,10 +4,35 @@ System information, team details, and contact information
 """
 
 import os
+import sys
 
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+from utils import (
+    format_currency,
+    format_number,
+    format_percentage,
+    get_session_state,
+    show_info_message,
+)
+
+# Centralized Plotly configuration to avoid deprecation warnings
+PLOTLY_CONFIG = {
+    'displayModeBar': True,
+    'displaylogo': False,
+    'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d', 'autoScale2d', 'resetScale2d'],
+    'toImageButtonOptions': {
+        'format': 'png',
+        'filename': 'plot',
+        'height': 500,
+        'width': 700,
+        'scale': 1
+    }
+}
 
 
 def load_custom_css():
@@ -114,10 +139,11 @@ def author_page():
         title="System Architecture",
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        height=400
+        height=400,
+        template='plotly_white'
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch', config=PLOTLY_CONFIG)
     
     # Development team
     st.subheader("Development Team")
@@ -130,7 +156,7 @@ def author_page():
     }
     
     df_team = pd.DataFrame(team_data)
-    st.dataframe(df_team, use_container_width=True)
+    st.dataframe(df_team, width='stretch')
     
     # Contact information
     st.subheader("Contact & Support")
@@ -166,7 +192,7 @@ def author_page():
     }
     
     df_info = pd.DataFrame(info_data)
-    st.dataframe(df_info, use_container_width=True)
+    st.dataframe(df_info, width='stretch')
     
     # Session state information
     st.subheader("Current Session Information")

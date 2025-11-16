@@ -120,7 +120,7 @@ fig = go.Figure(data=go.Candlestick(
     low=df['low'],
     close=df['close']
 ))
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width='stretch')
 ```
 
 #### 3. Session State Management
@@ -137,7 +137,7 @@ st.session_state.selected_symbol = symbol
 #### 4. Data Display
 ```python
 # Display data tables
-st.dataframe(df, use_container_width=True)
+st.dataframe(df, width='stretch')
 
 # Display JSON data
 st.json(session_state_data)

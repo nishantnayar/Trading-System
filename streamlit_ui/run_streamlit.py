@@ -65,8 +65,8 @@ font = "sans serif"
 
 
 if __name__ == "__main__":
-    print("🚀 Starting Streamlit Trading System...")
-    print("📁 Multipage app structure:")
+    print("Starting Streamlit Trading System...")
+    print("Multipage app structure:")
     print("   - Main app: streamlit_ui/streamlit_app.py")
     print("   - Pages: streamlit_ui/pages/")
     print("   - Navigation: Automatic sidebar menu")

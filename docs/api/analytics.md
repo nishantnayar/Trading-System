@@ -345,7 +345,7 @@ fig = go.Figure(data=go.Candlestick(
     low=[d['low'] for d in data],
     close=[d['close'] for d in data]
 ))
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width='stretch')
 ```
 
 ### Session State Integration

@@ -8,6 +8,8 @@ from datetime import datetime
 
 import streamlit as st
 
+from utils import initialize_session_state, load_custom_css
+
 # Configure Streamlit page
 st.set_page_config(
     page_title="Trading System",
@@ -37,40 +39,7 @@ def load_custom_css():
     except Exception as e:
         st.error(f"Error loading custom CSS: {e}")
 
-def initialize_session_state():
-    """Initialize session state variables"""
-    if 'portfolio_value' not in st.session_state:
-        st.session_state.portfolio_value = 125000
-    
-    if 'total_return' not in st.session_state:
-        st.session_state.total_return = 15.2
-    
-    if 'active_positions' not in st.session_state:
-        st.session_state.active_positions = 8
-    
-    if 'win_rate' not in st.session_state:
-        st.session_state.win_rate = 68
-    
-    if 'selected_symbol' not in st.session_state:
-        st.session_state.selected_symbol = "AAPL"
-    
-    if 'selected_timeframe' not in st.session_state:
-        st.session_state.selected_timeframe = "1M"
-    
-    if 'user_preferences' not in st.session_state:
-        st.session_state.user_preferences = {
-            'theme': 'light',
-            'notifications': True,
-            'auto_refresh': False
-        }
-    
-    if 'trading_data' not in st.session_state:
-        st.session_state.trading_data = {
-            'last_update': datetime.now(),
-            'market_status': 'open',
-            'positions': [],
-            'orders': []
-        }
+# Session state initialization is now handled by the utility function
 
 def create_sidebar():
     """Create sidebar with system status and navigation info"""

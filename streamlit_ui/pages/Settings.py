@@ -4,9 +4,26 @@ User preferences, system configuration, and session state management
 """
 
 import os
+import sys
 from datetime import datetime
 
 import streamlit as st
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+from utils import (
+    get_session_state,
+    initialize_session_state,
+    reset_session_state,
+    show_error_message,
+    show_info_message,
+    show_success_message,
+    show_warning_message,
+    update_session_state,
+    validate_date_range,
+    validate_numeric_input,
+    validate_symbol,
+)
 
 
 def load_custom_css():

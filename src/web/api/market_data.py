@@ -150,8 +150,8 @@ async def get_available_symbols() -> List[SymbolInfo]:
 @router.get("/data/{symbol}", response_model=List[MarketDataResponse])
 async def get_market_data(
     symbol: str,
-    limit: int = Query(
-        default=100, ge=1, le=5000, description="Number of records to return"
+    limit: Optional[int] = Query(
+        default=None, ge=1, le=5000, description="Number of records to return (no limit if not specified)"
     ),
     offset: int = Query(default=0, ge=0, description="Number of records to skip"),
     start_date: Optional[str] = Query(
@@ -192,7 +192,9 @@ async def get_market_data(
             query = query.order_by(desc(MarketData.timestamp))
 
             # Add pagination
-            query = query.offset(offset).limit(limit)
+            query = query.offset(offset)
+            if limit is not None:
+                query = query.limit(limit)
 
             # Execute query
             result = session.execute(query)

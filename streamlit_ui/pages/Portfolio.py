@@ -4,6 +4,7 @@ Portfolio tracking, performance metrics, and position management
 """
 
 import os
+import sys
 from datetime import datetime, timedelta
 
 import numpy as np
@@ -11,6 +12,36 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+from utils import (
+    create_info_card,
+    create_metric_card,
+    create_pie_chart,
+    create_price_chart,
+    format_currency,
+    format_number,
+    format_percentage,
+    get_session_state,
+    initialize_session_state,
+    show_loading_spinner,
+    update_session_state,
+)
+
+# Centralized Plotly configuration to avoid deprecation warnings
+PLOTLY_CONFIG = {
+    'displayModeBar': True,
+    'displaylogo': False,
+    'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d', 'autoScale2d', 'resetScale2d'],
+    'toImageButtonOptions': {
+        'format': 'png',
+        'filename': 'plot',
+        'height': 500,
+        'width': 700,
+        'scale': 1
+    }
+}
 
 
 def load_custom_css():
@@ -36,11 +67,7 @@ def load_custom_css():
 
 def portfolio_page():
     """Portfolio page with dashboard overview"""
-    st.title("📈 Portfolio - Trading Dashboard")
-    
-    st.write("Monitor your portfolio performance and market activity.")
-    
-    # Initialize session state if not exists
+    # Initialize session state FIRST before any access
     if 'portfolio_value' not in st.session_state:
         st.session_state.portfolio_value = 125000
     if 'total_return' not in st.session_state:
@@ -49,6 +76,10 @@ def portfolio_page():
         st.session_state.active_positions = 8
     if 'win_rate' not in st.session_state:
         st.session_state.win_rate = 68
+    
+    st.title("📈 Portfolio - Trading Dashboard")
+    
+    st.write("Monitor your portfolio performance and market activity.")
     
     # Key metrics with session state
     st.subheader("Portfolio Overview")
@@ -91,10 +122,11 @@ def portfolio_page():
         title="Portfolio Value Over Time",
         xaxis_title="Date",
         yaxis_title="Value ($)",
-        height=400
+        height=400,
+        template='plotly_white'
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch', config=PLOTLY_CONFIG)
     
     # Portfolio allocation
     st.subheader("Portfolio Allocation")
@@ -117,10 +149,11 @@ def portfolio_page():
         
         fig_pie.update_layout(
             title="Portfolio Allocation by Sector",
-            height=400
+            height=400,
+            template='plotly_white'
         )
         
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, width='stretch', config=PLOTLY_CONFIG)
     
     with col2:
         # Top holdings table
@@ -136,7 +169,7 @@ def portfolio_page():
         
         df_holdings = pd.DataFrame(holdings_data)
         df_holdings['Weight'] = df_holdings['Weight'].astype(str) + '%'
-        st.dataframe(df_holdings, use_container_width=True)
+        st.dataframe(df_holdings, width='stretch')
     
     # Recent activity
     st.subheader("Recent Activity")
@@ -150,7 +183,7 @@ def portfolio_page():
     }
     
     df_activity = pd.DataFrame(activity_data)
-    st.dataframe(df_activity, use_container_width=True)
+    st.dataframe(df_activity, width='stretch')
     st.markdown('</div>', unsafe_allow_html=True)
     
     # Risk metrics
