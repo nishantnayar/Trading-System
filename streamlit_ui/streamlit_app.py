@@ -7,7 +7,6 @@ import os
 from datetime import datetime
 
 import streamlit as st
-
 from utils import initialize_session_state, load_custom_css
 
 # Configure Streamlit page

@@ -12,19 +12,19 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-from streamlit_lightweight_charts import renderLightweightCharts, Chart
+from streamlit_lightweight_charts import Chart, renderLightweightCharts
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from utils import (
     calculate_returns,
     calculate_volatility,
+    convert_api_data_to_ohlc,
     create_candlestick_chart,
-    create_price_chart,
-    create_volume_chart,
     create_lightweight_ohlc_chart,
     create_lightweight_volume_chart,
-    convert_api_data_to_ohlc,
+    create_price_chart,
+    create_volume_chart,
     format_currency,
     format_percentage,
     generate_ohlc_data,

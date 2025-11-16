@@ -12,7 +12,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-
 # ============================================================================
 # FORMATTING UTILITIES
 # ============================================================================
@@ -684,8 +683,9 @@ def generate_ohlc_data(
         List of OHLC data dictionaries
     """
     from datetime import datetime, timedelta
+
     import numpy as np
-    
+
     # Generate date range
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days)
@@ -735,8 +735,8 @@ def create_lightweight_ohlc_chart(
         symbol: Stock symbol for display
         height: Chart height in pixels
     """
-    from streamlit_lightweight_charts import renderLightweightCharts, Chart
-    
+    from streamlit_lightweight_charts import Chart, renderLightweightCharts
+
     # Prepare data for lightweight chart
     chart_data = {
         'chart': {
@@ -775,8 +775,8 @@ def create_lightweight_volume_chart(
         symbol: Stock symbol for display
         height: Chart height in pixels
     """
-    from streamlit_lightweight_charts import renderLightweightCharts, Chart
-    
+    from streamlit_lightweight_charts import Chart, renderLightweightCharts
+
     # Prepare volume data
     volume_data = {
         'chart': {
