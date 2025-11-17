@@ -261,10 +261,11 @@ If indicators are not available in the database:
 
 ### Query Formulation
 
-**Good Queries:**
-- ✅ "Find tech stocks with RSI below 30"
-- ✅ "Show me healthcare stocks with high volume"
-- ✅ "Find stocks with price between $50 and $200"
+** ✅ Good Queries:**
+
+- "Find tech stocks with RSI below 30"
+- "Show me healthcare stocks with high volume"
+- "Find stocks with price between $50 and $200"
 
 **Less Effective:**
 - ❌ "Good stocks" (too vague)
