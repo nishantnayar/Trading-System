@@ -249,13 +249,13 @@ If indicators are not available in the database:
         ollama list
         ```
 
-   2. Check if a model is installed:
+2. Check if a model is installed:
 
        ```bash
        ollama pull phi3
        ```
 
-   3. Test Ollama connection:
+3. Test Ollama connection:
 
        ```bash
        python scripts/test_ollama.py
@@ -325,11 +325,12 @@ If indicators are not available in the database:
 
 **Query:**
 
-        ```text
-        Find technology stocks with RSI below 30 and volume above 500,000
-        ```
+```text
+Find technology stocks with RSI below 30 and volume above 500,000
+```
 
 **What it does:**
+
 - Filters to Technology sector
 - Finds stocks with RSI < 30 (oversold condition)
 - Requires minimum volume of 500,000
@@ -338,12 +339,14 @@ If indicators are not available in the database:
 ### Example 2: High-Growth Healthcare Stocks
 
 **Traditional Filters:**
+
 - Sector: Healthcare
 - Min Price Change (30d): 10%
 - Min Market Cap: $1.0B
 - RSI: 40-70
 
 **What it finds:**
+
 - Healthcare stocks with strong recent performance
 - Established companies (market cap filter)
 - Not overbought (RSI < 70)
@@ -353,11 +356,12 @@ If indicators are not available in the database:
 
 **Query:**
 
-        ```text
-        Find stocks with price between $20 and $100, low volatility, and positive 30-day change
-        ```
+```text
+Find stocks with price between $20 and $100, low volatility, and positive 30-day change
+```
 
 **What it identifies:**
+
 - Stocks in reasonable price range
 - Low volatility (less risky)
 - Positive momentum (recent gains)
@@ -366,11 +370,13 @@ If indicators are not available in the database:
 ## Integration with Other Features
 
 ### Analysis Page
+
 - Select a symbol from screener results
 - Navigate to Analysis page for detailed charts
 - View technical indicators and company info
 
 ### Portfolio Management
+
 - Use screener to find potential additions
 - Export results for portfolio planning
 - Cross-reference with existing holdings
@@ -378,6 +384,7 @@ If indicators are not available in the database:
 ## Future Enhancements
 
 Planned improvements:
+
 - **Database-Backed Indicators**: Store pre-calculated indicators for 10-100x faster screening
 - **More Symbols**: Increase screening limit (1000+ with database storage)
 - **Advanced Filters**: More technical indicators (Stochastic, ADX, etc.)
@@ -391,11 +398,13 @@ Planned improvements:
 ## Technical Documentation
 
 For developers and technical details:
+
 - **[Stock Screener Architecture](../development/stock-screener-architecture.md)** - Complete technical documentation, architecture overview, component breakdown, data flow, and implementation details
 
 ## Support
 
 For issues or questions:
+
 1. Check the troubleshooting section above
 2. Review system logs for errors
 3. Verify API and Ollama connections
