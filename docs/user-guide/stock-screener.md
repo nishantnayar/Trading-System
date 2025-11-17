@@ -245,21 +245,21 @@ If indicators are not available in the database:
 
 1. Verify Ollama is running:
 
-   ```bash
-   ollama list
-   ```
+        ```bash
+        ollama list
+        ```
 
-2. Check if a model is installed:
+   2. Check if a model is installed:
 
-   ```bash
-   ollama pull phi3
-   ```
+       ```bash
+       ollama pull phi3
+       ```
 
-3. Test Ollama connection:
+   3. Test Ollama connection:
 
-   ```bash
-   python scripts/test_ollama.py
-   ```
+       ```bash
+       python scripts/test_ollama.py
+       ```
 
 ### Slow Performance
 
@@ -325,9 +325,9 @@ If indicators are not available in the database:
 
 **Query:**
 
-```text
-Find technology stocks with RSI below 30 and volume above 500,000
-```
+        ```text
+        Find technology stocks with RSI below 30 and volume above 500,000
+        ```
 
 **What it does:**
 - Filters to Technology sector
@@ -353,9 +353,9 @@ Find technology stocks with RSI below 30 and volume above 500,000
 
 **Query:**
 
-```text
-Find stocks with price between $20 and $100, low volatility, and positive 30-day change
-```
+        ```text
+        Find stocks with price between $20 and $100, low volatility, and positive 30-day change
+        ```
 
 **What it identifies:**
 - Stocks in reasonable price range
