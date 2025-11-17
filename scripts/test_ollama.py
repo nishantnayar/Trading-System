@@ -3,10 +3,11 @@ Test script to verify Ollama installation and connectivity
 Run this after installing Ollama to ensure everything works
 """
 
-import sys
 import os
-import requests
+import sys
 from typing import Optional
+
+import requests
 
 # Fix Windows encoding issues
 if sys.platform == 'win32':

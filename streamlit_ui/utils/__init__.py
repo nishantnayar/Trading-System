@@ -3,8 +3,9 @@ Utilities module for Streamlit UI
 Re-exports functions from the parent utils.py file
 """
 
-import sys
+import importlib.util
 import os
+import sys
 
 # Import from parent utils.py file
 # We need to import it as a module from the parent directory
@@ -13,7 +14,6 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 # Import the utils module (the file, not this package)
-import importlib.util
 utils_file_path = os.path.join(parent_dir, 'utils.py')
 spec = importlib.util.spec_from_file_location("streamlit_ui_utils", utils_file_path)
 utils_module = importlib.util.module_from_spec(spec)
