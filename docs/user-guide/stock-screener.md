@@ -352,6 +352,11 @@ Planned improvements:
 - **Real-Time Updates**: Automatic indicator recalculation on new market data
 - **Indicator History**: Track indicator changes over time for pattern analysis
 
+## Technical Documentation
+
+For developers and technical details:
+- **[Stock Screener Architecture](../development/stock-screener-architecture.md)** - Complete technical documentation, architecture overview, component breakdown, data flow, and implementation details
+
 ## Support
 
 For issues or questions:

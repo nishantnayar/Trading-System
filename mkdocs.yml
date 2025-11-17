@@ -47,6 +47,7 @@ nav:
   - Getting Started: getting-started.md
   - User Guide:
     - Dashboard Overview: user-guide/dashboard.md
+    - Stock Screener: user-guide/stock-screener.md
     - Trading Operations: user-guide/trading.md
     - Strategy Management: user-guide/strategies.md
     - Risk Management: user-guide/risk-management.md
@@ -59,6 +60,7 @@ nav:
   - Troubleshooting: troubleshooting.md
   - Development:
     - System Architecture: development/architecture.md
+    - Stock Screener Architecture: development/stock-screener-architecture.md
     - Database Architecture: development/database.md
     - Session Management Testing: development/session-management-testing.md
     - Logging Architecture: development/logging.md

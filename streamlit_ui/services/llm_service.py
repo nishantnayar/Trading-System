@@ -106,15 +106,61 @@ Response: {{"sector": null, "keywords": ["Apple"]}}
             elif '```' in content:
                 content = content.split('```')[1].split('```')[0].strip()
             
+            # Try to find JSON object in the response
             import json
-            criteria = json.loads(content)
+            import re
+            
+            # Try to extract JSON object using regex if direct parsing fails
+            json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', content, re.DOTALL)
+            if json_match:
+                content = json_match.group(0)
+            
+            # Clean up common JSON issues
+            # Remove trailing commas before closing braces/brackets
+            content = re.sub(r',\s*}', '}', content)
+            content = re.sub(r',\s*]', ']', content)
+            
+            # Try to parse JSON
+            try:
+                criteria = json.loads(content)
+            except json.JSONDecodeError as json_err:
+                logger.warning(f"JSON parse error: {json_err}")
+                logger.debug(f"Content that failed to parse: {content[:500]}")
+                # Try to extract just the fields we need manually
+                criteria = {}
+                
+                # Try to extract sector
+                sector_match = re.search(r'"sector"\s*:\s*"([^"]+)"', content, re.IGNORECASE)
+                if sector_match:
+                    criteria['sector'] = sector_match.group(1)
+                
+                # Try to extract RSI values
+                rsi_max_match = re.search(r'"rsi_max"\s*:\s*(\d+(?:\.\d+)?)', content, re.IGNORECASE)
+                if rsi_max_match:
+                    criteria['rsi_max'] = float(rsi_max_match.group(1))
+                
+                rsi_min_match = re.search(r'"rsi_min"\s*:\s*(\d+(?:\.\d+)?)', content, re.IGNORECASE)
+                if rsi_min_match:
+                    criteria['rsi_min'] = float(rsi_min_match.group(1))
+                
+                # Try to extract keywords
+                keywords_match = re.search(r'"keywords"\s*:\s*\[(.*?)\]', content, re.IGNORECASE | re.DOTALL)
+                if keywords_match:
+                    keywords_str = keywords_match.group(1)
+                    keywords = [kw.strip().strip('"\'') for kw in keywords_str.split(',') if kw.strip()]
+                    if keywords:
+                        criteria['keywords'] = keywords
+                
+                logger.info(f"Extracted partial criteria from malformed JSON: {criteria}")
             
             logger.info(f"Parsed query '{query}' into criteria: {criteria}")
             return criteria
             
         except Exception as e:
             logger.error(f"Error interpreting query: {e}")
-            # Return empty criteria on error
+            import traceback
+            logger.debug(f"Full traceback: {traceback.format_exc()}")
+            # Return empty criteria on error - allow fallback to traditional filters
             return {}
     
     def analyze_screened_results(
