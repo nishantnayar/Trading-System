@@ -54,9 +54,9 @@ Get intelligent insights about your screening results:
 
 1. Start your Streamlit application:
 
-   ```
-   streamlit run streamlit_ui/streamlit_app.py
-   ```
+```bash
+streamlit run streamlit_ui/streamlit_app.py
+```
 
 2. Navigate to the **Screener** page from the sidebar menu
 
@@ -65,9 +65,9 @@ Get intelligent insights about your screening results:
 1. Click on the **"🤖 Natural Language Query"** tab
 2. Enter your query in the text box:
 
-   ```
-   Find tech stocks with RSI below 30 and volume above 1 million
-   ```
+```
+Find tech stocks with RSI below 30 and volume above 1 million
+```
 3. Click **"🔍 Search"**
 4. The AI will interpret your query and show the parsed criteria
 5. Review the matching stocks in the results table
@@ -246,19 +246,21 @@ If indicators are not available in the database:
 
 1. Verify Ollama is running:
 
-   ```
-   ollama list
-   ```
+```bash
+ollama list
+```
+
 2. Check if a model is installed:
 
-   ```
-   ollama pull phi3
-   ```
+```bash
+ollama pull phi3
+```
+
 3. Test Ollama connection:
 
-   ```
-   python scripts/test_ollama.py
-   ```
+```bash
+python scripts/test_ollama.py
+```
 
 ### Slow Performance
 
@@ -323,7 +325,8 @@ If indicators are not available in the database:
 ### Example 1: Finding Oversold Tech Stocks
 
 **Query:**
-```
+
+```text
 Find technology stocks with RSI below 30 and volume above 500,000
 ```
 
@@ -350,7 +353,8 @@ Find technology stocks with RSI below 30 and volume above 500,000
 ### Example 3: Value Stocks
 
 **Query:**
-```
+
+```text
 Find stocks with price between $20 and $100, low volatility, and positive 30-day change
 ```
 
