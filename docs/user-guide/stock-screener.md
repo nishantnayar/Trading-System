@@ -221,14 +221,17 @@ If indicators are not available in the database:
 
 **Solutions:**
 1. Verify Ollama is running:
+
    ```bash
    ollama list
    ```
 2. Check if a model is installed:
+
    ```bash
    ollama pull phi3
    ```
 3. Test Ollama connection:
+
    ```bash
    python scripts/test_ollama.py
    ```
@@ -236,11 +239,13 @@ If indicators are not available in the database:
 ### Slow Performance
 
 **Causes:**
+
 - Large number of symbols to screen
 - Network latency to API
 - LLM processing time
 
 **Solutions:**
+
 - Reduce number of symbols (currently limited to 50)
 - Use traditional filters instead of natural language (faster)
 - Ensure API is running locally for faster response
@@ -248,11 +253,13 @@ If indicators are not available in the database:
 ### Missing Technical Indicators
 
 **Causes:**
+
 - Insufficient historical data
 - Symbol has limited trading history
 - Data quality issues
 
 **Solutions:**
+
 - Ensure sufficient historical data is loaded
 - Check data quality in database
 - Some indicators require minimum data points (e.g., RSI needs 15+ days)
@@ -267,10 +274,11 @@ If indicators are not available in the database:
 - "Show me healthcare stocks with high volume"
 - "Find stocks with price between $50 and $200"
 
-**Less Effective:**
-- ❌ "Good stocks" (too vague)
-- ❌ "Find everything" (no criteria)
-- ❌ Very complex multi-part queries (may not parse correctly)
+**Less Effective ❌**
+
+- "Good stocks" (too vague)
+- "Find everything" (no criteria)
+- Very complex multi-part queries (may not parse correctly)
 
 ### Filter Strategy
 
