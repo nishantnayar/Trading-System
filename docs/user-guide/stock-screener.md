@@ -54,7 +54,7 @@ Get intelligent insights about your screening results:
 
 1. Start your Streamlit application:
 
-   ```bash
+   ```
    streamlit run streamlit_ui/streamlit_app.py
    ```
 
@@ -64,6 +64,7 @@ Get intelligent insights about your screening results:
 
 1. Click on the **"🤖 Natural Language Query"** tab
 2. Enter your query in the text box:
+
    ```
    Find tech stocks with RSI below 30 and volume above 1 million
    ```
@@ -124,7 +125,7 @@ The results table displays:
 
 1. After screening, scroll to the bottom of the results
 2. Click **"📥 Download Results as CSV"**
-3. The file will be named: `stock_screener_results_YYYYMMDD_HHMMSS.csv`
+3. The file will be named: ***stock_screener_results_YYYYMMDD_HHMMSS.csv***
 
 ## Technical Details
 
@@ -180,6 +181,7 @@ The screener uses a **hybrid approach** for technical indicators:
 #### Fallback Calculation
 
 If indicators are not available in the database:
+
 - Calculates indicators on-the-fly using Python functions
 - Uses same calculation logic for consistency
 - Results are not stored (for performance, use database approach)
@@ -244,17 +246,17 @@ If indicators are not available in the database:
 
 1. Verify Ollama is running:
 
-   ```bash
+   ```
    ollama list
    ```
 2. Check if a model is installed:
 
-   ```bash
+   ```
    ollama pull phi3
    ```
 3. Test Ollama connection:
 
-   ```bash
+   ```
    python scripts/test_ollama.py
    ```
 
@@ -290,13 +292,13 @@ If indicators are not available in the database:
 
 ### Query Formulation
 
-**Good Queries ✅**
+✅ **Good Queries**
 
 - "Find tech stocks with RSI below 30"
 - "Show me healthcare stocks with high volume"
 - "Find stocks with price between $50 and $200"
 
-**Less Effective ❌**
+❌ **Less Effective**
 
 - "Good stocks" (too vague)
 - "Find everything" (no criteria)
@@ -398,6 +400,6 @@ For issues or questions:
 
 ---
 
-**Last Updated**: 2025-01-16  
+**Last Updated**: 2025-11-16  
 **Version**: 1.0.0
 
