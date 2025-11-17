@@ -47,3 +47,7 @@ streamlit-plotly-events>=0.0.6
 streamlit-option-menu>=0.3.6
 streamlit-aggrid>=0.3.4
 streamlit-lightweight-charts>=0.1.0
+
+# Local LLM Integration
+ollama>=0.1.0
+requests>=2.31.0

@@ -53,6 +53,7 @@ python main.py
 
 ### **User Guide**
 - [Dashboard Overview](user-guide/dashboard.md) - Navigate the interface
+- [Stock Screener](user-guide/stock-screener.md) - AI-powered stock screening
 - [Trading Operations](user-guide/trading.md) - Execute trades
 - [Strategy Management](user-guide/strategies.md) - Create and manage strategies
 - [Risk Management](user-guide/risk-management.md) - Control your exposure
@@ -66,6 +67,7 @@ python main.py
 
 ### **Development**
 - [System Architecture](development/architecture.md) - Complete system design
+- [Stock Screener Architecture](development/stock-screener-architecture.md) - Screener technical documentation
 - [Database Architecture](development/database.md) - Database design and implementation
 - [Database Setup](development/database.md) - Step-by-step database setup guide
 - [Logging Architecture](development/logging.md) - Detailed logging strategy
@@ -150,6 +152,7 @@ Your Streamlit trading interface provides:
 
 - **Portfolio Management** - Real-time portfolio tracking and performance metrics
 - **Market Analysis** - Interactive charts with technical indicators using Plotly
+- **Stock Screener** - AI-powered stock screening with natural language queries
 - **System Information** - Team details and system architecture
 - **Settings** - User preferences and session state management
 - **Session State** - Persistent data sharing across all pages

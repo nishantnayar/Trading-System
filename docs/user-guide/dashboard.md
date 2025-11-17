@@ -6,6 +6,7 @@ This guide covers the modern Streamlit multipage interface with session state ma
 
 - **Portfolio Management**: Real-time portfolio tracking and performance metrics
 - **Market Analysis**: Interactive charts with technical indicators using Plotly
+- **Stock Screener**: AI-powered stock screening with natural language queries
 - **System Information**: Team details and system architecture
 - **Settings**: User preferences and session state management
 - **Session State**: Persistent data sharing across all pages
@@ -29,7 +30,17 @@ Interactive market analysis with technical indicators:
 - **Volume Analysis**: Trading volume visualization
 - **Session State**: Selected symbol and timeframe persist across page navigation
 
-### 3. Author Page
+### 3. Stock Screener Page
+AI-powered stock screening with natural language queries:
+- **Natural Language Queries**: Ask questions like "Find tech stocks with RSI < 30"
+- **Traditional Filters**: Precise filtering by sector, price, volume, RSI, market cap
+- **Technical Indicators**: RSI, MACD, moving averages, volatility calculations
+- **AI Analysis**: Intelligent insights about screening results using local LLM
+- **Results Export**: Download filtered stocks as CSV
+- **Interactive Table**: Sortable and filterable results display
+- See [Stock Screener Guide](stock-screener.md) for detailed documentation
+
+### 4. Author Page
 System information and team details:
 - **System Overview**: Trading system features and capabilities
 - **Technology Stack**: Detailed technology information
@@ -37,7 +48,7 @@ System information and team details:
 - **Development Team**: Team information and contact details
 - **Session State Display**: Current session state information for debugging
 
-### 4. Settings Page
+### 5. Settings Page
 User preferences and system configuration:
 - **User Preferences**: Interface and display settings
 - **Portfolio Settings**: Portfolio configuration options
