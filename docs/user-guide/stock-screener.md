@@ -5,6 +5,7 @@ The Stock Screener is an AI-powered tool that helps you find stocks matching spe
 ## Overview
 
 The Stock Screener allows you to:
+
 - **Search with Natural Language**: Ask questions like "Find tech stocks with RSI below 30"
 - **Use Traditional Filters**: Apply precise filters for sector, price, volume, RSI, etc.
 - **Get AI Analysis**: Receive intelligent insights about your screening results
@@ -14,12 +15,14 @@ The Stock Screener allows you to:
 
 ### 🤖 Natural Language Queries
 Ask questions in plain English and let the AI interpret your requirements:
+
 - "Find undervalued tech stocks with high volume"
 - "Show me healthcare stocks with RSI between 30 and 70"
 - "Find stocks with price between $50 and $200 in the finance sector"
 
 ### ⚙️ Traditional Filters
 Use precise controls for exact filtering:
+
 - **Sector & Industry**: Filter by business sector and industry
 - **Price Range**: Set minimum and maximum price filters
 - **Volume**: Filter by average trading volume
@@ -29,6 +32,7 @@ Use precise controls for exact filtering:
 
 ### 📊 Technical Indicators
 The screener calculates and displays:
+
 - **RSI (Relative Strength Index)**: Momentum indicator (0-100)
 - **MACD**: Moving Average Convergence Divergence
 - **Moving Averages**: SMA 20, SMA 50
@@ -38,6 +42,7 @@ The screener calculates and displays:
 
 ### 🧠 AI-Powered Analysis
 Get intelligent insights about your screening results:
+
 - Pattern recognition in results
 - Notable opportunities or risks
 - Sector distribution analysis
@@ -48,6 +53,7 @@ Get intelligent insights about your screening results:
 ### Accessing the Screener
 
 1. Start your Streamlit application:
+
    ```bash
    streamlit run streamlit_ui/streamlit_app.py
    ```
@@ -67,6 +73,7 @@ Get intelligent insights about your screening results:
 6. Expand **"🤖 AI Analysis"** to see intelligent insights
 
 **Example Queries:**
+
 - `Find tech stocks with RSI < 30`
 - `Show me high volume stocks in healthcare sector`
 - `Find stocks with price between $50 and $200`
@@ -76,6 +83,7 @@ Get intelligent insights about your screening results:
 
 1. Click on the **"⚙️ Traditional Filters"** tab
 2. Set your filter criteria:
+
    - **Sector & Industry**: Select from dropdowns
    - **Price & Volume**: Enter numeric ranges
    - **Technical Indicators**: Use sliders and inputs
@@ -124,7 +132,8 @@ The results table displays:
 
 1. **Symbol Loading**: Fetches available symbols from the database
 2. **Data Retrieval**: Gets market data and company info for each symbol
-3. **Indicator Calculation**: 
+3. **Indicator Calculation**:
+
    - **Database-First**: Attempts to load pre-calculated indicators from database (fast)
    - **Fallback Calculation**: Calculates indicators on-the-fly if not in database
 4. **Filtering**: Applies your criteria to filter stocks
@@ -138,6 +147,7 @@ The screener uses a **hybrid approach** for technical indicators:
 #### Database-Backed Indicators (Recommended)
 
 **Benefits:**
+
 - ⚡ **10-100x Faster**: Pre-calculated indicators eliminate per-symbol calculations
 - 📊 **Historical Tracking**: Store indicator values over time for analysis
 - 🔍 **Direct SQL Filtering**: Filter by RSI, MACD directly in database queries
@@ -145,11 +155,13 @@ The screener uses a **hybrid approach** for technical indicators:
 - ✅ **Consistency**: Same calculation method for all queries
 
 **Storage Approach:**
+
 - **Latest Values Table**: Fast access to current indicator values for screening
 - **Time-Series Table**: Historical indicator values for backtesting and analysis
 - **Daily Calculation Jobs**: Automated calculation and storage of indicators
 
 **Indicators Stored:**
+
 - Moving Averages (SMA 20, 50, 200; EMA 12, 26)
 - Momentum Indicators (RSI, RSI-14)
 - MACD (Line, Signal, Histogram)
@@ -159,6 +171,7 @@ The screener uses a **hybrid approach** for technical indicators:
 - Volume Metrics (SMA-20, Volume Ratio)
 
 **Calculation Service:**
+
 - Batch processes indicators from market data
 - Handles missing data gracefully
 - Updates both latest and historical tables
@@ -174,19 +187,24 @@ If indicators are not available in the database:
 ### Performance Considerations
 
 **Current Implementation:**
+
 - **Symbol Limit**: Screens up to 50 symbols at a time (for demo purposes)
-- **Processing Time**: 
+- **Processing Time**:
+
   - With database: ~0.1-0.5 seconds per symbol (10-50x faster)
   - Without database: ~1-2 seconds per symbol (calculation overhead)
+
 - **Caching**: Company info and sectors are cached for faster loading
 - **LLM Processing**: AI analysis adds ~2-5 seconds depending on model
 
 **With Database Storage:**
+
 - **Screening Speed**: Can screen 1000+ symbols in seconds
 - **Query Performance**: Direct SQL filtering on RSI, MACD, etc.
 - **Storage Overhead**: ~50-100 bytes per symbol per day (~18-36 MB/year for 1000 symbols)
 
 **Migration Path:**
+
 1. Database tables created (no breaking changes)
 2. Calculation service populates indicators
 3. Screener automatically uses database when available
@@ -204,11 +222,13 @@ If indicators are not available in the database:
 ### No Results Found
 
 **Possible Causes:**
+
 - Criteria too restrictive
 - No symbols match all filters
 - Market data not available for symbols
 
 **Solutions:**
+
 - Relax filter criteria
 - Try broader sector/industry selections
 - Check if market data is loaded in database
@@ -216,10 +236,12 @@ If indicators are not available in the database:
 ### LLM Not Working
 
 **Symptoms:**
+
 - Warning message: "LLM service not available"
 - Natural language queries don't work
 
 **Solutions:**
+
 1. Verify Ollama is running:
 
    ```bash
