@@ -261,7 +261,7 @@ If indicators are not available in the database:
 
 ### Query Formulation
 
-** ✅ Good Queries:**
+**Good Queries ✅**
 
 - "Find tech stocks with RSI below 30"
 - "Show me healthcare stocks with high volume"
