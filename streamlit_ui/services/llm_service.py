@@ -3,7 +3,10 @@ LLM Service for Stock Screener
 Handles natural language queries and AI-powered analysis using Ollama
 """
 
+import json
 import os
+import re
+import traceback
 from typing import Any, Dict, List, Optional
 
 import ollama
@@ -107,9 +110,6 @@ Response: {{"sector": null, "keywords": ["Apple"]}}
                 content = content.split('```')[1].split('```')[0].strip()
             
             # Try to find JSON object in the response
-            import json
-            import re
-            
             # Try to extract JSON object using regex if direct parsing fails
             json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', content, re.DOTALL)
             if json_match:
@@ -158,7 +158,6 @@ Response: {{"sector": null, "keywords": ["Apple"]}}
             
         except Exception as e:
             logger.error(f"Error interpreting query: {e}")
-            import traceback
             logger.debug(f"Full traceback: {traceback.format_exc()}")
             # Return empty criteria on error - allow fallback to traditional filters
             return {}
