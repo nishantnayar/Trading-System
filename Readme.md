@@ -42,7 +42,8 @@ This system uses a **modular monolithic architecture** with clear service bounda
 | Feature | Description |
 |---------|-------------|
 | 🚀 **Paper Trading** | Safe testing environment with Alpaca paper trading API |
-| 📊 **Market Data** | Historical data from Polygon.io with comprehensive analytics |
+| 📊 **Market Data** | Historical data from Polygon.io, Yahoo Finance, and Alpaca with comprehensive analytics |
+| 🤖 **AI-Powered Screener** | Natural language stock screening with local LLM (Ollama) integration |
 | 🧠 **Strategy Engine** | Plugin-based framework for custom trading strategies |
 | ⚡ **Risk Management** | Built-in position sizing and risk controls |
 | 📈 **Analytics** | Interactive charts and performance tracking with Plotly |
@@ -51,6 +52,7 @@ This system uses a **modular monolithic architecture** with clear service bounda
 | 🔧 **Modular Design** | Scalable, maintainable service-oriented architecture |
 | 🗄️ **Database** | PostgreSQL with comprehensive schema design |
 | 📊 **Data Quality** | Automated data validation and quality monitoring |
+| 🌍 **Timezone Support** | UTC storage with Central Time display for all data |
 
 ## 🚀 Quick Start
 
@@ -59,7 +61,8 @@ This system uses a **modular monolithic architecture** with clear service bounda
 The trading system now features a modern **Streamlit multipage interface** with:
 
 - **Portfolio Management**: Real-time portfolio tracking and performance metrics
-- **Market Analysis**: Interactive charts with technical indicators
+- **Market Analysis**: Interactive charts with technical indicators using Plotly
+- **Stock Screener**: AI-powered stock screening with natural language queries (Ollama integration)
 - **System Information**: Team details and system architecture
 - **Settings**: User preferences and session state management
 - **Session State**: Persistent data sharing across all pages
@@ -73,8 +76,9 @@ The trading system now features a modern **Streamlit multipage interface** with:
 | **Python** | 3.11+ | Core runtime |
 | **Anaconda** | Latest | Package management |
 | **PostgreSQL** | 15+ | Primary database |
-| **Redis** | 7+ | Caching and messaging |
+| **Redis** | 7+ | Caching and messaging (optional) |
 | **Alpaca API** | - | Trading and market data |
+| **Ollama** | Latest | Local LLM for AI-powered features (optional) |
 
 > **Note**: Alpaca paper trading account is free and recommended for testing
 
@@ -196,8 +200,11 @@ pip install -r deployment/requirements.txt
 # Copy environment template
 cp deployment/env.example .env
 
-# Edit .env with your Alpaca API credentials
-# Get your API keys from: https://app.alpaca.markets/paper/dashboard/overview
+# Edit .env with your API credentials:
+# - Alpaca API keys: https://app.alpaca.markets/paper/dashboard/overview
+# - Polygon.io API key (optional, for historical data)
+# - Database credentials
+# - Redis URL (optional)
 ```
 
 #### 4. Initialize Database
@@ -318,11 +325,12 @@ mkdocs build
 - **Backtesting**: Historical strategy validation and optimization
 
 ### 📈 Data Processing
-- **Historical Data**: Polygon.io integration for backtesting and analysis
-- **Market Data Analytics**: Comprehensive data processing with Polars
+- **Historical Data**: Polygon.io and Yahoo Finance integration for backtesting and analysis
+- **Market Data Analytics**: Comprehensive data processing with pandas
 - **Data Quality Monitoring**: Automated validation and quality checks
 - **Performance Metrics**: Detailed analytics and reporting
-- **Interactive Charts**: Plotly.js integration for financial visualizations
+- **Interactive Charts**: Plotly integration for financial visualizations
+- **Timezone Handling**: All data stored in UTC, displayed in Central Time
 
 ### 🔔 Monitoring & Alerts
 - **Real-time Dashboard**: Live portfolio monitoring and control
@@ -333,6 +341,7 @@ mkdocs build
 ### 🛠️ Development Features
 - **Modular Architecture**: Service-oriented design ready for scaling
 - **Modern Frontend**: Streamlit + Plotly Charts + Custom CSS interface
+- **AI Integration**: Local LLM support via Ollama for natural language processing
 - **Comprehensive Logging**: Structured logging with Loguru
 - **Code Quality**: Black, Flake8, mypy, and pre-commit hooks
 - **Testing Suite**: Comprehensive test coverage across all components
@@ -402,6 +411,29 @@ risk_management:
    # Use Jupyter notebooks in docs/notebooks/backtesting/
    ```
 
+### AI-Powered Stock Screener
+
+The system includes an AI-powered stock screener with natural language query support:
+
+1. **Install Ollama** (optional but recommended):
+   ```bash
+   # Download from https://ollama.ai
+   # Install a model:
+   ollama pull phi3
+   ```
+
+2. **Access the Screener**:
+   - Navigate to the Screener page in the Streamlit UI
+   - Use natural language queries like "Find tech stocks with RSI below 30"
+   - Or use traditional filters for precise screening
+
+3. **Test Ollama Connection**:
+   ```bash
+   python scripts/test_ollama.py
+   ```
+
+See [Stock Screener Guide](docs/user-guide/stock-screener.md) for detailed documentation.
+
 ## 🚨 Risk Disclaimer
 
 **This software is for educational and research purposes only. Trading involves substantial risk of loss and is not suitable for all investors. Past performance is not indicative of future results.**
@@ -435,8 +467,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 | Version | Status | Features |
 |---------|--------|----------|
-| **v1.0.0** | Current | Paper trading, market data integration, web dashboard |
-| **v1.1.0** | Planned | Strategy engine implementation, backtesting |
+| **v1.0.0** | Current | Paper trading, market data integration, web dashboard, AI-powered stock screener |
+| **v1.1.0** | Planned | Strategy engine implementation, backtesting, risk management |
 | **v1.2.0** | Roadmap | Prefect orchestration, automated workflows |
 | **v1.3.0** | Roadmap | Microservices architecture, cloud deployment |
 

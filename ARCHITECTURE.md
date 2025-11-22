@@ -37,6 +37,7 @@ A production-grade algorithmic trading system designed for local deployment, foc
 - **Frontend**: Streamlit + Plotly Charts + Custom CSS
 - **Charts**: Plotly library for interactive financial visualizations
 - **Session State**: Persistent data sharing across pages
+- **AI Integration**: Ollama LLM for natural language processing
 - **Real-time**: Planned for future versions
 
 ### Development & Quality
@@ -58,20 +59,23 @@ The system is implemented as a **modular monolith** with clear service boundarie
 **Components**:
 - Polygon.io client (historical data)
 - Alpaca API client (real-time trading)
-- Yahoo Finance client (additional data source)
+- Yahoo Finance client (additional data source - company info, financials, key statistics)
 - Symbol management system
 - Data validation (Pydantic models)
 - Data quality checks
 - Error handling and retry logic
+- Timezone handling (UTC storage, Central Time display)
 
 **Responsibilities**:
 - Fetch historical market data from Polygon.io (end-of-day)
 - Fetch real-time trading data from Alpaca
+- Fetch company information and financials from Yahoo Finance
 - Manage symbol universe (active/delisted tracking)
 - Validate data integrity
-- Store raw data in PostgreSQL
+- Store raw data in PostgreSQL (UTC timezone)
 - Cache frequently accessed data in Redis
 - Automatic delisting detection
+- Timezone conversion for display (UTC to Central Time)
 
 **Implementation Status**: ✅ Core functionality implemented  
 **Future Enhancements**: Prefect workflows for automated data collection (v1.2.0)
@@ -141,6 +145,8 @@ The system is implemented as a **modular monolith** with clear service boundarie
 - Data visualization (Plotly Charts)
 - Market data analysis
 - Interactive dashboards
+- Technical indicator calculations
+- AI-powered analysis (via Ollama integration)
 
 **Responsibilities**:
 - Display market data with professional charts
@@ -148,8 +154,10 @@ The system is implemented as a **modular monolith** with clear service boundarie
 - Analyze trade patterns
 - Portfolio analytics
 - Technical indicator visualization
+- AI-powered stock screening and analysis
+- Natural language query interpretation
 
-**Implementation Status**: ✅ Market data visualization complete  
+**Implementation Status**: ✅ Market data visualization and AI screener complete  
 **Future Enhancements**: Strategy performance metrics, backtesting framework
 
 ### 6. Notification Module

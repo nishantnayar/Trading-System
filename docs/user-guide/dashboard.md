@@ -6,11 +6,12 @@ This guide covers the modern Streamlit multipage interface with session state ma
 
 - **Portfolio Management**: Real-time portfolio tracking and performance metrics
 - **Market Analysis**: Interactive charts with technical indicators using Plotly
-- **Stock Screener**: AI-powered stock screening with natural language queries
+- **Stock Screener**: AI-powered stock screening with natural language queries (Ollama integration)
 - **System Information**: Team details and system architecture
 - **Settings**: User preferences and session state management
 - **Session State**: Persistent data sharing across all pages
 - **Modern UI**: Clean, professional Streamlit interface
+- **Timezone Support**: All data displayed in Central Time (stored in UTC)
 
 ## Streamlit Pages
 
@@ -32,12 +33,13 @@ Interactive market analysis with technical indicators:
 
 ### 3. Stock Screener Page
 AI-powered stock screening with natural language queries:
-- **Natural Language Queries**: Ask questions like "Find tech stocks with RSI < 30"
+- **Natural Language Queries**: Ask questions like "Find tech stocks with RSI < 30" (requires Ollama)
 - **Traditional Filters**: Precise filtering by sector, price, volume, RSI, market cap
 - **Technical Indicators**: RSI, MACD, moving averages, volatility calculations
-- **AI Analysis**: Intelligent insights about screening results using local LLM
+- **AI Analysis**: Intelligent insights about screening results using local LLM (Ollama)
 - **Results Export**: Download filtered stocks as CSV
 - **Interactive Table**: Sortable and filterable results display
+- **Ollama Integration**: Uses local LLM for natural language processing (optional)
 - See [Stock Screener Guide](stock-screener.md) for detailed documentation
 
 ### 4. Author Page

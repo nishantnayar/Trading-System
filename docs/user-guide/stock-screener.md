@@ -248,11 +248,13 @@ If indicators are not available in the database:
         ```bash
         ollama list
         ```
+
 2. Check if a model is installed:
 
         ```bash
         ollama pull phi3
         ```
+
 3. Test Ollama connection:
 
        ```python
@@ -410,6 +412,6 @@ For issues or questions:
 
 ---
 
-**Last Updated**: 2025-11-16  
+**Last Updated**: 2025-11-22  
 **Version**: 1.0.0
 

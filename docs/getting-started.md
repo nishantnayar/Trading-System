@@ -47,6 +47,13 @@ This comprehensive guide will help you install, configure, and run the Trading S
      sudo apt-get install redis-server
      ```
 
+4. **Ollama** (Optional, for AI-powered stock screener)
+   - Download from [ollama.ai](https://ollama.ai)
+   - Install a model after installation:
+     ```bash
+     ollama pull phi3
+     ```
+
 ## Installation
 
 ### Step 1: Clone the Repository
@@ -133,6 +140,9 @@ python -c "import sqlalchemy, redis, fastapi; print('Core dependencies installed
    ALPACA_API_KEY=your_api_key_here
    ALPACA_SECRET_KEY=your_secret_key_here
    ALPACA_BASE_URL=https://paper-api.alpaca.markets
+   
+   # Ollama Configuration (Optional, for AI features)
+   OLLAMA_BASE_URL=http://localhost:11434
    
    # Application Configuration
    APP_NAME=Trading System
@@ -225,6 +235,28 @@ Database is ready for use.
    ALPACA_BASE_URL=https://paper-api.alpaca.markets
    ```
 
+### Step 5: Ollama Setup (Optional, for AI Features)
+
+1. **Install Ollama**:
+   - Download from [ollama.ai](https://ollama.ai)
+   - Install and start the service
+
+2. **Install a Model**:
+   ```bash
+   # Recommended model for stock screener
+   ollama pull phi3
+   ```
+
+3. **Test Connection**:
+   ```bash
+   python scripts/test_ollama.py
+   ```
+
+4. **Update `.env` file** (if using custom URL):
+   ```env
+   OLLAMA_BASE_URL=http://localhost:11434
+   ```
+
 ## First Run
 
 ### Step 1: Start Redis (Optional)
@@ -240,7 +272,18 @@ net start redis
 sudo systemctl start redis
 ```
 
-### Step 2: Start Prefect Server
+### Step 2: Start Ollama (Optional, for AI Features)
+
+```bash
+# Start Ollama service
+# Windows: Usually starts automatically after installation
+# Linux/macOS: Usually runs as a service
+
+# Verify it's running
+ollama list
+```
+
+### Step 3: Start Prefect Server (Optional)
 
 ```bash
 # Start Prefect server
@@ -249,7 +292,7 @@ prefect server start
 
 The Prefect UI will be available at `http://localhost:4200`.
 
-### Step 3: Run the Application
+### Step 4: Run the Application
 
 ```bash
 # Start the trading system
@@ -268,11 +311,14 @@ python -m src.services.strategy_engine.main
 python -m src.services.execution.main
 ```
 
-### Step 3: Access the Streamlit UI
+### Step 5: Access the Streamlit UI
 
 1. **Open your browser** and go to `http://localhost:8501`
 2. **Check the Streamlit interface** for system status
 3. **Verify the application** is running correctly
+4. **Test AI Features** (if Ollama is installed):
+   - Navigate to the Stock Screener page
+   - Try a natural language query like "Find tech stocks with RSI below 30"
 
 ## Verification
 
@@ -334,6 +380,7 @@ tail -f logs/strategy_engine.log
 - **Streamlit UI**: Navigate through the multipage interface at `http://localhost:8501`
 - **API Documentation**: Visit `http://localhost:8001/docs`
 - **Market Data**: Explore interactive charts and analytics with Plotly
+- **AI Stock Screener**: Try natural language queries in the Screener page (requires Ollama)
 
 ### 2. Configure Trading
 

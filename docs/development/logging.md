@@ -4,7 +4,7 @@
 
 This document outlines the logging architecture for the trading system, including design decisions, implementation strategy, and configuration management.
 
-**Last Updated**: October 2025  
+**Last Updated**: November 2025  
 **Status**: Implementation Phase  
 **Author**: Nishant Nayar
 

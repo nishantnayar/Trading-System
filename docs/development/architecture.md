@@ -8,7 +8,7 @@ A production-grade algorithmic trading system designed for local deployment, foc
 **Email**: nishant.nayar@hotmail.com  
 **Repository**: https://github.com/nishantnayar/trading-system  
 **Documentation**: https://nishantnayar.github.io/trading-system  
-**Last Updated**: September 2025  
+**Last Updated**: November 2025  
 **Status**: Design Phase
 
 ## System Requirements

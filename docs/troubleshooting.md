@@ -72,7 +72,19 @@ python scripts/run_tests.py check
 A: The Streamlit UI is available at `http://localhost:8501`. If it's not running, start it with:
 ```bash
 python streamlit_ui/run_streamlit.py
+# Or
+streamlit run streamlit_ui/streamlit_app.py
 ```
+
+**Q: How do I set up AI features (stock screener with natural language)?**
+A: 
+1. Install Ollama from [ollama.ai](https://ollama.ai)
+2. Install a model: `ollama pull phi3`
+3. Test connection: `python scripts/test_ollama.py`
+4. Natural language queries will work in the Stock Screener page
+
+**Q: Do I need Ollama for the stock screener?**
+A: No, Ollama is optional. You can use traditional filters without it. Natural language queries require Ollama.
 
 ## Common Issues
 
@@ -113,6 +125,39 @@ def initialize_session_state():
 pip install plotly
 # Ensure data is in correct format for Plotly charts
 ```
+
+**Error**: `LLM service not available` or `Ollama connection failed`
+
+**Solutions**:
+1. **Verify Ollama is installed and running**:
+   ```bash
+   # Check if Ollama is running
+   ollama list
+   
+   # If not running, start it
+   # Windows: Usually runs as a service
+   # Linux/macOS: Check service status
+   ```
+
+2. **Install a model**:
+   ```bash
+   # Install recommended model
+   ollama pull phi3
+   ```
+
+3. **Test connection**:
+   ```bash
+   python scripts/test_ollama.py
+   ```
+
+4. **Check environment variables**:
+   ```bash
+   # Verify OLLAMA_BASE_URL in .env (default: http://localhost:11434)
+   ```
+
+5. **Natural language queries won't work without Ollama**:
+   - Use traditional filters instead
+   - Or install and configure Ollama for AI features
 
 ### Database Connection Issues
 

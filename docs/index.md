@@ -107,13 +107,14 @@ graph TB
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Data Ingestion** | Python + pandas | Market data processing |
+| **Data Ingestion** | Python + pandas | Market data processing (Polygon.io, Yahoo Finance, Alpaca) |
 | **Strategy Engine** | Python + Pydantic | Algorithm execution (v1.1.0) |
 | **Risk Management** | Python + PostgreSQL | Risk controls (v1.1.0) |
 | **Execution Engine** | Python + Alpaca API | Order management |
-| **Analytics** | Python + Lightweight Charts | Performance tracking |
+| **Analytics** | Python + Plotly | Performance tracking and visualization |
+| **AI Services** | Python + Ollama | Natural language processing for stock screener |
 | **Database** | PostgreSQL | Data persistence |
-| **Cache** | Redis | High-speed access |
+| **Cache** | Redis | High-speed access (optional) |
 
 ---
 
@@ -121,10 +122,11 @@ graph TB
 
 ### **Trading Capabilities**
 - ✅ **Paper Trading** - Start with Alpaca paper trading
-- ✅ **Historical Data** - Polygon.io integration for backtesting
+- ✅ **Historical Data** - Polygon.io and Yahoo Finance integration for backtesting
+- ✅ **AI-Powered Screener** - Natural language stock screening with Ollama LLM
 - ✅ **Strategy Backtesting** - Test before live deployment
 - ✅ **Risk Controls** - Built-in risk management
-- ✅ **Performance Analytics** - Interactive charts and metrics
+- ✅ **Performance Analytics** - Interactive charts and metrics with Plotly
 - ✅ **Order Management** - Complete order lifecycle management
 
 ### **Technical Features**
@@ -133,10 +135,12 @@ graph TB
 - ✅ **Data Processing** - pandas for analytics and manipulation
 - ✅ **Modern UI** - Streamlit + Plotly Charts + Custom CSS
 - ✅ **Professional Charts** - Interactive financial visualizations with Plotly
+- ✅ **AI Integration** - Local LLM support via Ollama for natural language queries
 - ✅ **Session State** - Persistent data sharing across pages
 - ✅ **Comprehensive Logging** - Structured logging with Loguru
 - ✅ **Database Design** - PostgreSQL with comprehensive schema
 - ✅ **Data Quality** - Automated validation and monitoring
+- ✅ **Timezone Support** - UTC storage with Central Time display
 
 ### **Development Features**
 - ✅ **Code Quality** - Flake8, Black, isort, mypy
@@ -152,11 +156,12 @@ Your Streamlit trading interface provides:
 
 - **Portfolio Management** - Real-time portfolio tracking and performance metrics
 - **Market Analysis** - Interactive charts with technical indicators using Plotly
-- **Stock Screener** - AI-powered stock screening with natural language queries
+- **Stock Screener** - AI-powered stock screening with natural language queries (Ollama integration)
 - **System Information** - Team details and system architecture
 - **Settings** - User preferences and session state management
 - **Session State** - Persistent data sharing across all pages
 - **Modern UI** - Clean, professional Streamlit interface
+- **Timezone Support** - All data displayed in Central Time (stored in UTC)
 
 ---
 
@@ -172,6 +177,9 @@ REDIS_URL=redis://localhost:6379/0
 ALPACA_API_KEY=your_api_key
 ALPACA_SECRET_KEY=your_secret_key
 ALPACA_BASE_URL=https://paper-api.alpaca.markets
+
+# Ollama (Optional, for AI features)
+OLLAMA_BASE_URL=http://localhost:11434
 
 # Logging
 LOG_LEVEL=INFO
