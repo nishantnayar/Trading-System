@@ -139,10 +139,37 @@ def setup_test_tables(trading_engine):
     );
     """
 
+    # Create the analyst_recommendations table
+    create_analyst_recommendations_table = """
+    CREATE TABLE IF NOT EXISTS data_ingestion.analyst_recommendations (
+        id SERIAL PRIMARY KEY,
+        symbol VARCHAR(20) NOT NULL,
+        date DATE NOT NULL,
+        period VARCHAR(10) NOT NULL,
+        strong_buy INTEGER DEFAULT 0,
+        buy INTEGER DEFAULT 0,
+        hold INTEGER DEFAULT 0,
+        sell INTEGER DEFAULT 0,
+        strong_sell INTEGER DEFAULT 0,
+        total_analysts INTEGER GENERATED ALWAYS AS (strong_buy + buy + hold + sell + strong_sell) STORED,
+        data_source VARCHAR(20) NOT NULL DEFAULT 'yahoo',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        
+        CONSTRAINT fk_analyst_recommendations_symbol 
+            FOREIGN KEY (symbol) REFERENCES data_ingestion.symbols(symbol) 
+            ON DELETE CASCADE,
+        
+        CONSTRAINT uk_analyst_recommendations_unique 
+            UNIQUE (symbol, date, period, data_source)
+    );
+    """
+
     with trading_engine.connect() as conn:
         conn.execute(text(create_load_runs_table))
         conn.execute(text(create_market_data_table))
         conn.execute(text(create_symbols_table))
+        conn.execute(text(create_analyst_recommendations_table))
         conn.commit()
 
     yield
@@ -152,4 +179,5 @@ def setup_test_tables(trading_engine):
         conn.execute(text("DROP TABLE IF EXISTS data_ingestion.load_runs CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS data_ingestion.market_data CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS data_ingestion.symbols CASCADE"))
+        conn.execute(text("DROP TABLE IF EXISTS data_ingestion.analyst_recommendations CASCADE"))
         conn.commit()

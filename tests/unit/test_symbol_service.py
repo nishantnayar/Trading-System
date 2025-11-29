@@ -148,9 +148,17 @@ class TestSymbolService:
             "src.services.data_ingestion.symbols.db_transaction"
         ) as mock_transaction:
             mock_session = Mock(spec=Session)
-            mock_result = Mock()
-            mock_result.scalar_one_or_none.return_value = mock_symbol
-            mock_session.execute.return_value = mock_result
+            
+            # First execute call: Symbol query (returns mock_symbol)
+            # Second execute call: DelistedSymbol query (returns None - not already delisted)
+            mock_result_symbol = Mock()
+            mock_result_symbol.scalar_one_or_none.return_value = mock_symbol
+            
+            mock_result_delisted = Mock()
+            mock_result_delisted.scalar_one_or_none.return_value = None
+            
+            # Mock execute to return different results for different calls
+            mock_session.execute.side_effect = [mock_result_symbol, mock_result_delisted]
             mock_transaction.return_value.__enter__.return_value = mock_session
 
             result = await symbol_service.mark_symbol_delisted(

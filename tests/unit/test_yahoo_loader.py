@@ -466,7 +466,8 @@ class TestYahooDataLoader:
             result = await loader.load_company_officers("AAPL")
 
             assert result == mock_company_officers
-            assert mock_session.merge.call_count == 2  # Two officers
+            # Changed from merge to execute (using insert().on_conflict_do_update())
+            assert mock_session.execute.call_count == 2  # Two officers
             mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
