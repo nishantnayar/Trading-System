@@ -105,6 +105,10 @@ class ESGScore(Base):
         """Calculate average of E, S, G scores if all are available"""
         if not self.has_complete_scores:
             return None
+        # Type narrowing: has_complete_scores guarantees these are not None
+        assert self.environment_score is not None
+        assert self.social_score is not None
+        assert self.governance_score is not None
         return (
             float(self.environment_score)
             + float(self.social_score)

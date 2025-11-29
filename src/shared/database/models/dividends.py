@@ -89,8 +89,6 @@ class Dividend(Base):
     @property
     def amount_display(self) -> str:
         """Display amount with formatting"""
-        if self.amount is None:
-            return "N/A"
         return f"${float(self.amount):.4f}"
 
     def to_dict(self) -> dict:
