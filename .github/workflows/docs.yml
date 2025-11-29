@@ -111,6 +111,13 @@ jobs:
                                     else:
                                         link_path = os.path.join('docs', link)
                                 
+                                # Strip anchor fragment before checking file existence
+                                if '#' in link_path:
+                                    link_path = link_path.split('#')[0]
+                                
+                                # Normalize path to handle ../ and ./
+                                link_path = os.path.normpath(link_path).replace(os.sep, '/')
+                                
                                 if not os.path.exists(link_path):
                                     broken_links.append(f'{filepath}: {text} -> {link}')
             
