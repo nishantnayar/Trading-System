@@ -869,9 +869,7 @@ if data["success"]:
         print(f"{holder['holder_name']}: {holder['percent_held_display']}")
 ```
 
-## SymbolService API
-
-<a id="symbolservice-api"></a>
+## SymbolService API {#symbolservice-api}
 
 The `SymbolService` class (`src/services/data_ingestion/symbols.py`) provides comprehensive symbol management functionality for the data ingestion pipeline. It handles symbol tracking, delisting detection, data ingestion status monitoring, and symbol statistics.
 

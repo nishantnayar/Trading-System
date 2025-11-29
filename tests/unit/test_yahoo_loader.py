@@ -589,16 +589,34 @@ class TestYahooDataLoader:
 
     @pytest.mark.asyncio
     async def test_load_analyst_recommendations_success(
-        self, loader, mock_analyst_recommendations, setup_test_tables
+        self, loader, mock_analyst_recommendations
     ):
         """Test successful loading of analyst recommendations"""
-        with patch.object(
-            loader.client,
-            "get_analyst_recommendations",
-            return_value=mock_analyst_recommendations,
+        with (
+            patch.object(
+                loader.client,
+                "get_analyst_recommendations",
+                return_value=mock_analyst_recommendations,
+            ),
+            patch("src.services.yahoo.loader.db_transaction") as mock_db,
+            patch("src.services.yahoo.loader.insert") as mock_insert,
         ):
+
+            # Setup mock session
+            mock_session = Mock()
+            mock_db.return_value.__enter__.return_value = mock_session
+
+            # Mock upsert statement
+            mock_upsert_stmt = Mock()
+            mock_insert.return_value.on_conflict_do_update.return_value = (
+                mock_upsert_stmt
+            )
+
             count = await loader.load_analyst_recommendations("AAPL")
-            assert count == 3
+
+            assert count == 3  # Method returns count of recommendations loaded
+            assert mock_session.execute.call_count == 3  # Three recommendations
+            mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_load_analyst_recommendations_no_data(self, loader):
