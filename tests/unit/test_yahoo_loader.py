@@ -10,11 +10,15 @@ import pytest
 from src.services.yahoo.exceptions import YahooAPIError
 from src.services.yahoo.loader import YahooDataLoader
 from src.services.yahoo.models import (
+    AnalystRecommendation,
     CompanyInfo,
     CompanyOfficer,
+    Dividend,
+    ESGScore,
     FinancialStatement,
     InstitutionalHolder,
     KeyStatistics,
+    StockSplit,
 )
 
 
@@ -135,6 +139,110 @@ class TestYahooDataLoader:
                 },
             ),
         ]
+
+    @pytest.fixture
+    def mock_dividends(self):
+        """Mock dividends data"""
+        return [
+            Dividend(
+                symbol="AAPL",
+                ex_date=date(2024, 2, 9),
+                amount=0.24,
+                payment_date=date(2024, 2, 15),
+                record_date=date(2024, 2, 12),
+                dividend_type="regular",
+                currency="USD",
+            ),
+            Dividend(
+                symbol="AAPL",
+                ex_date=date(2024, 5, 10),
+                amount=0.25,
+                payment_date=date(2024, 5, 16),
+                record_date=date(2024, 5, 13),
+                dividend_type="regular",
+                currency="USD",
+            ),
+            Dividend(
+                symbol="AAPL",
+                ex_date=date(2024, 8, 9),
+                amount=0.25,
+                payment_date=date(2024, 8, 15),
+                record_date=date(2024, 8, 12),
+                dividend_type="regular",
+                currency="USD",
+            ),
+        ]
+
+    @pytest.fixture
+    def mock_stock_splits(self):
+        """Mock stock splits data"""
+        return [
+            StockSplit(
+                symbol="AAPL",
+                split_date=date(2020, 8, 31),
+                split_ratio=4.0,
+                ratio_str="4:1",
+            ),
+            StockSplit(
+                symbol="AAPL",
+                split_date=date(2014, 6, 9),
+                split_ratio=7.0,
+                ratio_str="7:1",
+            ),
+        ]
+
+    @pytest.fixture
+    def mock_analyst_recommendations(self):
+        """Mock analyst recommendations data"""
+        return [
+            AnalystRecommendation(
+                symbol="AAPL",
+                date=date(2024, 11, 1),
+                period="0m",
+                strong_buy=15,
+                buy=8,
+                hold=3,
+                sell=1,
+                strong_sell=0,
+            ),
+            AnalystRecommendation(
+                symbol="AAPL",
+                date=date(2024, 10, 1),
+                period="-1m",
+                strong_buy=12,
+                buy=10,
+                hold=4,
+                sell=1,
+                strong_sell=0,
+            ),
+            AnalystRecommendation(
+                symbol="AAPL",
+                date=date(2024, 9, 1),
+                period="-2m",
+                strong_buy=10,
+                buy=12,
+                hold=5,
+                sell=0,
+                strong_sell=0,
+            ),
+        ]
+
+    @pytest.fixture
+    def mock_esg_scores(self):
+        """Mock ESG scores data"""
+        return ESGScore(
+            symbol="AAPL",
+            date=date(2024, 11, 1),
+            total_esg=72.5,
+            environment_score=75.0,
+            social_score=70.0,
+            governance_score=72.5,
+            controversy_level=2,
+            esg_performance="OUT_PERF",
+            peer_group="Technology",
+            peer_count=150,
+            percentile=85.5,
+        )
 
     @pytest.fixture
     def mock_company_officers(self):
@@ -369,6 +477,149 @@ class TestYahooDataLoader:
             assert result == []
 
     @pytest.mark.asyncio
+    async def test_load_dividends_success(self, loader, mock_dividends):
+        """Test successful loading of dividends"""
+        with (
+            patch.object(
+                loader.client, "get_dividends", return_value=mock_dividends
+            ),
+            patch("src.services.yahoo.loader.db_transaction") as mock_db,
+            patch("src.services.yahoo.loader.insert") as mock_insert,
+        ):
+
+            # Setup mock session
+            mock_session = Mock()
+            mock_db.return_value.__enter__.return_value = mock_session
+
+            # Mock upsert statement
+            mock_upsert_stmt = Mock()
+            mock_insert.return_value.on_conflict_do_update.return_value = (
+                mock_upsert_stmt
+            )
+
+            result = await loader.load_dividends(
+                symbol="AAPL",
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 12, 31),
+            )
+
+            assert result == 3  # Method returns count of dividends loaded
+            assert mock_session.execute.call_count == 3  # Three dividends
+            mock_session.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_load_dividends_no_data(self, loader):
+        """Test handling of no dividends data"""
+        with patch.object(loader.client, "get_dividends", return_value=[]):
+            result = await loader.load_dividends(
+                symbol="INVALID",
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 12, 31),
+            )
+            assert result == 0  # Method returns count of dividends loaded
+
+    @pytest.mark.asyncio
+    async def test_load_dividends_api_error(self, loader):
+        """Test handling of API errors in dividends loading"""
+        with patch.object(
+            loader.client, "get_dividends", side_effect=YahooAPIError("API Error")
+        ):
+            with pytest.raises(YahooAPIError):
+                await loader.load_dividends(
+                    symbol="INVALID",
+                    start_date=date(2024, 1, 1),
+                    end_date=date(2024, 12, 31),
+                )
+
+    @pytest.mark.asyncio
+    async def test_load_splits_success(self, loader, mock_stock_splits):
+        """Test successful loading of stock splits"""
+        with (
+            patch.object(
+                loader.client, "get_splits", return_value=mock_stock_splits
+            ),
+            patch("src.services.yahoo.loader.db_transaction") as mock_db,
+            patch("src.services.yahoo.loader.insert") as mock_insert,
+        ):
+
+            # Setup mock session
+            mock_session = Mock()
+            mock_db.return_value.__enter__.return_value = mock_session
+
+            # Mock upsert statement
+            mock_upsert_stmt = Mock()
+            mock_insert.return_value.on_conflict_do_update.return_value = (
+                mock_upsert_stmt
+            )
+
+            result = await loader.load_splits(
+                symbol="AAPL",
+                start_date=date(2020, 1, 1),
+                end_date=date(2024, 12, 31),
+            )
+
+            assert result == 2  # Method returns count of splits loaded
+            assert mock_session.execute.call_count == 2  # Two splits
+            mock_session.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_load_splits_no_data(self, loader):
+        """Test handling of no stock splits data"""
+        with patch.object(loader.client, "get_splits", return_value=[]):
+            result = await loader.load_splits(
+                symbol="INVALID",
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 12, 31),
+            )
+            assert result == 0  # Method returns count of splits loaded
+
+    @pytest.mark.asyncio
+    async def test_load_splits_api_error(self, loader):
+        """Test handling of API errors in stock splits loading"""
+        with patch.object(
+            loader.client, "get_splits", side_effect=YahooAPIError("API Error")
+        ):
+            with pytest.raises(YahooAPIError):
+                await loader.load_splits(
+                    symbol="INVALID",
+                    start_date=date(2024, 1, 1),
+                    end_date=date(2024, 12, 31),
+                )
+
+    @pytest.mark.asyncio
+    async def test_load_analyst_recommendations_success(
+        self, loader, mock_analyst_recommendations, setup_test_tables
+    ):
+        """Test successful loading of analyst recommendations"""
+        with patch.object(
+            loader.client,
+            "get_analyst_recommendations",
+            return_value=mock_analyst_recommendations,
+        ):
+            count = await loader.load_analyst_recommendations("AAPL")
+            assert count == 3
+
+    @pytest.mark.asyncio
+    async def test_load_analyst_recommendations_no_data(self, loader):
+        """Test handling of no analyst recommendations data"""
+        with patch.object(
+            loader.client, "get_analyst_recommendations", return_value=[]
+        ):
+            count = await loader.load_analyst_recommendations("AAPL")
+            assert count == 0
+
+    @pytest.mark.asyncio
+    async def test_load_analyst_recommendations_api_error(self, loader):
+        """Test handling of API errors in analyst recommendations loading"""
+        with patch.object(
+            loader.client,
+            "get_analyst_recommendations",
+            side_effect=YahooAPIError("API Error"),
+        ):
+            with pytest.raises(YahooAPIError):
+                await loader.load_analyst_recommendations("INVALID")
+
+    @pytest.mark.asyncio
     async def test_load_all_data_success(
         self, loader, mock_company_info, mock_key_statistics, setup_test_tables
     ):
@@ -379,6 +630,10 @@ class TestYahooDataLoader:
             patch.object(loader, "load_institutional_holders", return_value=0),
             patch.object(loader, "load_financial_statements", return_value=[]),
             patch.object(loader, "load_company_officers", return_value=0),
+            patch.object(loader, "load_dividends", return_value=0),
+            patch.object(loader, "load_splits", return_value=0),
+            patch.object(loader, "load_analyst_recommendations", return_value=0),
+            patch.object(loader, "load_esg_scores", return_value=True),
         ):
 
             result = await loader.load_all_data("AAPL")
@@ -393,6 +648,8 @@ class TestYahooDataLoader:
                 result["financial_statements"] == 0
             )  # load_financial_statements returns [], len([]) = 0
             assert result["company_officers"] == 0
+            assert result["dividends"] == 0  # Not loaded by default
+            assert result["splits"] == 0  # Not loaded by default
 
     @pytest.mark.asyncio
     async def test_load_all_data_with_options(
@@ -405,6 +662,10 @@ class TestYahooDataLoader:
             patch.object(loader, "load_institutional_holders", return_value=0),
             patch.object(loader, "load_financial_statements", return_value=[]),
             patch.object(loader, "load_company_officers", return_value=0),
+            patch.object(loader, "load_dividends", return_value=5),
+            patch.object(loader, "load_splits", return_value=0),
+            patch.object(loader, "load_analyst_recommendations", return_value=3),
+            patch.object(loader, "load_esg_scores", return_value=True),
         ):
 
             result = await loader.load_all_data(
@@ -414,6 +675,9 @@ class TestYahooDataLoader:
                 include_institutional_holders=False,
                 include_financial_statements=False,
                 include_company_officers=False,
+                include_dividends=True,
+                include_analyst_recommendations=True,
+                include_esg_scores=True,
             )
 
             # The method returns counts/status indicators
@@ -422,6 +686,10 @@ class TestYahooDataLoader:
             assert result["institutional_holders"] == 0
             assert result["financial_statements"] == 0  # len([]) = 0
             assert result["company_officers"] == 0
+            assert result["dividends"] == 5  # Count of dividends loaded
+            assert result["splits"] == 0  # Not loaded
+            assert result["analyst_recommendations"] == 3  # Count of recommendations loaded
+            assert result["esg_scores"] == 1  # True gets converted to 1
 
     @pytest.mark.asyncio
     async def test_load_all_symbols_data_success(self, loader, setup_test_tables):
@@ -446,6 +714,18 @@ class TestYahooDataLoader:
             patch.object(
                 loader, "load_company_officers", return_value=3
             ) as mock_officers,
+            patch.object(
+                loader, "load_dividends", return_value=4
+            ) as mock_dividends,
+            patch.object(
+                loader, "load_splits", return_value=1
+            ) as mock_splits,
+            patch.object(
+                loader, "load_analyst_recommendations", return_value=2
+            ) as mock_analyst_recs,
+            patch.object(
+                loader, "load_esg_scores", return_value=True
+            ) as mock_esg_scores,
         ):
 
             result = await loader.load_all_symbols_data()
@@ -471,10 +751,15 @@ class TestYahooDataLoader:
             patch.object(
                 loader, "load_institutional_holders", return_value=8
             ) as mock_holders,
+            patch.object(
+                loader, "load_dividends", return_value=3
+            ) as mock_dividends,
         ):
 
             result = await loader.load_all_symbols_data(
-                include_key_statistics=True, include_institutional_holders=True
+                include_key_statistics=True,
+                include_institutional_holders=True,
+                include_dividends=True,
             )
 
             # The method returns a statistics dictionary, not a dictionary with symbol keys
@@ -485,6 +770,7 @@ class TestYahooDataLoader:
             assert mock_market_data.call_count == 1
             assert mock_key_stats.call_count == 1
             assert mock_holders.call_count == 1
+            assert mock_dividends.call_count == 1
 
     def test_detect_fiscal_year_quarter_apple(self, loader):
         """Test fiscal year and quarter detection for Apple (September end)"""

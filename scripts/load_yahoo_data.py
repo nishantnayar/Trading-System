@@ -78,14 +78,14 @@ from src.shared.logging import setup_logging
     help="Maximum number of symbols to process (for testing)",
 )
 @click.option(
+    "--market-data",
+    is_flag=True,
+    help="Load market data (default if no other flags specified)",
+)
+@click.option(
     "--company-info",
     is_flag=True,
     help="Load company info (fundamentals)",
-)
-@click.option(
-    "--fundamentals",
-    is_flag=True,
-    help="Load company fundamentals (company info)",
 )
 @click.option(
     "--key-statistics",
@@ -93,24 +93,9 @@ from src.shared.logging import setup_logging
     help="Load key financial statistics (P/E, ROE, margins, etc.)",
 )
 @click.option(
-    "--company-info-only",
-    is_flag=True,
-    help="Load only company info (no market data)",
-)
-@click.option(
-    "--key-statistics-only",
-    is_flag=True,
-    help="Load only key statistics (no market data)",
-)
-@click.option(
     "--institutional-holders",
     is_flag=True,
     help="Load institutional holders data",
-)
-@click.option(
-    "--institutional-holders-only",
-    is_flag=True,
-    help="Load only institutional holders (no market data)",
 )
 @click.option(
     "--financial-statements",
@@ -118,29 +103,29 @@ from src.shared.logging import setup_logging
     help="Load financial statements (income, balance sheet, cash flow)",
 )
 @click.option(
-    "--financial-statements-only",
-    is_flag=True,
-    help="Load only financial statements (no market data)",
-)
-@click.option(
     "--company-officers",
     is_flag=True,
     help="Load company officers and executives",
 )
 @click.option(
-    "--company-officers-only",
-    is_flag=True,
-    help="Load only company officers (no market data)",
-)
-@click.option(
     "--dividends",
     is_flag=True,
-    help="Load dividend history (not yet implemented)",
+    help="Load dividend history",
 )
 @click.option(
     "--splits",
     is_flag=True,
-    help="Load stock split history (not yet implemented)",
+    help="Load stock split history",
+)
+@click.option(
+    "--analyst-recommendations",
+    is_flag=True,
+    help="Load analyst recommendations",
+)
+@click.option(
+    "--esg-scores",
+    is_flag=True,
+    help="Load ESG (Environmental, Social, Governance) scores",
 )
 @click.option(
     "--health-check",
@@ -157,52 +142,45 @@ def main(
     batch_size: int,
     delay: float,
     max_symbols: Optional[int],
+    market_data: bool,
     company_info: bool,
-    fundamentals: bool,
     key_statistics: bool,
-    company_info_only: bool,
-    key_statistics_only: bool,
     institutional_holders: bool,
-    institutional_holders_only: bool,
     financial_statements: bool,
-    financial_statements_only: bool,
     company_officers: bool,
-    company_officers_only: bool,
     dividends: bool,
     splits: bool,
+    analyst_recommendations: bool,
+    esg_scores: bool,
     health_check: bool,
 ) -> int:
     """
     Load market data from Yahoo Finance
 
     Examples:
-        # Load daily data for AAPL for the last 30 days
+        # Load daily data for AAPL for the last 30 days (market data only)
         python scripts/load_yahoo_data.py --symbol AAPL --days 30
 
         # Load hourly data for AAPL for the last 7 days
         python scripts/load_yahoo_data.py --symbol AAPL --days 7 --interval 1h
 
-        # Load key statistics for AAPL
-        python scripts/load_yahoo_data.py --symbol AAPL --key-statistics-only
+        # Load company info only (no market data)
+        python scripts/load_yahoo_data.py --symbol AAPL --company-info
 
-        # Load institutional holders for AAPL
-        python scripts/load_yahoo_data.py --symbol AAPL --institutional-holders-only
+        # Load key statistics only
+        python scripts/load_yahoo_data.py --symbol AAPL --key-statistics
+
+        # Load market data + company info + key statistics
+        python scripts/load_yahoo_data.py --symbol AAPL --days 30 --market-data --company-info --key-statistics
 
         # Load key statistics for all symbols
-        python scripts/load_yahoo_data.py --all-symbols --key-statistics-only --max-symbols 10
-
-        # Load market data + company info + key statistics + institutional holders
-        python scripts/load_yahoo_data.py --symbol AAPL --days 30 --company-info --key-statistics --institutional-holders
+        python scripts/load_yahoo_data.py --all-symbols --key-statistics --max-symbols 10
 
         # Load data for all symbols for specific date range
         python scripts/load_yahoo_data.py --all-symbols --from-date 2023-01-01 --to-date 2023-12-31
 
-        # Load company info only (no market data)
-        python scripts/load_yahoo_data.py --symbol AAPL --company-info-only
-        python scripts/load_yahoo_data.py --all-symbols --company-info-only
-
-        # Load market data + company info
-        python scripts/load_yahoo_data.py --symbol AAPL --days 30 --company-info
+        # Load company info for all symbols
+        python scripts/load_yahoo_data.py --all-symbols --company-info
 
         # Health check
         python scripts/load_yahoo_data.py --health-check
@@ -219,10 +197,10 @@ def main(
         if health_check:
             healthy = await loader.health_check()
             if healthy:
-                logger.info("✅ Health check passed - Yahoo Finance is accessible")
+                logger.info("Health check passed - Yahoo Finance is accessible")
                 return 0
             else:
-                logger.error("❌ Health check failed - Yahoo Finance not accessible")
+                logger.error("Health check failed - Yahoo Finance not accessible")
                 return 1
 
         if not symbol and not all_symbols:
@@ -233,290 +211,66 @@ def main(
             logger.error("Cannot specify both --symbol and --all-symbols")
             return 1
 
-        # Convert datetime to date if provided
-        from_date_obj = from_date.date() if from_date else None
-        to_date_obj = to_date.date() if to_date else None
+        # Determine what data types to load
+        data_flags = {
+            "market_data": market_data,
+            "company_info": company_info,
+            "key_statistics": key_statistics,
+            "institutional_holders": institutional_holders,
+            "financial_statements": financial_statements,
+            "company_officers": company_officers,
+            "dividends": dividends,
+            "splits": splits,
+            "analyst_recommendations": analyst_recommendations,
+            "esg_scores": esg_scores,
+        }
 
-        # Calculate date range
-        if days:
-            to_date_obj = to_date_obj or date.today()
-            from_date_obj = from_date_obj or (to_date_obj - timedelta(days=days))
-        elif not from_date_obj:
-            # Default to 30 days if no date range specified
-            to_date_obj = to_date_obj or date.today()
-            from_date_obj = to_date_obj - timedelta(days=30)
+        # If no flags specified, default to market data only
+        if not any(data_flags.values()):
+            data_flags["market_data"] = True
 
-        logger.info(f"Date range: {from_date_obj} to {to_date_obj}")
-        logger.info(f"Interval: {interval}")
+        # Calculate date range if market data, dividends, or splits are needed
+        from_date_obj: Optional[date] = None
+        to_date_obj: Optional[date] = None
+
+        if data_flags["market_data"] or data_flags["dividends"] or data_flags["splits"]:
+            from_date_obj = from_date.date() if from_date else None
+            to_date_obj = to_date.date() if to_date else None
+
+            # Calculate date range
+            if days:
+                to_date_obj = to_date_obj or date.today()
+                from_date_obj = from_date_obj or (to_date_obj - timedelta(days=days))
+            elif not from_date_obj:
+                # Default to 30 days if no date range specified
+                to_date_obj = to_date_obj or date.today()
+                from_date_obj = to_date_obj - timedelta(days=30)
+
+            logger.info(f"Date range: {from_date_obj} to {to_date_obj}")
+            if data_flags["market_data"]:
+                logger.info(f"Interval: {interval}")
 
         try:
             if symbol:
                 # Load single symbol
-                if company_info_only:
-                    # Load only company info
-                    success = await loader.load_company_info(symbol)
-                    if success:
-                        logger.info(f"✅ Successfully loaded company info for {symbol}")
-                    else:
-                        logger.error(f"❌ Failed to load company info for {symbol}")
-                        return 1
-                elif key_statistics_only:
-                    # Load only key statistics
-                    success = await loader.load_key_statistics(symbol)
-                    if success:
-                        logger.info(
-                            f"✅ Successfully loaded key statistics for {symbol}"
-                        )
-                    else:
-                        logger.error(f"❌ Failed to load key statistics for {symbol}")
-                        return 1
-                elif institutional_holders_only:
-                    # Load only institutional holders
-                    count = await loader.load_institutional_holders(symbol)
-                    if count > 0:
-                        logger.info(
-                            f"✅ Successfully loaded {count} institutional holders for {symbol}"
-                        )
-                    else:
-                        logger.warning(f"⚠ No institutional holders found for {symbol}")
-                        return 1
-                elif financial_statements_only:
-                    # Load only financial statements
-                    statements = await loader.load_financial_statements(symbol)
-                    if statements:
-                        logger.info(
-                            f"✅ Successfully loaded {len(statements)} financial statements for {symbol}"
-                        )
-                    else:
-                        logger.warning(f"⚠ No financial statements found for {symbol}")
-                        return 1
-                elif company_officers_only:
-                    # Load only company officers
-                    officers = await loader.load_company_officers(symbol)
-                    if officers:
-                        logger.info(
-                            f"✅ Successfully loaded {len(officers)} company officers for {symbol}"
-                        )
-                    else:
-                        logger.warning(f"⚠ No company officers found for {symbol}")
-                        return 1
-                elif (
-                    company_info
-                    or fundamentals
-                    or key_statistics
-                    or institutional_holders
-                    or financial_statements
-                    or dividends
-                    or splits
-                ):
-                    # Use load_all_data for comprehensive loading
-                    results = await loader.load_all_data(
-                        symbol=symbol,
-                        start_date=from_date_obj,
-                        end_date=to_date_obj,
-                        include_fundamentals=company_info or fundamentals,
-                        include_key_statistics=key_statistics,
-                        include_institutional_holders=institutional_holders,
-                        include_financial_statements=financial_statements,
-                        include_dividends=dividends,
-                        include_splits=splits,
-                    )
-                    logger.info(f"Loaded data for {symbol}: {results}")
-                else:
-                    # Load market data only
-                    records_count = await loader.load_market_data(
-                        symbol=symbol,
-                        start_date=from_date_obj,
-                        end_date=to_date_obj,
-                        interval=interval,
-                    )
-                    logger.info(f"Loaded {records_count} records for {symbol}")
-
-                return 0
-
+                return await _load_single_symbol(
+                    loader=loader,
+                    symbol=symbol,
+                    data_flags=data_flags,
+                    from_date_obj=from_date_obj,
+                    to_date_obj=to_date_obj,
+                    interval=interval,
+                )
             elif all_symbols:
-                if company_info_only:
-                    # Load company info for all symbols
-                    symbols_list = await loader._get_active_symbols()
-                    if max_symbols:
-                        symbols_list = symbols_list[:max_symbols]
-
-                    logger.info(f"Loading company info for {len(symbols_list)} symbols")
-                    successful = 0
-                    failed = 0
-
-                    for i, sym in enumerate(symbols_list, 1):
-                        logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
-                        success = await loader.load_company_info(sym)
-                        if success:
-                            successful += 1
-                        else:
-                            failed += 1
-
-                        if i < len(symbols_list):
-                            await asyncio.sleep(loader.delay_between_requests)
-
-                    logger.info(f"Company info loading completed:")
-                    logger.info(f"  Total symbols: {len(symbols_list)}")
-                    logger.info(f"  Successful: {successful}")
-                    logger.info(f"  Failed: {failed}")
-
-                    return 0 if failed == 0 else 1
-                elif key_statistics_only:
-                    # Load key statistics for all symbols
-                    symbols_list = await loader._get_active_symbols()
-                    if max_symbols:
-                        symbols_list = symbols_list[:max_symbols]
-
-                    logger.info(
-                        f"Loading key statistics for {len(symbols_list)} symbols"
-                    )
-                    successful = 0
-                    failed = 0
-
-                    for i, sym in enumerate(symbols_list, 1):
-                        logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
-                        success = await loader.load_key_statistics(sym)
-                        if success:
-                            successful += 1
-                        else:
-                            failed += 1
-
-                        if i < len(symbols_list):
-                            await asyncio.sleep(loader.delay_between_requests)
-
-                    logger.info(f"Key statistics loading completed:")
-                    logger.info(f"  Total symbols: {len(symbols_list)}")
-                    logger.info(f"  Successful: {successful}")
-                    logger.info(f"  Failed: {failed}")
-
-                    return 0 if failed == 0 else 1
-                elif institutional_holders_only:
-                    # Load institutional holders for all symbols
-                    symbols_list = await loader._get_active_symbols()
-                    if max_symbols:
-                        symbols_list = symbols_list[:max_symbols]
-
-                    logger.info(
-                        f"Loading institutional holders for {len(symbols_list)} symbols"
-                    )
-                    successful = 0
-                    failed = 0
-                    total_holders = 0
-
-                    for i, sym in enumerate(symbols_list, 1):
-                        logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
-                        count = await loader.load_institutional_holders(sym)
-                        if count > 0:
-                            successful += 1
-                            total_holders += count
-                        else:
-                            failed += 1
-
-                        if i < len(symbols_list):
-                            await asyncio.sleep(loader.delay_between_requests)
-
-                    logger.info(f"Institutional holders loading completed:")
-                    logger.info(f"  Total symbols: {len(symbols_list)}")
-                    logger.info(f"  Successful: {successful}")
-                    logger.info(f"  Failed: {failed}")
-                    logger.info(f"  Total holders: {total_holders}")
-
-                    return 0 if failed == 0 else 1
-                elif financial_statements_only:
-                    # Load financial statements for all symbols
-                    symbols_list = await loader._get_active_symbols()
-                    if max_symbols:
-                        symbols_list = symbols_list[:max_symbols]
-
-                    logger.info(
-                        f"Loading financial statements for {len(symbols_list)} symbols"
-                    )
-                    successful = 0
-                    failed = 0
-                    total_statements = 0
-
-                    for i, sym in enumerate(symbols_list, 1):
-                        logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
-                        statements = await loader.load_financial_statements(sym)
-                        if statements:
-                            successful += 1
-                            total_statements += len(statements)
-                        else:
-                            failed += 1
-
-                        if i < len(symbols_list):
-                            await asyncio.sleep(loader.delay_between_requests)
-
-                    logger.info(f"Financial statements loading completed:")
-                    logger.info(f"  Total symbols: {len(symbols_list)}")
-                    logger.info(f"  Successful: {successful}")
-                    logger.info(f"  Failed: {failed}")
-                    logger.info(f"  Total statements: {total_statements}")
-
-                    return 0 if failed == 0 else 1
-                elif company_officers_only:
-                    # Load company officers for all symbols
-                    symbols_list = await loader._get_active_symbols()
-                    if max_symbols:
-                        symbols_list = symbols_list[:max_symbols]
-
-                    logger.info(
-                        f"Loading company officers for {len(symbols_list)} symbols"
-                    )
-                    successful = 0
-                    failed = 0
-                    total_officers = 0
-
-                    for i, sym in enumerate(symbols_list, 1):
-                        logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
-                        try:
-                            officers = await loader.load_company_officers(sym)
-                            if officers:
-                                successful += 1
-                                total_officers += len(officers)
-                            else:
-                                failed += 1
-                        except Exception as e:
-                            logger.error(f"Failed to load officers for {sym}: {e}")
-                            failed += 1
-
-                        if i < len(symbols_list):
-                            await asyncio.sleep(loader.delay_between_requests)
-
-                    logger.info(f"Company officers loading completed:")
-                    logger.info(f"  Total symbols: {len(symbols_list)}")
-                    logger.info(f"  Successful: {successful}")
-                    logger.info(f"  Failed: {failed}")
-                    logger.info(f"  Total officers: {total_officers}")
-
-                    return 0 if failed == 0 else 1
-                else:
-                    # Load all symbols
-                    stats = await loader.load_all_symbols_data(
-                        start_date=from_date_obj,
-                        end_date=to_date_obj,
-                        interval=interval,
-                        max_symbols=max_symbols,
-                        include_fundamentals=company_info or fundamentals,
-                        include_key_statistics=key_statistics,
-                        include_institutional_holders=institutional_holders,
-                        include_financial_statements=financial_statements,
-                        include_company_officers=company_officers,
-                    )
-
-                logger.info("Loading completed:")
-                logger.info(f"  Total symbols: {stats['total_symbols']}")
-                logger.info(f"  Successful: {stats['successful']}")
-                logger.info(f"  Failed: {stats['failed']}")
-                logger.info(f"  Total records: {stats['total_records']}")
-
-                if stats["errors"]:
-                    logger.error("Errors encountered:")
-                    for error in stats["errors"]:
-                        logger.error(f"  {error}")
-
-                return 0 if stats["failed"] == 0 else 1
+                # Load all symbols
+                return await _load_all_symbols(
+                    loader=loader,
+                    data_flags=data_flags,
+                    from_date_obj=from_date_obj,
+                    to_date_obj=to_date_obj,
+                    interval=interval,
+                    max_symbols=max_symbols,
+                )
 
         except Exception as e:
             logger.error(f"Loader failed: {e}")
@@ -524,6 +278,319 @@ def main(
 
     # Run the async function
     return asyncio.run(run_loader())
+
+
+async def _load_single_symbol(
+    loader: YahooDataLoader,
+    symbol: str,
+    data_flags: dict,
+    from_date_obj: Optional[date],
+    to_date_obj: Optional[date],
+    interval: str,
+) -> int:
+    """Load data for a single symbol"""
+    # Check if only one data type is requested (no market data)
+    only_flags = [
+        ("company_info", loader.load_company_info),
+        ("key_statistics", loader.load_key_statistics),
+        ("institutional_holders", loader.load_institutional_holders),
+        ("financial_statements", loader.load_financial_statements),
+        ("company_officers", loader.load_company_officers),
+    ]
+
+    # Check for single data type only (no market data)
+    single_type = None
+    single_loader = None
+    for flag_name, loader_func in only_flags:
+        if data_flags[flag_name] and not data_flags["market_data"]:
+            if single_type:
+                # Multiple non-market-data flags, use load_all_data
+                single_type = None
+                break
+            single_type = flag_name
+            single_loader = loader_func
+
+    if single_type and single_loader:
+        # Load single data type only
+        if single_type == "institutional_holders":
+            count = await single_loader(symbol)
+            if count > 0:
+                logger.info(f"Successfully loaded {count} institutional holders for {symbol}")
+                return 0
+            else:
+                logger.warning(f"No institutional holders found for {symbol}")
+                return 1
+        elif single_type == "financial_statements":
+            statements = await single_loader(symbol)
+            if statements:
+                logger.info(f"Successfully loaded {len(statements)} financial statements for {symbol}")
+                return 0
+            else:
+                logger.warning(f"No financial statements found for {symbol}")
+                return 1
+        elif single_type == "company_officers":
+            officers = await single_loader(symbol)
+            if officers:
+                logger.info(f"Successfully loaded {len(officers)} company officers for {symbol}")
+                return 0
+            else:
+                logger.warning(f"No company officers found for {symbol}")
+                return 1
+        elif single_type == "analyst_recommendations":
+            count = await single_loader(symbol)
+            if count > 0:
+                logger.info(f"Successfully loaded {count} analyst recommendation records for {symbol}")
+                return 0
+            else:
+                logger.warning(f"No analyst recommendations found for {symbol}")
+                return 1
+        else:
+            # company_info, key_statistics, or esg_scores (return boolean)
+            success = await single_loader(symbol)
+            if success:
+                logger.info(f"Successfully loaded {single_type.replace('_', ' ')} for {symbol}")
+                return 0
+            else:
+                logger.error(f"Failed to load {single_type.replace('_', ' ')} for {symbol}")
+                return 1
+
+    # Load multiple data types or market data
+    if data_flags["market_data"] or any(
+        data_flags[k] for k in ["company_info", "key_statistics", "institutional_holders", 
+                                "financial_statements", "company_officers", "dividends", "splits", "analyst_recommendations", "esg_scores"]
+    ):
+        # Use load_all_data for comprehensive loading
+        results = await loader.load_all_data(
+            symbol=symbol,
+            start_date=from_date_obj,
+            end_date=to_date_obj,
+            include_fundamentals=data_flags["company_info"],
+            include_key_statistics=data_flags["key_statistics"],
+            include_institutional_holders=data_flags["institutional_holders"],
+            include_financial_statements=data_flags["financial_statements"],
+            include_company_officers=data_flags["company_officers"],
+            include_dividends=data_flags["dividends"],
+            include_splits=data_flags["splits"],
+            include_analyst_recommendations=data_flags["analyst_recommendations"],
+            include_esg_scores=data_flags["esg_scores"],
+        )
+        logger.info(f"Loaded data for {symbol}: {results}")
+        return 0
+    else:
+        # This shouldn't happen due to default logic, but handle it
+        logger.error("No data types specified")
+        return 1
+
+
+async def _load_all_symbols(
+    loader: YahooDataLoader,
+    data_flags: dict,
+    from_date_obj: Optional[date],
+    to_date_obj: Optional[date],
+    interval: str,
+    max_symbols: Optional[int],
+) -> int:
+    """Load data for all symbols"""
+    symbols_list = await loader._get_active_symbols()
+    if max_symbols:
+        symbols_list = symbols_list[:max_symbols]
+
+    # Check if only one data type is requested (no market data)
+    only_flags = [
+        ("company_info", loader.load_company_info),
+        ("key_statistics", loader.load_key_statistics),
+        ("institutional_holders", loader.load_institutional_holders),
+        ("financial_statements", loader.load_financial_statements),
+        ("company_officers", loader.load_company_officers),
+        ("analyst_recommendations", loader.load_analyst_recommendations),
+        ("esg_scores", loader.load_esg_scores),
+    ]
+
+    # Special handling for dividends and splits (they need date parameters)
+    if data_flags["dividends"] and not data_flags["market_data"] and not any(
+        data_flags[k] for k in ["company_info", "key_statistics", "institutional_holders", 
+                                "financial_statements", "company_officers", "splits"]
+    ):
+        # Load dividends only for all symbols
+        logger.info(f"Loading dividends for {len(symbols_list)} symbols")
+        successful = 0
+        no_data = 0
+        failed = 0
+        total_dividends = 0
+
+        for i, sym in enumerate(symbols_list, 1):
+            logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
+            try:
+                count = await loader.load_dividends(
+                    symbol=sym,
+                    start_date=from_date_obj,
+                    end_date=to_date_obj,
+                )
+                if count > 0:
+                    successful += 1
+                    total_dividends += count
+                else:
+                    no_data += 1
+            except Exception as e:
+                logger.error(f"Failed to load dividends for {sym}: {e}")
+                failed += 1
+
+            if i < len(symbols_list):
+                await asyncio.sleep(loader.delay_between_requests)
+
+        logger.info(f"Dividends loading completed:")
+        logger.info(f"  Total symbols: {len(symbols_list)}")
+        logger.info(f"  Successful (with data): {successful}")
+        logger.info(f"  No data available: {no_data}")
+        logger.info(f"  Failed (errors): {failed}")
+        logger.info(f"  Total dividends: {total_dividends}")
+
+        return 0 if failed == 0 else 1
+
+    if data_flags["splits"] and not data_flags["market_data"] and not any(
+        data_flags[k] for k in ["company_info", "key_statistics", "institutional_holders", 
+                                "financial_statements", "company_officers", "dividends"]
+    ):
+        # Load splits only for all symbols
+        logger.info(f"Loading stock splits for {len(symbols_list)} symbols")
+        successful = 0
+        no_data = 0
+        failed = 0
+        total_splits = 0
+
+        for i, sym in enumerate(symbols_list, 1):
+            logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
+            try:
+                count = await loader.load_splits(
+                    symbol=sym,
+                    start_date=from_date_obj,
+                    end_date=to_date_obj,
+                )
+                if count > 0:
+                    successful += 1
+                    total_splits += count
+                else:
+                    no_data += 1
+            except Exception as e:
+                logger.error(f"Failed to load stock splits for {sym}: {e}")
+                failed += 1
+
+            if i < len(symbols_list):
+                await asyncio.sleep(loader.delay_between_requests)
+
+        logger.info(f"Stock splits loading completed:")
+        logger.info(f"  Total symbols: {len(symbols_list)}")
+        logger.info(f"  Successful (with data): {successful}")
+        logger.info(f"  No data available: {no_data}")
+        logger.info(f"  Failed (errors): {failed}")
+        logger.info(f"  Total splits: {total_splits}")
+
+        return 0 if failed == 0 else 1
+
+    # Check for single data type only (no market data)
+    single_type = None
+    single_loader = None
+    for flag_name, loader_func in only_flags:
+        if data_flags[flag_name] and not data_flags["market_data"]:
+            if single_type:
+                # Multiple non-market-data flags, use load_all_symbols_data
+                single_type = None
+                break
+            single_type = flag_name
+            single_loader = loader_func
+
+    if single_type and single_loader:
+        # Load single data type for all symbols
+        logger.info(f"Loading {single_type.replace('_', ' ')} for {len(symbols_list)} symbols")
+        successful = 0
+        no_data = 0
+        failed = 0
+        total_items = 0
+
+        for i, sym in enumerate(symbols_list, 1):
+            logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
+            try:
+                if single_type == "institutional_holders":
+                    count = await single_loader(sym)
+                    if count > 0:
+                        successful += 1
+                        total_items += count
+                    else:
+                        no_data += 1
+                elif single_type == "financial_statements":
+                    statements = await single_loader(sym)
+                    if statements:
+                        successful += 1
+                        total_items += len(statements)
+                    else:
+                        no_data += 1
+                elif single_type == "company_officers":
+                    officers = await single_loader(sym)
+                    if officers:
+                        successful += 1
+                        total_items += len(officers)
+                    else:
+                        no_data += 1
+                elif single_type == "analyst_recommendations":
+                    count = await single_loader(sym)
+                    if count > 0:
+                        successful += 1
+                        total_items += count
+                    else:
+                        no_data += 1
+                else:
+                    # company_info, key_statistics, or esg_scores (return boolean)
+                    success = await single_loader(sym)
+                    if success:
+                        successful += 1
+                    else:
+                        no_data += 1
+            except Exception as e:
+                logger.error(f"Failed to load {single_type.replace('_', ' ')} for {sym}: {e}")
+                failed += 1
+
+            if i < len(symbols_list):
+                await asyncio.sleep(loader.delay_between_requests)
+
+        logger.info(f"{single_type.replace('_', ' ').title()} loading completed:")
+        logger.info(f"  Total symbols: {len(symbols_list)}")
+        logger.info(f"  Successful (with data): {successful}")
+        logger.info(f"  No data available: {no_data}")
+        logger.info(f"  Failed (errors): {failed}")
+        if total_items > 0:
+            logger.info(f"  Total items: {total_items}")
+
+        return 0 if failed == 0 else 1
+    else:
+        # Load multiple data types or market data
+        stats = await loader.load_all_symbols_data(
+            start_date=from_date_obj,
+            end_date=to_date_obj,
+            interval=interval,
+            max_symbols=max_symbols,
+            include_fundamentals=data_flags["company_info"],
+            include_key_statistics=data_flags["key_statistics"],
+            include_institutional_holders=data_flags["institutional_holders"],
+            include_financial_statements=data_flags["financial_statements"],
+            include_company_officers=data_flags["company_officers"],
+            include_dividends=data_flags["dividends"],
+            include_splits=data_flags["splits"],
+            include_analyst_recommendations=data_flags["analyst_recommendations"],
+            include_esg_scores=data_flags["esg_scores"],
+        )
+
+        logger.info("Loading completed:")
+        logger.info(f"  Total symbols: {stats['total_symbols']}")
+        logger.info(f"  Successful: {stats['successful']}")
+        logger.info(f"  Failed: {stats['failed']}")
+        logger.info(f"  Total records: {stats['total_records']}")
+
+        if stats["errors"]:
+            logger.error("Errors encountered:")
+            for error in stats["errors"]:
+                logger.error(f"  {error}")
+
+        return 0 if stats["failed"] == 0 else 1
 
 
 if __name__ == "__main__":

@@ -623,13 +623,17 @@ class YahooClient:
 
         Returns:
             ESG scores or None if not available
+
+        Note:
+            HTTP 404 errors are expected and normal when ESG data is not available
+            for a symbol. This is handled silently.
         """
         try:
             ticker = yf.Ticker(symbol)
             esg_df = ticker.sustainability
 
             if esg_df is None or esg_df.empty:
-                logger.info(f"No ESG data for {symbol}")
+                logger.debug(f"No ESG data for {symbol}")
                 return None
 
             esg_data = esg_df.iloc[:, 0].to_dict() if not esg_df.empty else {}
@@ -652,7 +656,15 @@ class YahooClient:
             return esg
 
         except Exception as e:
-            logger.warning(f"Failed to get ESG scores for {symbol}: {e}")
+            # HTTP 404 is expected when ESG data is not available for a symbol
+            # This is normal behavior - not all symbols have ESG data
+            error_str = str(e).lower()
+            if "404" in error_str or "not found" in error_str or "http error" in error_str:
+                # Silently handle 404 - this is expected for symbols without ESG data
+                logger.debug(f"No ESG data available for {symbol}")
+            else:
+                # Log other errors as warnings
+                logger.warning(f"Failed to get ESG scores for {symbol}: {e}")
             return None
 
     async def health_check(self, test_symbol: str = "AAPL") -> YahooHealthCheck:

@@ -175,6 +175,37 @@ python scripts/load_historical_data.py --symbol AAPL --days-back 30
 
 Yahoo Finance provides free, unlimited market data including OHLCV, fundamentals, dividends, and company information. Perfect for backtesting, fundamental analysis, and development.
 
+### Implementation Status
+
+**✅ Complete (10/10 data types implemented - 100%)**
+
+All Yahoo Finance data types have been fully implemented:
+
+| # | Data Type | Client Method | Loader Method | Database Model | SQL Script | CLI Flag | Status |
+|---|-----------|---------------|---------------|----------------|------------|----------|--------|
+| 1 | **Market Data (OHLCV)** | `get_historical_data()` | `load_market_data()` | `MarketData` | ✅ | `--market-data` | ✅ Complete |
+| 2 | **Company Information** | `get_company_info()` | `load_company_info()` | `CompanyInfo` | ✅ | `--company-info` | ✅ Complete |
+| 3 | **Key Statistics** | `get_key_statistics()` | `load_key_statistics()` | `KeyStatistics` | ✅ | `--key-statistics` | ✅ Complete |
+| 4 | **Dividends** | `get_dividends()` | `load_dividends()` | `Dividend` | ✅ | `--dividends` | ✅ Complete |
+| 5 | **Stock Splits** | `get_splits()` | `load_splits()` | `StockSplit` | ✅ | `--splits` | ✅ Complete |
+| 6 | **Institutional Holders** | `get_institutional_holders()` | `load_institutional_holders()` | `InstitutionalHolder` | ✅ | `--institutional-holders` | ✅ Complete |
+| 7 | **Financial Statements** | `get_financial_statements()` | `load_financial_statements()` | `FinancialStatement` | ✅ | `--financial-statements` | ✅ Complete |
+| 8 | **Company Officers** | `get_company_officers()` | `load_company_officers()` | `CompanyOfficer` | ✅ | `--company-officers` | ✅ Complete |
+| 9 | **Analyst Recommendations** | `get_analyst_recommendations()` | `load_analyst_recommendations()` | `AnalystRecommendation` | ✅ | `--analyst-recommendations` | ✅ Complete |
+| 10 | **ESG Scores** | `get_esg_scores()` | `load_esg_scores()` | `ESGScore` | ✅ | `--esg-scores` | ✅ Complete |
+
+**What's Working:**
+- ✅ All core market data and fundamentals
+- ✅ All financial statements and metrics
+- ✅ Corporate actions (dividends, splits)
+- ✅ Ownership data (institutional holders, officers)
+- ✅ Analyst recommendations
+- ✅ ESG scores
+- ✅ Complete CLI integration
+- ✅ Comprehensive test coverage
+
+**Note:** HTTP 404 errors when loading ESG scores are expected and normal - not all symbols have ESG data available. These are handled silently by the system.
+
 ### Features
 
 **Market Data:**
@@ -227,6 +258,8 @@ class YahooDataLoader:
     async def load_financials(symbol)
     async def load_dividends(symbol, start_date, end_date)
     async def load_splits(symbol, start_date, end_date)
+    async def load_analyst_recommendations(symbol)
+    async def load_esg_scores(symbol)
     async def load_all_data(symbol, start_date, end_date)
 ```
 
@@ -670,18 +703,31 @@ await loader.load_financials(
 
 ```python
 # Load dividends
-await loader.load_dividends(
+count = await loader.load_dividends(
     symbol="AAPL",
     start_date=date(2023, 1, 1),
     end_date=date(2024, 1, 1)
 )
+print(f"Loaded {count} dividends")
 
 # Load stock splits
-await loader.load_splits(
+count = await loader.load_splits(
     symbol="AAPL",
     start_date=date(2020, 1, 1),
     end_date=date(2024, 1, 1)
 )
+print(f"Loaded {count} stock splits")
+
+# Load analyst recommendations
+count = await loader.load_analyst_recommendations(symbol="AAPL")
+print(f"Loaded {count} analyst recommendation records")
+
+# Load ESG scores
+success = await loader.load_esg_scores(symbol="AAPL")
+if success:
+    print("ESG scores loaded successfully")
+else:
+    print("No ESG scores available")
 ```
 
 #### Load Everything
@@ -694,43 +740,54 @@ await loader.load_all_data(
     end_date=date(2024, 1, 1),
     include_fundamentals=True,
     include_dividends=True,
-    include_splits=True
+    include_splits=True,
+    include_analyst_recommendations=True,
+    include_esg_scores=True
 )
 ```
 
 ### CLI Script
 
 ```bash
-# Load market data only
-python scripts/load_yahoo_data.py --symbol AAPL --days-back 365
+# Load market data only (default)
+python scripts/load_yahoo_data.py --symbol AAPL --days 30
 
-# Load with fundamentals
-python scripts/load_yahoo_data.py --symbol AAPL --days-back 365 --fundamentals
-
-# Load all data types
-python scripts/load_yahoo_data.py --symbol AAPL --days-back 365 --all
-
-# Load for all active symbols (market data only)
-python scripts/load_yahoo_data.py --all-symbols --days-back 30
-
-# Load specific data types
-python scripts/load_yahoo_data.py --symbol AAPL \
-    --market-data \
-    --fundamentals \
-    --dividends \
-    --splits
+# Load company info only (no market data)
+python scripts/load_yahoo_data.py --symbol AAPL --company-info
 
 # Load key statistics only
-python scripts/load_yahoo_data.py --symbol AAPL --key-statistics-only
+python scripts/load_yahoo_data.py --symbol AAPL --key-statistics
+
+# Load market data + company info + key statistics
+python scripts/load_yahoo_data.py --symbol AAPL --days 30 --market-data --company-info --key-statistics
+
+# Load for all active symbols (market data only)
+python scripts/load_yahoo_data.py --all-symbols --days 30
 
 # Load key statistics for all symbols
-python scripts/load_yahoo_data.py --all-symbols --key-statistics-only --max-symbols 10
+python scripts/load_yahoo_data.py --all-symbols --key-statistics --max-symbols 10
 
-# Load market data + key statistics
-python scripts/load_yahoo_data.py --symbol AAPL --days 30 --key-statistics
+# Load company info for all symbols
+python scripts/load_yahoo_data.py --all-symbols --company-info
 
-# Load fundamentals only (no market data)
-python scripts/load_yahoo_data.py --all-symbols --fundamentals-only
+# Load multiple data types
+python scripts/load_yahoo_data.py --symbol AAPL --days 30 \
+    --market-data \
+    --company-info \
+    --key-statistics \
+    --institutional-holders
+
+# Load analyst recommendations only
+python scripts/load_yahoo_data.py --symbol AAPL --analyst-recommendations
+
+# Load analyst recommendations for all symbols
+python scripts/load_yahoo_data.py --all-symbols --analyst-recommendations
+
+# Load ESG scores only
+python scripts/load_yahoo_data.py --symbol AAPL --esg-scores
+
+# Load ESG scores for all symbols
+python scripts/load_yahoo_data.py --all-symbols --esg-scores
 ```
 
 ### Rate Limits & Best Practices
@@ -885,8 +942,10 @@ async def validate_market_data(symbol: str, date: date):
 - `load_company_info()`: Company profile
 - `load_key_statistics()`: Financial metrics
 - `load_financials()`: Financial statements
-- `load_dividends()`: Dividend history
-- `load_splits()`: Split history
+- `load_dividends()`: Dividend history (with date range support)
+- `load_splits()`: Stock split history (with date range support)
+- `load_analyst_recommendations()`: Analyst recommendation counts over time
+- `load_esg_scores()`: ESG (Environmental, Social, Governance) scores
 - `load_all_data()`: Comprehensive load
 - `load_all_symbols_data()`: Batch processing
 

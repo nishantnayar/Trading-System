@@ -14,12 +14,16 @@ from sqlalchemy.dialects.postgresql import insert
 
 from src.services.data_ingestion.symbols import SymbolService
 from src.shared.database.base import db_transaction
+from src.shared.database.models.analyst_recommendations import AnalystRecommendation
 from src.shared.database.models.company_info import CompanyInfo
 from src.shared.database.models.company_officers import CompanyOfficer
+from src.shared.database.models.dividends import Dividend
+from src.shared.database.models.esg_scores import ESGScore
 from src.shared.database.models.financial_statements import FinancialStatement
 from src.shared.database.models.institutional_holders import InstitutionalHolder
 from src.shared.database.models.key_statistics import KeyStatistics
 from src.shared.database.models.market_data import MarketData
+from src.shared.database.models.stock_splits import StockSplit
 from src.shared.database.models.symbols import Symbol
 
 from .client import YahooClient
@@ -485,10 +489,67 @@ class YahooDataLoader:
         Returns:
             Number of dividends loaded
         """
-        # Note: This requires the dividends table to be created
-        # We'll implement this after database migration
-        logger.info(f"Dividend loading not yet implemented for {symbol}")
-        return 0
+        symbol = symbol.upper().strip()
+        if not symbol:
+            raise ValueError("Symbol cannot be empty")
+
+        logger.info(
+            f"Loading dividends for {symbol} from Yahoo Finance"
+            + (f" from {start_date} to {end_date}" if start_date and end_date else "")
+        )
+
+        try:
+            # Fetch dividends from Yahoo
+            dividends_data = await self.client.get_dividends(
+                symbol=symbol, start_date=start_date, end_date=end_date
+            )
+
+            if not dividends_data:
+                logger.info(f"No dividends found for {symbol}")
+                return 0
+
+            # Insert into database using upsert
+            loaded_count = 0
+
+            with db_transaction() as session:
+                for dividend in dividends_data:
+                    stmt = insert(Dividend).values(
+                        symbol=symbol,
+                        ex_date=dividend.ex_date,
+                        amount=dividend.amount,
+                        payment_date=dividend.payment_date,
+                        record_date=dividend.record_date,
+                        dividend_type=dividend.dividend_type,
+                        currency=dividend.currency,
+                        data_source=self.data_source,
+                    )
+
+                    # Update on conflict (unique constraint: symbol, ex_date, data_source)
+                    stmt = stmt.on_conflict_do_update(
+                        index_elements=["symbol", "ex_date", "data_source"],
+                        set_={
+                            "amount": stmt.excluded.amount,
+                            "payment_date": stmt.excluded.payment_date,
+                            "record_date": stmt.excluded.record_date,
+                            "dividend_type": stmt.excluded.dividend_type,
+                            "currency": stmt.excluded.currency,
+                            "updated_at": stmt.excluded.updated_at,
+                        },
+                    )
+
+                    session.execute(stmt)
+                    loaded_count += 1
+
+                session.commit()
+
+            logger.info(
+                f"Successfully loaded {loaded_count} dividends for {symbol}"
+            )
+            return loaded_count
+
+        except Exception as e:
+            logger.error(f"Failed to load dividends for {symbol}: {e}")
+            raise YahooAPIError(f"Failed to load dividends for {symbol}: {str(e)}")
 
     async def load_splits(
         self,
@@ -507,10 +568,61 @@ class YahooDataLoader:
         Returns:
             Number of splits loaded
         """
-        # Note: This requires the stock_splits table to be created
-        # We'll implement this after database migration
-        logger.info(f"Split loading not yet implemented for {symbol}")
-        return 0
+        symbol = symbol.upper().strip()
+        if not symbol:
+            raise ValueError("Symbol cannot be empty")
+
+        logger.info(
+            f"Loading stock splits for {symbol} from Yahoo Finance"
+            + (f" from {start_date} to {end_date}" if start_date and end_date else "")
+        )
+
+        try:
+            # Fetch splits from Yahoo
+            splits_data = await self.client.get_splits(
+                symbol=symbol, start_date=start_date, end_date=end_date
+            )
+
+            if not splits_data:
+                logger.info(f"No stock splits found for {symbol}")
+                return 0
+
+            # Insert into database using upsert
+            loaded_count = 0
+
+            with db_transaction() as session:
+                for split in splits_data:
+                    stmt = insert(StockSplit).values(
+                        symbol=symbol,
+                        split_date=split.split_date,
+                        split_ratio=split.split_ratio,
+                        ratio_str=split.ratio_str,
+                        data_source=self.data_source,
+                    )
+
+                    # Update on conflict (unique constraint: symbol, split_date, data_source)
+                    stmt = stmt.on_conflict_do_update(
+                        index_elements=["symbol", "split_date", "data_source"],
+                        set_={
+                            "split_ratio": stmt.excluded.split_ratio,
+                            "ratio_str": stmt.excluded.ratio_str,
+                            "updated_at": stmt.excluded.updated_at,
+                        },
+                    )
+
+                    session.execute(stmt)
+                    loaded_count += 1
+
+                session.commit()
+
+            logger.info(
+                f"Successfully loaded {loaded_count} stock splits for {symbol}"
+            )
+            return loaded_count
+
+        except Exception as e:
+            logger.error(f"Failed to load stock splits for {symbol}: {e}")
+            raise YahooAPIError(f"Failed to load stock splits for {symbol}: {str(e)}")
 
     async def load_financial_statements(
         self, symbol: str, include_annual: bool = True, include_quarterly: bool = True
@@ -699,39 +811,50 @@ class YahooDataLoader:
                 logger.info(f"No officers data available for {symbol}")
                 return []
 
-            # Store in database using session.merge for each officer
+            # Insert into database using upsert
             stored_count = 0
             with db_transaction() as session:
-                for i, officer_data in enumerate(officers_data):
-                    try:
-                        # Validate officer data before storing
-                        if not officer_data.name or not officer_data.name.strip():
-                            logger.warning(f"Skipping officer {i+1} for {symbol}: empty name")
-                            continue
-
-                        officer_record = CompanyOfficer(
-                            symbol=symbol,
-                            name=officer_data.name.strip(),
-                            title=officer_data.title.strip() if officer_data.title else None,
-                            age=officer_data.age,
-                            year_born=officer_data.year_born,
-                            fiscal_year=officer_data.fiscal_year,
-                            total_pay=officer_data.total_pay,
-                            exercised_value=officer_data.exercised_value,
-                            unexercised_value=officer_data.unexercised_value,
-                            data_source='yahoo',
-                        )
-
-                        session.merge(officer_record)
-                        stored_count += 1
-
-                    except Exception as e:
-                        logger.warning(f"Failed to store officer {i+1} for {symbol}: {e}")
+                for officer_data in officers_data:
+                    # Validate officer data before storing
+                    if not officer_data.name or not officer_data.name.strip():
+                        logger.warning(f"Skipping officer for {symbol}: empty name")
                         continue
+
+                    stmt = insert(CompanyOfficer).values(
+                        symbol=symbol,
+                        name=officer_data.name.strip(),
+                        title=officer_data.title.strip() if officer_data.title else None,
+                        age=officer_data.age,
+                        year_born=officer_data.year_born,
+                        fiscal_year=officer_data.fiscal_year,
+                        total_pay=officer_data.total_pay,
+                        exercised_value=officer_data.exercised_value,
+                        unexercised_value=officer_data.unexercised_value,
+                        data_source=self.data_source,
+                    )
+
+                    # Update on conflict (unique constraint: symbol, name, title)
+                    stmt = stmt.on_conflict_do_update(
+                        index_elements=["symbol", "name", "title"],
+                        set_={
+                            "age": stmt.excluded.age,
+                            "year_born": stmt.excluded.year_born,
+                            "fiscal_year": stmt.excluded.fiscal_year,
+                            "total_pay": stmt.excluded.total_pay,
+                            "exercised_value": stmt.excluded.exercised_value,
+                            "unexercised_value": stmt.excluded.unexercised_value,
+                            "updated_at": stmt.excluded.updated_at,
+                        },
+                    )
+
+                    session.execute(stmt)
+                    stored_count += 1
 
                 session.commit()
 
-            logger.info(f"Successfully loaded {stored_count}/{len(officers_data)} company officers for {symbol}")
+            logger.info(
+                f"Successfully loaded {stored_count}/{len(officers_data)} company officers for {symbol}"
+            )
             return officers_data
 
         except Exception as e:
@@ -739,6 +862,147 @@ class YahooDataLoader:
             raise YahooAPIError(
                 f"Failed to load company officers for {symbol}: {str(e)}"
             )
+
+    async def load_analyst_recommendations(self, symbol: str) -> int:
+        """
+        Load analyst recommendations for a symbol
+
+        Args:
+            symbol: Stock symbol
+
+        Returns:
+            Number of recommendation records loaded
+        """
+        symbol = symbol.upper().strip()
+        if not symbol:
+            raise ValueError("Symbol cannot be empty")
+
+        logger.info(f"Loading analyst recommendations for {symbol} from Yahoo Finance")
+
+        try:
+            # Fetch recommendations from Yahoo
+            recommendations_data = await self.client.get_analyst_recommendations(
+                symbol=symbol
+            )
+
+            if not recommendations_data:
+                logger.info(f"No analyst recommendations found for {symbol}")
+                return 0
+
+            # Insert into database using upsert
+            loaded_count = 0
+
+            with db_transaction() as session:
+                for rec in recommendations_data:
+                    stmt = insert(AnalystRecommendation).values(
+                        symbol=symbol,
+                        date=rec.date,
+                        period=rec.period,
+                        strong_buy=rec.strong_buy,
+                        buy=rec.buy,
+                        hold=rec.hold,
+                        sell=rec.sell,
+                        strong_sell=rec.strong_sell,
+                        data_source=self.data_source,
+                    )
+
+                    # Update on conflict (unique constraint: symbol, date, period, data_source)
+                    stmt = stmt.on_conflict_do_update(
+                        index_elements=["symbol", "date", "period", "data_source"],
+                        set_={
+                            "strong_buy": stmt.excluded.strong_buy,
+                            "buy": stmt.excluded.buy,
+                            "hold": stmt.excluded.hold,
+                            "sell": stmt.excluded.sell,
+                            "strong_sell": stmt.excluded.strong_sell,
+                            "updated_at": stmt.excluded.updated_at,
+                        },
+                    )
+
+                    session.execute(stmt)
+                    loaded_count += 1
+
+                session.commit()
+
+            logger.info(
+                f"Successfully loaded {loaded_count} analyst recommendation records for {symbol}"
+            )
+            return loaded_count
+
+        except Exception as e:
+            logger.error(f"Failed to load analyst recommendations for {symbol}: {e}")
+            raise YahooAPIError(
+                f"Failed to load analyst recommendations for {symbol}: {str(e)}"
+            )
+
+    async def load_esg_scores(self, symbol: str) -> bool:
+        """
+        Load ESG scores for a symbol
+
+        Args:
+            symbol: Stock symbol
+
+        Returns:
+            True if ESG scores were loaded, False if no data available
+        """
+        symbol = symbol.upper().strip()
+        if not symbol:
+            raise ValueError("Symbol cannot be empty")
+
+        logger.info(f"Loading ESG scores for {symbol} from Yahoo Finance")
+
+        try:
+            # Fetch ESG scores from Yahoo
+            esg_data = await self.client.get_esg_scores(symbol=symbol)
+
+            if not esg_data:
+                # No need to log - this is expected for many symbols
+                # The client already logs at debug level
+                return False
+
+            # Insert into database using upsert
+            with db_transaction() as session:
+                stmt = insert(ESGScore).values(
+                    symbol=symbol,
+                    date=esg_data.date,
+                    total_esg=esg_data.total_esg,
+                    environment_score=esg_data.environment_score,
+                    social_score=esg_data.social_score,
+                    governance_score=esg_data.governance_score,
+                    controversy_level=esg_data.controversy_level,
+                    esg_performance=esg_data.esg_performance,
+                    peer_group=esg_data.peer_group,
+                    peer_count=esg_data.peer_count,
+                    percentile=esg_data.percentile,
+                    data_source=self.data_source,
+                )
+
+                # Update on conflict (unique constraint: symbol, date, data_source)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["symbol", "date", "data_source"],
+                    set_={
+                        "total_esg": stmt.excluded.total_esg,
+                        "environment_score": stmt.excluded.environment_score,
+                        "social_score": stmt.excluded.social_score,
+                        "governance_score": stmt.excluded.governance_score,
+                        "controversy_level": stmt.excluded.controversy_level,
+                        "esg_performance": stmt.excluded.esg_performance,
+                        "peer_group": stmt.excluded.peer_group,
+                        "peer_count": stmt.excluded.peer_count,
+                        "percentile": stmt.excluded.percentile,
+                        "updated_at": stmt.excluded.updated_at,
+                    },
+                )
+
+                session.execute(stmt)
+                session.commit()
+
+            logger.info(f"Successfully loaded ESG scores for {symbol}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to load ESG scores for {symbol}: {e}")
+            raise YahooAPIError(f"Failed to load ESG scores for {symbol}: {str(e)}")
 
     async def load_all_data(
         self,
@@ -752,6 +1016,8 @@ class YahooDataLoader:
         include_company_officers: bool = False,
         include_dividends: bool = False,
         include_splits: bool = False,
+        include_analyst_recommendations: bool = False,
+        include_esg_scores: bool = False,
     ) -> Dict[str, int]:
         """
         Load all available data for a symbol
@@ -768,6 +1034,8 @@ class YahooDataLoader:
             include_company_officers: Load company officers and executives
             include_dividends: Load dividend history
             include_splits: Load split history
+            include_analyst_recommendations: Load analyst recommendations
+            include_esg_scores: Load ESG scores
 
         Returns:
             Dictionary with counts of loaded records
@@ -784,6 +1052,8 @@ class YahooDataLoader:
             "company_officers": 0,
             "dividends": 0,
             "splits": 0,
+            "analyst_recommendations": 0,
+            "esg_scores": 0,
         }
 
         try:
@@ -836,6 +1106,17 @@ class YahooDataLoader:
                     end_date=end_date,
                 )
 
+            # Load analyst recommendations if requested
+            if include_analyst_recommendations:
+                results["analyst_recommendations"] = (
+                    await self.load_analyst_recommendations(symbol)
+                )
+
+            # Load ESG scores if requested
+            if include_esg_scores:
+                success = await self.load_esg_scores(symbol)
+                results["esg_scores"] = 1 if success else 0
+
             logger.info(f"Completed loading all data for {symbol}: {results}")
             return results
 
@@ -854,6 +1135,10 @@ class YahooDataLoader:
         include_institutional_holders: bool = False,
         include_financial_statements: bool = False,
         include_company_officers: bool = False,
+        include_dividends: bool = False,
+        include_splits: bool = False,
+        include_analyst_recommendations: bool = False,
+        include_esg_scores: bool = False,
     ) -> Dict[str, Any]:
         """
         Load market data for all active symbols
@@ -866,6 +1151,12 @@ class YahooDataLoader:
             include_fundamentals: Load fundamentals data
             include_key_statistics: Load key statistics
             include_institutional_holders: Load institutional holders
+            include_financial_statements: Load financial statements
+            include_company_officers: Load company officers
+            include_dividends: Load dividend history
+            include_splits: Load stock split history
+            include_analyst_recommendations: Load analyst recommendations
+            include_esg_scores: Load ESG scores
 
         Returns:
             Dictionary with loading statistics
@@ -919,6 +1210,30 @@ class YahooDataLoader:
                 # Load company officers if requested
                 if include_company_officers:
                     await self.load_company_officers(symbol)
+
+                # Load dividends if requested
+                if include_dividends:
+                    await self.load_dividends(
+                        symbol=symbol,
+                        start_date=start_date,
+                        end_date=end_date,
+                    )
+
+                # Load splits if requested
+                if include_splits:
+                    await self.load_splits(
+                        symbol=symbol,
+                        start_date=start_date,
+                        end_date=end_date,
+                    )
+
+                # Load analyst recommendations if requested
+                if include_analyst_recommendations:
+                    await self.load_analyst_recommendations(symbol)
+
+                # Load ESG scores if requested
+                if include_esg_scores:
+                    await self.load_esg_scores(symbol)
 
                 stats["successful"] += 1
                 

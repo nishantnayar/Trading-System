@@ -1,5 +1,5 @@
 """
-Author page for Trading System
+Author page for Trading System.
 System information, team details, and contact information
 """
 

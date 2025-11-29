@@ -1268,7 +1268,8 @@ REDIS_URL=redis://localhost:6379/0
 - **System Logging**: Structured log storage
 
 #### **2.2 Service-Specific Schemas**
-- **data_ingestion**: Market data, key statistics, institutional holders, company info, data quality logs, ingestion status
+- **data_ingestion**: Market data, symbols management, key statistics, institutional holders, company info, data quality logs, ingestion status
+  - Symbol tables: `symbols`, `delisted_symbols`, `symbol_data_status` (see [SymbolService API](../api/data-ingestion.md#symbolservice-api))
 - **strategy_engine**: Strategies, signals, performance metrics
 - **execution**: Orders, trades, positions, execution logs
 - **risk_management**: Risk limits, events, position limits

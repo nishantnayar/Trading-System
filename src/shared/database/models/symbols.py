@@ -61,6 +61,26 @@ class Symbol(Base):
         back_populates="symbol_ref",
         cascade="all, delete-orphan",
     )
+    dividends = relationship(
+        "Dividend",
+        back_populates="symbol_ref",
+        cascade="all, delete-orphan",
+    )
+    stock_splits = relationship(
+        "StockSplit",
+        back_populates="symbol_ref",
+        cascade="all, delete-orphan",
+    )
+    analyst_recommendations = relationship(
+        "AnalystRecommendation",
+        back_populates="symbol_ref",
+        cascade="all, delete-orphan",
+    )
+    esg_scores = relationship(
+        "ESGScore",
+        back_populates="symbol_ref",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Symbol(symbol='{self.symbol}', name='{self.name}', status='{self.status}')>"

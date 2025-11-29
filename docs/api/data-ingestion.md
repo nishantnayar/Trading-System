@@ -869,19 +869,345 @@ if data["success"]:
         print(f"{holder['holder_name']}: {holder['percent_held_display']}")
 ```
 
-```javascript
-// Frontend usage with horizontal bars
-fetch('/api/institutional-holders/MS')
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      data.holders.forEach(holder => {
-        // Display holder with horizontal bar
-        displayHolderWithBar(holder);
-      });
-    }
-  });
+## SymbolService API
+
+The `SymbolService` class (`src/services/data_ingestion/symbols.py`) provides comprehensive symbol management functionality for the data ingestion pipeline. It handles symbol tracking, delisting detection, data ingestion status monitoring, and symbol statistics.
+
+### Class Overview
+
+```python
+from src.services.data_ingestion.symbols import SymbolService
+
+service = SymbolService()
 ```
+
+The `SymbolService` integrates with the Polygon.io client for symbol health checking and uses database transactions for all operations.
+
+### Core Methods
+
+#### Symbol Retrieval
+
+##### `get_active_symbols() -> List[Symbol]`
+Retrieves all symbols with `status == "active"` from the database.
+
+**Returns**: List of `Symbol` model objects with full symbol information
+
+**Example:**
+```python
+symbols = await service.get_active_symbols()
+for symbol in symbols:
+    print(f"{symbol.symbol}: {symbol.name} ({symbol.exchange})")
+```
+
+##### `get_active_symbol_strings() -> List[str]`
+Gets a lightweight list of active symbol tickers as strings.
+
+**Returns**: List of symbol ticker strings (e.g., `["AAPL", "MSFT", "GOOGL"]`)
+
+**Use Case**: Efficient when you only need ticker symbols without full symbol details
+
+**Example:**
+```python
+tickers = await service.get_active_symbol_strings()
+# ['AAPL', 'MSFT', 'GOOGL', ...]
+```
+
+##### `get_symbol_by_ticker(symbol: str) -> Optional[Symbol]`
+Retrieves a specific symbol by its ticker.
+
+**Parameters:**
+- `symbol` (str): Ticker symbol (case-insensitive, automatically uppercased)
+
+**Returns**: `Symbol` object if found, `None` otherwise
+
+**Example:**
+```python
+symbol = await service.get_symbol_by_ticker("AAPL")
+if symbol:
+    print(f"Found: {symbol.name}")
+```
+
+#### Symbol Management
+
+##### `add_symbol(symbol: str, name: Optional[str] = None, exchange: Optional[str] = None, sector: Optional[str] = None, market_cap: Optional[int] = None) -> Symbol`
+Adds a new symbol to the tracking system. If the symbol already exists, returns the existing symbol.
+
+**Parameters:**
+- `symbol` (str): Ticker symbol (required, automatically uppercased)
+- `name` (str, optional): Company name
+- `exchange` (str, optional): Exchange name (e.g., "NASDAQ", "NYSE")
+- `sector` (str, optional): Industry sector
+- `market_cap` (int, optional): Market capitalization
+
+**Returns**: `Symbol` object (existing or newly created)
+
+**Behavior:**
+- Automatically sets status to "active"
+- Returns existing symbol if already in database (no duplicate creation)
+- Logs warning if symbol already exists
+
+**Example:**
+```python
+new_symbol = await service.add_symbol(
+    symbol="TSLA",
+    name="Tesla Inc.",
+    exchange="NASDAQ",
+    sector="Consumer Cyclical",
+    market_cap=800_000_000_000
+)
+```
+
+##### `mark_symbol_delisted(symbol: str, last_price: Optional[float] = None, notes: Optional[str] = None) -> bool`
+Marks a symbol as delisted and adds it to the `delisted_symbols` table.
+
+**Parameters:**
+- `symbol` (str): Ticker symbol to mark as delisted
+- `last_price` (float, optional): Last known price before delisting
+- `notes` (str, optional): Additional notes about the delisting
+
+**Returns**: `True` if successful, `False` if symbol not found
+
+**Behavior:**
+- Updates symbol status to "delisted" in `symbols` table
+- Creates entry in `delisted_symbols` table with delist date (today)
+- Handles already-delisted symbols gracefully (updates status if needed)
+- Sets default notes to "Automatically detected as delisted" if not provided
+
+**Example:**
+```python
+success = await service.mark_symbol_delisted(
+    symbol="OLD",
+    last_price=10.50,
+    notes="Acquired by another company"
+)
+```
+
+#### Symbol Health Checking
+
+##### `check_symbol_health(symbol: str) -> bool`
+Validates if a symbol is still active by attempting to fetch data from Polygon.io.
+
+**Parameters:**
+- `symbol` (str): Ticker symbol to check
+
+**Returns**: 
+- `True` if symbol is valid/healthy
+- `False` if symbol appears to be delisted (404/not found errors)
+
+**Behavior:**
+- Uses Polygon.io API to verify symbol validity
+- Returns `False` for 404 or "not found" errors
+- Returns `True` for other errors (treats as temporary issues)
+- Logs warnings for delisted symbols
+
+**Example:**
+```python
+is_healthy = await service.check_symbol_health("AAPL")
+if not is_healthy:
+    await service.mark_symbol_delisted("AAPL")
+```
+
+##### `detect_delisted_symbols() -> List[str]`
+Automatically scans all active symbols and detects which ones have been delisted.
+
+**Returns**: List of symbol tickers that were detected as delisted
+
+**Process:**
+1. Retrieves all active symbols
+2. Checks health of each symbol via Polygon.io
+3. Marks unhealthy symbols as delisted
+4. Returns list of newly delisted symbols
+
+**Use Case**: Scheduled job to periodically clean up delisted symbols
+
+**Example:**
+```python
+delisted = await service.detect_delisted_symbols()
+print(f"Detected {len(delisted)} delisted symbols: {delisted}")
+# Output: Detected 3 delisted symbols: ['OLD', 'GONE', 'DELISTED']
+```
+
+#### Data Ingestion Status Tracking
+
+##### `get_symbol_data_status(symbol: str, date: date, data_source: str = "polygon") -> Optional[SymbolDataStatus]`
+Retrieves the data ingestion status for a specific symbol, date, and data source.
+
+**Parameters:**
+- `symbol` (str): Ticker symbol
+- `date` (date): Date to check status for
+- `data_source` (str): Data source name (default: "polygon")
+
+**Returns**: `SymbolDataStatus` object if found, `None` otherwise
+
+**Use Case**: Check if data has already been ingested for a symbol/date
+
+**Example:**
+```python
+from datetime import date
+
+status = await service.get_symbol_data_status("AAPL", date(2024, 1, 15))
+if status:
+    print(f"Status: {status.status}, Last attempt: {status.last_attempt}")
+```
+
+##### `update_symbol_data_status(symbol: str, date: date, data_source: str, status: str, error_message: Optional[str] = None) -> SymbolDataStatus`
+Updates or creates the data ingestion status for a symbol.
+
+**Parameters:**
+- `symbol` (str): Ticker symbol
+- `date` (date): Date of data ingestion
+- `data_source` (str): Data source name (e.g., "polygon", "alpaca")
+- `status` (str): Status value ("success", "failed", "no_data", etc.)
+- `error_message` (str, optional): Error message if ingestion failed
+
+**Returns**: `SymbolDataStatus` object (created or updated)
+
+**Behavior:**
+- Creates new status record if doesn't exist
+- Updates existing record if already present
+- Automatically sets `last_attempt` timestamp
+
+**Example:**
+```python
+status = await service.update_symbol_data_status(
+    symbol="AAPL",
+    date=date(2024, 1, 15),
+    data_source="polygon",
+    status="success"
+)
+```
+
+##### `get_symbols_needing_data(target_date: date, data_source: str = "polygon") -> List[Symbol]`
+Retrieves active symbols that don't have successful data ingestion for the specified date.
+
+**Parameters:**
+- `target_date` (date): Date to check for missing data
+- `data_source` (str): Data source to check (default: "polygon")
+
+**Returns**: List of `Symbol` objects that need data for the target date
+
+**Use Case**: Identify symbols that need data backfill or retry ingestion
+
+**Example:**
+```python
+from datetime import date, timedelta
+
+yesterday = date.today() - timedelta(days=1)
+needing_data = await service.get_symbols_needing_data(yesterday)
+print(f"{len(needing_data)} symbols need data for {yesterday}")
+```
+
+#### Delisted Symbol Management
+
+##### `get_delisted_symbols() -> List[DelistedSymbol]`
+Retrieves all delisted symbols from the `delisted_symbols` table.
+
+**Returns**: List of `DelistedSymbol` objects, ordered by delist date (most recent first)
+
+**Example:**
+```python
+delisted = await service.get_delisted_symbols()
+for symbol in delisted:
+    print(f"{symbol.symbol}: Delisted on {symbol.delist_date}, Last price: ${symbol.last_price}")
+```
+
+#### Statistics and Reporting
+
+##### `get_symbol_statistics() -> dict`
+Generates comprehensive statistics about the symbol universe.
+
+**Returns**: Dictionary with the following keys:
+- `active_symbols` (int): Count of active symbols
+- `delisted_symbols` (int): Count of delisted symbols
+- `total_symbols` (int): Total symbol count
+- `by_exchange` (dict): Dictionary mapping exchange names to symbol counts
+
+**Example:**
+```python
+stats = await service.get_symbol_statistics()
+print(f"Active: {stats['active_symbols']}")
+print(f"Delisted: {stats['delisted_symbols']}")
+print(f"By Exchange: {stats['by_exchange']}")
+# Output:
+# Active: 95
+# Delisted: 5
+# By Exchange: {'NASDAQ': 60, 'NYSE': 35}
+```
+
+### Integration with Data Ingestion Flows
+
+The `SymbolService` is designed to integrate seamlessly with Prefect data ingestion flows:
+
+```python
+from prefect import flow
+from datetime import date
+from src.services.data_ingestion.symbols import SymbolService
+
+@flow(name="daily_data_ingestion")
+async def daily_data_ingestion_flow():
+    service = SymbolService()
+    
+    # Get symbols that need data for today
+    target_date = date.today()
+    symbols_needing_data = await service.get_symbols_needing_data(target_date)
+    
+    # Process each symbol
+    for symbol in symbols_needing_data:
+        try:
+            # Fetch and ingest data
+            # ... data ingestion logic ...
+            
+            # Update status on success
+            await service.update_symbol_data_status(
+                symbol=symbol.symbol,
+                date=target_date,
+                data_source="polygon",
+                status="success"
+            )
+        except Exception as e:
+            # Update status on failure
+            await service.update_symbol_data_status(
+                symbol=symbol.symbol,
+                date=target_date,
+                data_source="polygon",
+                status="failed",
+                error_message=str(e)
+            )
+```
+
+### Database Models
+
+The `SymbolService` interacts with the following database models:
+
+- **`Symbol`**: Main symbols table (`data_ingestion.symbols`)
+  - Primary key: `symbol` (VARCHAR(10))
+  - Fields: `name`, `exchange`, `sector`, `market_cap`, `status`, `added_date`, `last_updated`
+  - Relationships: `key_statistics`, `institutional_holders`, `financial_statements`, `company_officers`, `dividends`, `stock_splits`, `analyst_recommendations`, `esg_scores`
+
+- **`DelistedSymbol`**: Delisted symbols tracking (`data_ingestion.delisted_symbols`)
+  - Primary key: `symbol` (VARCHAR(10))
+  - Fields: `delist_date`, `last_price`, `notes`, `created_at`
+
+- **`SymbolDataStatus`**: Data ingestion status tracking (`data_ingestion.symbol_data_status`)
+  - Primary key: (`symbol`, `date`, `data_source`)
+  - Fields: `status`, `error_message`, `last_attempt`
+
+### Error Handling
+
+The service handles various error scenarios gracefully:
+
+- **Symbol not found**: Returns `None` for retrieval methods, `False` for operations
+- **Database errors**: All operations use transactions for atomicity
+- **API errors**: Health checking distinguishes between delisted symbols (404) and temporary errors
+- **Duplicate symbols**: `add_symbol()` safely handles existing symbols
+
+### Best Practices
+
+1. **Always use transactions**: All database operations are wrapped in `db_transaction()` context
+2. **Check health before marking delisted**: Use `check_symbol_health()` to verify before calling `mark_symbol_delisted()`
+3. **Update status after ingestion**: Always update `SymbolDataStatus` after data ingestion attempts
+4. **Use statistics for monitoring**: Regularly call `get_symbol_statistics()` to monitor symbol universe health
+5. **Schedule delisting detection**: Run `detect_delisted_symbols()` periodically (e.g., weekly) to clean up inactive symbols
 
 ## Getting Started
 
@@ -948,11 +1274,54 @@ fetch('/api/institutional-holders/MS')
 
 ### Symbol Management Features
 
-- **Automatic Delisting Detection**: System automatically detects and marks delisted symbols
-- **Data Ingestion Status Tracking**: Monitor success/failure of data collection per symbol
-- **100 Initial Symbols**: Pre-configured symbol universe for data collection
-- **Database-Driven Management**: All symbol operations go through the database
-- **No Delisting Reason Tracking**: Simplified approach focusing on active/inactive status
+The symbol management system provides comprehensive tracking and monitoring capabilities:
+
+#### Core Capabilities
+
+- **Automatic Delisting Detection**: System automatically detects and marks delisted symbols using Polygon.io API health checks
+- **Data Ingestion Status Tracking**: Monitor success/failure of data collection per symbol, date, and data source
+- **Symbol Universe Management**: Add, retrieve, and manage symbols with metadata (name, exchange, sector, market cap)
+- **Database-Driven Management**: All symbol operations use database transactions for consistency
+- **Health Monitoring**: Periodic health checks validate symbol validity before data ingestion
+- **Statistics and Reporting**: Comprehensive statistics about active/delisted symbols and exchange distribution
+
+#### Key Features
+
+1. **Delisting Detection**:
+   - Automatic detection via `detect_delisted_symbols()` method
+   - Health checking using Polygon.io API
+   - Tracks delisting date and last known price
+   - Prevents unnecessary API calls for delisted symbols
+
+2. **Data Ingestion Tracking**:
+   - Per-symbol, per-date, per-source status tracking
+   - Identifies symbols needing data backfill
+   - Tracks error messages for failed ingestions
+   - Supports multiple data sources (polygon, alpaca, etc.)
+
+3. **Symbol Lifecycle**:
+   - Add new symbols with metadata
+   - Track active vs delisted status
+   - Maintain historical delisting records
+   - Support for symbol statistics and analytics
+
+4. **Integration Points**:
+   - Integrates with Polygon.io for health checks
+   - Works with Prefect flows for automated ingestion
+   - Database-backed for reliability and queryability
+   - Supports multiple data sources simultaneously
+
+#### Usage in Data Ingestion Pipeline
+
+The `SymbolService` is used throughout the data ingestion pipeline:
+
+1. **Initial Setup**: Add symbols to the system using `add_symbol()`
+2. **Daily Ingestion**: Identify symbols needing data using `get_symbols_needing_data()`
+3. **Status Tracking**: Update ingestion status with `update_symbol_data_status()`
+4. **Health Monitoring**: Periodically check symbol health with `detect_delisted_symbols()`
+5. **Reporting**: Generate statistics with `get_symbol_statistics()`
+
+For detailed API documentation, see the [SymbolService API](#symbolservice-api) section above.
 
 ## Troubleshooting
 

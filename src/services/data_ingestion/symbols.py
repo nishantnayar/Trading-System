@@ -95,6 +95,20 @@ class SymbolService:
                 logger.warning(f"Symbol {symbol} not found")
                 return False
 
+            # Check if already in delisted_symbols table
+            delisted_stmt = select(DelistedSymbol).where(DelistedSymbol.symbol == symbol)
+            delisted_result = session.execute(delisted_stmt)
+            existing_delisted = delisted_result.scalar_one_or_none()
+
+            if existing_delisted:
+                # Symbol already marked as delisted, just update the symbol status if needed
+                logger.info(f"Symbol {symbol} is already in delisted_symbols table")
+                if symbol_obj.status != "delisted":
+                    symbol_obj.status = "delisted"  # type: ignore
+                    symbol_obj.last_updated = datetime.now(timezone.utc)  # type: ignore
+                    session.commit()
+                return True
+
             # Update symbol status
             symbol_obj.status = "delisted"  # type: ignore
             symbol_obj.last_updated = datetime.now(timezone.utc)  # type: ignore

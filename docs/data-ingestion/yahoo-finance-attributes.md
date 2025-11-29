@@ -11,6 +11,112 @@ The Yahoo Finance integration provides **10 major data categories** with 100+ in
 - Ownership and analyst coverage
 - ESG metrics
 
+## Quick Reference
+
+### Available Data Categories
+
+Your Yahoo Finance integration provides **10 comprehensive data categories** with **100+ individual attributes**:
+
+1. **📈 Market Data (OHLCV)** - Price: Open, High, Low, Close, Volume. Intervals: 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo
+2. **🏢 Company Information** - Name, Sector, Industry, Description, Website, Contact, Address, Employees, Market Cap, Exchange
+3. **💰 Key Statistics (50+ Metrics)** - Valuation, Profitability, Financial Health, Growth, Trading, Dividends, Shares
+4. **💵 Dividends** - Ex-Date, Payment Date, Record Date, Amount, Type (regular/special/stock)
+5. **🔀 Stock Splits** - Split Date, Split Ratio (numeric & readable)
+6. **🏦 Institutional Holders** - Institution Name, Shares Held, Dollar Value, Percentage Ownership
+7. **📊 Analyst Recommendations** - Strong Buy, Buy, Hold, Sell, Strong Sell, Total Analyst Count
+8. **📑 Financial Statements** - Income Statement, Balance Sheet, Cash Flow (Annual or Quarterly)
+9. **🌱 ESG Scores** - Total ESG Score, Environment, Social, Governance scores, Controversy Level, Peer Group Comparison
+10. **👔 Company Officers** - Executive Name, Title, Age, Total Compensation, Stock Options
+
+### Quick Start Examples
+
+```bash
+# Load key statistics for single symbol
+python scripts/load_yahoo_data.py --symbol AAPL --key-statistics
+
+# Load key statistics for all symbols
+python scripts/load_yahoo_data.py --all-symbols --key-statistics --max-symbols 10
+
+# Load market data + key statistics together
+python scripts/load_yahoo_data.py --symbol AAPL --days 30 --market-data --key-statistics
+
+# Load all data types
+python scripts/load_yahoo_data.py --symbol AAPL --days 365 \
+    --market-data \
+    --company-info \
+    --key-statistics \
+    --institutional-holders \
+    --financial-statements \
+    --company-officers \
+    --dividends \
+    --splits \
+    --analyst-recommendations \
+    --esg-scores
+```
+
+### Programmatic Usage
+
+```python
+from src.services.yahoo.loader import YahooDataLoader
+from datetime import date, timedelta
+
+loader = YahooDataLoader()
+
+# Load key statistics
+success = await loader.load_key_statistics("AAPL")
+
+# Load market data
+count = await loader.load_market_data(
+    symbol="AAPL",
+    start_date=date.today() - timedelta(days=30),
+    end_date=date.today(),
+    interval="1d"
+)
+
+# Load all data types
+results = await loader.load_all_data(
+    symbol="AAPL",
+    start_date=date.today() - timedelta(days=30),
+    end_date=date.today(),
+    include_fundamentals=True,
+    include_dividends=True,
+    include_splits=True,
+    include_analyst_recommendations=True,
+    include_esg_scores=True
+)
+```
+
+### Use Cases
+
+- **Stock Screening**: Load Key Statistics (PE, PB, ROE, margins, growth)
+- **Dividend Investing**: Load Dividends, Dividend Metrics (yield, payout ratio)
+- **Financial Analysis**: Load Financial Statements, Key Statistics, Cash Flow
+- **Technical Analysis**: Load Market Data, Moving Averages, 52W High/Low, Beta
+- **Fundamental Analysis**: Load Company Info, Financial Statements, Growth Metrics
+- **Risk Assessment**: Load Debt/Equity, Current Ratio, Interest Coverage, Beta
+- **Sentiment Analysis**: Load Analyst Recommendations, Institutional Holders, Short Interest
+
+### Key Features
+
+✅ **100+ Data Attributes** across 10 categories  
+✅ **Real-time Data** for US equities  
+✅ **Multiple Timeframes** (1-minute to monthly)  
+✅ **Automatic Database Storage** with upsert logic  
+✅ **Rate Limiting** built-in (0.5s delay)  
+✅ **Error Handling** with specific exceptions  
+✅ **Timezone Aware** (UTC storage, Central display)  
+✅ **Type Safe** with Pydantic models  
+✅ **Async/Await** for performance
+
+### Important Notes
+
+- **Free Service**: Yahoo Finance is free but has informal rate limits
+- **Best Practices**: Use 0.5-1 second delays between requests
+- **Data Coverage**: Most complete for large-cap US stocks
+- **Updates**: Market data is real-time, fundamentals lag by 1-2 days
+- **Timezone**: All data stored in UTC, convert to Central for display
+- **HTTP 404 Errors**: Expected when ESG data is not available for a symbol (handled silently)
+
 ## 1. Market Data (OHLCV)
 
 ### Available Attributes
