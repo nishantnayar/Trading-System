@@ -25,6 +25,7 @@ except ImportError:
         # Try to import pandas_ta_classic to register the extension
         try:
             import pandas_ta_classic  # type: ignore[import-untyped]
+
             # Check if extension is now available
             if not hasattr(pd.DataFrame, 'ta'):
                 raise ImportError(
