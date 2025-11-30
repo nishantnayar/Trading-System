@@ -10,7 +10,33 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-import pandas_ta as ta
+
+# Import pandas_ta to register the pandas DataFrame extension (df.ta.*)
+# We use df.ta.sma(), df.ta.ema(), etc. in the code, so we need the extension registered
+try:
+    import pandas_ta as ta  # type: ignore[import-untyped]
+except ImportError:
+    # pandas-ta-classic might register the extension when the package is installed
+    # Try to verify the extension is available
+    if hasattr(pd.DataFrame, 'ta'):
+        # Extension is already registered (might be auto-registered by pandas-ta-classic)
+        ta = None  # type: ignore[assignment, unused-ignore]
+    else:
+        # Try to import pandas_ta_classic to register the extension
+        try:
+            import pandas_ta_classic  # type: ignore[import-untyped]
+            # Check if extension is now available
+            if not hasattr(pd.DataFrame, 'ta'):
+                raise ImportError(
+                    "pandas.ta extension not available. "
+                    "Please ensure 'pandas-ta-classic>=0.3.15' is properly installed."
+                )
+            ta = None  # type: ignore[assignment, unused-ignore]
+        except ImportError:
+            raise ImportError(
+                "pandas_ta module not found and pandas.ta extension not available. "
+                "Please install 'pandas-ta-classic>=0.3.15' for Python 3.11."
+            )
 
 
 def calculate_sma(prices: List[float], period: int) -> Optional[float]:

@@ -112,7 +112,8 @@ jobs:
         pip install -r requirements-test.txt
         # Explicitly verify pandas-ta-classic installation
         pip show pandas-ta-classic || pip install pandas-ta-classic>=0.3.15
-        python -c "import pandas_ta; print('✓ pandas_ta imported successfully')" || (echo "✗ ERROR: pandas_ta import failed" && pip list | grep -i pandas && exit 1)
+        # Verify pandas.ta extension is available (pandas-ta-classic registers this, not pandas_ta module)
+        python -c "import pandas as pd; import pandas_ta_classic; df = pd.DataFrame({'close': [1,2,3]}); assert hasattr(df, 'ta'), 'pandas.ta extension not available'; print('✓ pandas.ta extension verified')" || (echo "✗ ERROR: pandas.ta extension not available" && pip list | grep -i pandas && exit 1)
         
     - name: Set up test environment
       run: |
