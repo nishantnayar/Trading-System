@@ -80,8 +80,7 @@ class TestSMA:
             # Our implementation (uses pandas-ta internally)
             our_result = calculate_sma(prices, period)
             
-            # Direct pandas-ta verification
-            import pandas_ta as ta
+            # Direct pandas-ta verification using pandas extension API
             df = pd.DataFrame({'close': prices})
             df.ta.sma(length=period, append=True)
             pandas_ta_result = df[f'SMA_{period}'].iloc[-1]
@@ -209,8 +208,7 @@ class TestSMA:
         
         result = calculate_sma(prices, period)
         
-        # Verify against pandas-ta
-        import pandas_ta as ta
+        # Verify against pandas-ta using pandas extension API
         df = pd.DataFrame({'close': prices})
         df.ta.sma(length=period, append=True)
         pandas_ta_result = df[f'SMA_{period}'].iloc[-1]
@@ -228,8 +226,7 @@ class TestSMA:
         
         result = calculate_sma(prices, period)
         
-        # Verify against pandas-ta
-        import pandas_ta as ta
+        # Verify against pandas-ta using pandas extension API
         df = pd.DataFrame({'close': prices})
         df.ta.sma(length=period, append=True)
         pandas_ta_result = df[f'SMA_{period}'].iloc[-1]
@@ -330,8 +327,7 @@ class TestOtherIndicators:
         assert result is not None
         assert isinstance(result, (float, np.floating))
         
-        # Verify against pandas-ta
-        import pandas_ta as ta
+        # Verify against pandas-ta using pandas extension API
         df = pd.DataFrame({'close': prices})
         df.ta.ema(length=period, append=True)
         expected = df[f'EMA_{period}'].iloc[-1]
@@ -347,8 +343,7 @@ class TestOtherIndicators:
         assert result is not None
         assert 0 <= result <= 100, "RSI should be between 0 and 100"
         
-        # Verify against pandas-ta
-        import pandas_ta as ta
+        # Verify against pandas-ta using pandas extension API
         df = pd.DataFrame({'close': prices})
         df.ta.rsi(length=period, append=True)
         expected = df[f'RSI_{period}'].iloc[-1]
@@ -366,8 +361,7 @@ class TestOtherIndicators:
         assert 'histogram' in result
         assert all(isinstance(v, (float, np.floating)) for v in result.values())
         
-        # Verify against pandas-ta
-        import pandas_ta as ta
+        # Verify against pandas-ta using pandas extension API
         df = pd.DataFrame({'close': prices})
         df.ta.macd(fast=12, slow=26, signal=9, append=True)
         expected_macd = df['MACD_12_26_9'].iloc[-1]
@@ -392,8 +386,7 @@ class TestOtherIndicators:
         assert 'lower' in result
         assert result['upper'] > result['middle'] > result['lower']
         
-        # Verify against pandas-ta
-        import pandas_ta as ta
+        # Verify against pandas-ta using pandas extension API
         df = pd.DataFrame({'close': prices})
         df.ta.bbands(length=period, std=std_dev, append=True)
         
