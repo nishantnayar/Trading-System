@@ -110,6 +110,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-test.txt
+        # Explicitly verify pandas-ta-classic installation
+        pip show pandas-ta-classic || pip install pandas-ta-classic>=0.3.15
+        python -c "import pandas_ta; print('✓ pandas_ta imported successfully')" || (echo "✗ ERROR: pandas_ta import failed" && pip list | grep -i pandas && exit 1)
         
     - name: Set up test environment
       run: |
