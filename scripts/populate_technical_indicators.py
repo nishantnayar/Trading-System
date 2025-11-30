@@ -33,6 +33,7 @@ from src.services.data_ingestion.symbols import SymbolService
 async def check_tables_exist() -> bool:
     """Check if technical indicators tables exist"""
     from sqlalchemy import inspect
+
     from src.shared.database.base import get_engine
     
     engine = get_engine("trading")

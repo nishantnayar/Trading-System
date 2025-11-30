@@ -8,6 +8,7 @@ correctly and match industry-standard implementations.
 Author: Trading System Team
 """
 
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -19,13 +20,20 @@ import pytest
 streamlit_path = Path(__file__).parent.parent.parent / "streamlit_ui"
 sys.path.insert(0, str(streamlit_path))
 
-from utils.technical_indicators import (
-    calculate_bollinger_bands,
-    calculate_ema,
-    calculate_macd,
-    calculate_rsi,
-    calculate_sma,
-)
+# Import directly from technical_indicators module to avoid importing utils package
+# which would trigger plotly import (not available in test environment)
+
+technical_indicators_path = streamlit_path / "utils" / "technical_indicators.py"
+spec = importlib.util.spec_from_file_location("technical_indicators", technical_indicators_path)
+technical_indicators_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(technical_indicators_module)
+
+# Import functions from the module
+calculate_bollinger_bands = technical_indicators_module.calculate_bollinger_bands
+calculate_ema = technical_indicators_module.calculate_ema
+calculate_macd = technical_indicators_module.calculate_macd
+calculate_rsi = technical_indicators_module.calculate_rsi
+calculate_sma = technical_indicators_module.calculate_sma
 
 
 class TestSMA:

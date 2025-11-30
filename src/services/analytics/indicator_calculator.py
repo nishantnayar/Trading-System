@@ -5,7 +5,9 @@ Calculates technical indicators from market data and stores them in the database
 Uses only Yahoo Finance data (data_source = 'yahoo') for calculations.
 """
 
+import sys
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -14,12 +16,12 @@ from loguru import logger
 from sqlalchemy import and_, desc, select
 
 from src.shared.database.base import db_transaction
-from src.shared.database.models.market_data import MarketData  # noqa: F401 (used in type hints)
+from src.shared.database.models.market_data import (  # noqa: F401 (used in type hints)
+    MarketData,
+)
 
 # Import calculation functions from streamlit_ui
 # Note: In production, these should be moved to a shared location
-import sys
-from pathlib import Path
 
 # Add streamlit_ui to path to import calculation functions
 streamlit_path = Path(__file__).parent.parent.parent.parent / "streamlit_ui"
