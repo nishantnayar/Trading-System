@@ -8,7 +8,7 @@ Uses only Yahoo Finance data (data_source = 'yahoo') for calculations.
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -215,12 +215,18 @@ class IndicatorCalculationService:
                     return bool(value)
                 else:
                     # Fallback: convert to Python type
-                    return value.item() if hasattr(value, 'item') else float(value)
+                    return float(value.item() if hasattr(value, 'item') else value)
             # Handle numpy arrays
             if isinstance(value, np.ndarray):
-                return value.tolist()
-            # Already a Python native type
-            return value
+                result = value.tolist()
+                return cast(List[Any], result)
+            # Already a Python native type - cast to expected return type
+            if isinstance(value, (float, int, bool)):
+                return cast(Union[float, int, bool], value)
+            if isinstance(value, list):
+                return cast(List[Any], value)
+            # Fallback: try to convert to float
+            return float(value)
         
         # Build indicators dictionary (convert numpy types to Python native types)
         indicators = {
