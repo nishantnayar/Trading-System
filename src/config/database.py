@@ -2,12 +2,18 @@
 Database Configuration for Trading System
 """
 
-from typing import Dict, Optional
+from threading import Lock
+from typing import Dict, Optional, Tuple
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.pool import QueuePool
+
+# Module-level engine cache to prevent creating multiple engines
+# This prevents connection pool exhaustion by reusing engines
+_engine_cache: Dict[Tuple[str, Optional[str]], Engine] = {}
+_cache_lock: Lock = Lock()
 
 
 class DatabaseConfig(BaseSettings):
@@ -76,37 +82,54 @@ class DatabaseConfig(BaseSettings):
         self, database: str = "trading", schema: Optional[str] = None
     ) -> Engine:
         """
-        Get SQLAlchemy engine for specified database and schema
+        Get SQLAlchemy engine for specified database and schema.
+        Engines are cached to prevent connection pool exhaustion.
 
         Args:
             database: Database name ('trading' or 'prefect')
             schema: Optional schema name for trading database
 
         Returns:
-            SQLAlchemy Engine instance
+            SQLAlchemy Engine instance (cached and reused)
         """
-        if database == "trading":
-            url = self.trading_db_url
-        elif database == "prefect":
-            url = self.prefect_db_url
-        else:
-            raise ValueError(
-                f"Invalid database: {database}. Must be 'trading' or 'prefect'"
+        cache_key = (database, schema)
+        
+        # Check cache first (fast path without lock)
+        if cache_key in _engine_cache:
+            return _engine_cache[cache_key]
+        
+        # Create engine with lock to prevent race conditions
+        with _cache_lock:
+            # Double-check after acquiring lock
+            if cache_key in _engine_cache:
+                return _engine_cache[cache_key]
+            
+            if database == "trading":
+                url = self.trading_db_url
+            elif database == "prefect":
+                url = self.prefect_db_url
+            else:
+                raise ValueError(
+                    f"Invalid database: {database}. Must be 'trading' or 'prefect'"
+                )
+
+            # Add schema to URL if specified
+            if schema and database == "trading":
+                url += f"?options=-csearch_path={schema}"
+
+            engine = create_engine(
+                url,
+                poolclass=QueuePool,
+                pool_size=self.pool_size,
+                max_overflow=self.max_overflow,
+                pool_timeout=self.pool_timeout,
+                pool_recycle=self.pool_recycle,
+                echo=False,  # Set to True for SQL debugging
             )
-
-        # Add schema to URL if specified
-        if schema and database == "trading":
-            url += f"?options=-csearch_path={schema}"
-
-        return create_engine(
-            url,
-            poolclass=QueuePool,
-            pool_size=self.pool_size,
-            max_overflow=self.max_overflow,
-            pool_timeout=self.pool_timeout,
-            pool_recycle=self.pool_recycle,
-            echo=False,  # Set to True for SQL debugging
-        )
+            
+            # Cache the engine
+            _engine_cache[cache_key] = engine
+            return engine
 
     def get_service_engine(self, service: str) -> Engine:
         """

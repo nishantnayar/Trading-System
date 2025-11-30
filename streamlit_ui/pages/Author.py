@@ -1,38 +1,15 @@
 """
 Author page for Trading System.
-System information, team details, and contact information
+Personal information about the developer/author
 """
 
 import os
 import sys
 
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
-from utils import (
-    format_currency,
-    format_number,
-    format_percentage,
-    get_session_state,
-    show_info_message,
-)
-
-# Centralized Plotly configuration to avoid deprecation warnings
-PLOTLY_CONFIG = {
-    'displayModeBar': True,
-    'displaylogo': False,
-    'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d', 'autoScale2d', 'resetScale2d'],
-    'toImageButtonOptions': {
-        'format': 'png',
-        'filename': 'plot',
-        'height': 500,
-        'width': 700,
-        'scale': 1
-    }
-}
 
 
 def load_custom_css():
@@ -57,161 +34,272 @@ def load_custom_css():
         st.error(f"Error loading custom CSS: {e}")
 
 def author_page():
-    """Author page with system information"""
-    st.title("👨‍💻 Author - About the Trading System")
+    """Author page with personal information"""
     
-    st.write("Learn about the Trading System, its features, and the development team.")
+    # ============================================
+    # CUSTOMIZE THIS SECTION - Personal Introduction
+    # ============================================
+    st.title("👨‍💻 About Me")
     
-    # Initialize session state if not exists
-    if 'portfolio_value' not in st.session_state:
-        st.session_state.portfolio_value = 125000
-    if 'total_return' not in st.session_state:
-        st.session_state.total_return = 15.2
-    if 'active_positions' not in st.session_state:
-        st.session_state.active_positions = 8
-    if 'win_rate' not in st.session_state:
-        st.session_state.win_rate = 68
-    if 'selected_symbol' not in st.session_state:
-        st.session_state.selected_symbol = "AAPL"
-    if 'selected_timeframe' not in st.session_state:
-        st.session_state.selected_timeframe = "1M"
-    if 'user_preferences' not in st.session_state:
-        st.session_state.user_preferences = {
-            'theme': 'light',
-            'notifications': True,
-            'auto_refresh': False
-        }
+    # Hero section with name and tagline
+    col1, col2 = st.columns([1, 2])
     
-    # System overview
-    st.subheader("System Overview")
+    with col1:
+        # You can add a profile image here if you have one
+        # st.image("path/to/your/profile_image.jpg", width=200)
+        st.markdown("### [YOUR NAME]")
+        st.caption("📌 [Your Title/Role]")
+    
+    with col2:
+        st.markdown("""
+        **Welcome!** 👋
+        
+        [Write a brief introduction about yourself here. 
+        What drives you? What's your passion? 
+        What makes you excited about building trading systems?]
+        """)
+    
+    st.divider()
+    
+    # ============================================
+    # CUSTOMIZE THIS SECTION - Bio & Background
+    # ============================================
+    st.subheader("📖 My Story")
+    
+    st.markdown("""
+    [Tell your story here. You might want to include:
+    - Your background and how you got into programming/trading
+    - What inspired you to build this trading system
+    - Your journey in learning and development
+    - Key milestones or achievements
+    - What you're currently working on or learning]
+    """)
+    
+    st.divider()
+    
+    # ============================================
+    # CUSTOMIZE THIS SECTION - Technical Skills
+    # ============================================
+    st.subheader("🛠️ Technical Skills")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        **Languages:**
+        - [Language 1]
+        - [Language 2]
+        - [Language 3]
+        - [Add more...]
+        """)
+    
+    with col2:
+        st.markdown("""
+        **Frameworks & Tools:**
+        - [Framework 1]
+        - [Framework 2]
+        - [Tool 1]
+        - [Add more...]
+        """)
+    
+    with col3:
+        st.markdown("""
+        **Specializations:**
+        - [Specialization 1]
+        - [Specialization 2]
+        - [Specialization 3]
+        - [Add more...]
+        """)
+    
+    st.divider()
+    
+    # ============================================
+    # CUSTOMIZE THIS SECTION - This Project
+    # ============================================
+    st.subheader("🚀 About This Trading System")
     
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("""
-        **Trading System Features:**
-        - 📈 Real-time market data
-        - 🔍 Technical analysis tools
-        - 📊 Portfolio tracking
-        - ⚡ Automated trading strategies
-        - 🛡️ Risk management
-        - 📱 Modern web interface
+        **What I Built:**
+        - 📈 [Feature 1 - e.g., Real-time market data integration]
+        - 🔍 [Feature 2 - e.g., Advanced technical analysis]
+        - 📊 [Feature 3 - e.g., Portfolio tracking]
+        - ⚡ [Feature 4 - e.g., Automated strategies]
+        - 🛡️ [Feature 5 - e.g., Risk management]
+        - 📱 [Feature 6 - e.g., Modern web interface]
         """)
     
     with col2:
         st.markdown("""
-        **Technology Stack:**
+        **Tech Stack Used:**
         - Python 3.9+
-        - FastAPI backend
-        - Streamlit frontend
-        - PostgreSQL database
-        - Redis caching
-        - Docker deployment
+        - FastAPI (Backend API)
+        - Streamlit (Frontend UI)
+        - PostgreSQL (Database)
+        - Redis (Caching)
+        - [Add other technologies you used]
         """)
     
-    # Architecture diagram
-    st.subheader("System Architecture")
+    st.markdown("""
+    **Why I Built This:**
     
-    # Create a simple architecture diagram
-    fig = go.Figure()
+    [Explain your motivation for building this trading system. 
+    What problem were you trying to solve? 
+    What did you learn along the way?]
+    """)
     
-    # Add boxes for different components
-    components = [
-        {"name": "Streamlit UI", "x": 1, "y": 3, "color": "lightblue"},
-        {"name": "FastAPI Backend", "x": 2, "y": 3, "color": "lightgreen"},
-        {"name": "PostgreSQL", "x": 3, "y": 2, "color": "lightcoral"},
-        {"name": "Redis Cache", "x": 3, "y": 4, "color": "lightyellow"},
-        {"name": "Trading APIs", "x": 2, "y": 1, "color": "lightpink"}
-    ]
+    st.divider()
     
-    for comp in components:
-        fig.add_trace(go.Scatter(
-            x=[comp["x"]],
-            y=[comp["y"]],
-            mode="markers+text",
-            marker=dict(size=100, color=comp["color"]),
-            text=[comp["name"]],
-            textposition="middle center",
-            showlegend=False
-        ))
+    # ============================================
+    # CUSTOMIZE THIS SECTION - Experience & Education
+    # ============================================
+    st.subheader("🎓 Experience & Education")
     
-    fig.update_layout(
-        title="System Architecture",
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        height=400,
-        template='plotly_white'
-    )
-    
-    st.plotly_chart(fig, width='stretch', config=PLOTLY_CONFIG)
-    
-    # Development team
-    st.subheader("Development Team")
-    
-    team_data = {
-        "Role": ["Lead Developer", "Data Scientist", "DevOps Engineer", "UI/UX Designer"],
-        "Name": ["Alex Johnson", "Sarah Chen", "Mike Rodriguez", "Emma Wilson"],
-        "Expertise": ["Python, FastAPI", "ML, Analytics", "Docker, AWS", "Streamlit, Design"],
-        "Experience": ["5+ years", "4+ years", "6+ years", "3+ years"]
+    experience_data = {
+        "Role/Position": [
+            "[Role 1 - e.g., Software Engineer]",
+            "[Role 2 - e.g., Data Analyst]",
+            "[Role 3 - e.g., Student/Intern]"
+        ],
+        "Company/Institution": [
+            "[Company/University 1]",
+            "[Company/University 2]",
+            "[Company/University 3]"
+        ],
+        "Duration": [
+            "[Date Range 1]",
+            "[Date Range 2]",
+            "[Date Range 3]"
+        ],
+        "Key Achievements": [
+            "[Achievement 1]",
+            "[Achievement 2]",
+            "[Achievement 3]"
+        ]
     }
     
-    df_team = pd.DataFrame(team_data)
-    st.dataframe(df_team, width='stretch')
+    df_experience = pd.DataFrame(experience_data)
+    st.dataframe(df_experience, width='stretch', hide_index=True)
     
-    # Contact information
-    st.subheader("Contact & Support")
+    st.divider()
+    
+    # ============================================
+    # CUSTOMIZE THIS SECTION - Projects & Achievements
+    # ============================================
+    st.subheader("🏆 Projects & Achievements")
+    
+    st.markdown("""
+    **Notable Projects:**
+    - **[Project Name 1]**: [Brief description]
+    - **[Project Name 2]**: [Brief description]
+    - **[Project Name 3]**: [Brief description]
+    
+    **Achievements:**
+    - [Achievement 1 - e.g., Certifications, Awards, Publications]
+    - [Achievement 2]
+    - [Achievement 3]
+    """)
+    
+    st.divider()
+    
+    # ============================================
+    # CUSTOMIZE THIS SECTION - Interests & Hobbies
+    # ============================================
+    st.subheader("🎯 Interests & Hobbies")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        **Professional Interests:**
+        - [Interest 1 - e.g., Algorithmic Trading]
+        - [Interest 2 - e.g., Machine Learning]
+        - [Interest 3 - e.g., Financial Modeling]
+        - [Add more...]
+        """)
+    
+    with col2:
+        st.markdown("""
+        **Personal Hobbies:**
+        - [Hobby 1 - e.g., Reading]
+        - [Hobby 2 - e.g., Hiking]
+        - [Hobby 3 - e.g., Photography]
+        - [Add more...]
+        """)
+    
+    st.divider()
+    
+    # ============================================
+    # CUSTOMIZE THIS SECTION - Contact & Links
+    # ============================================
+    st.subheader("📬 Connect With Me")
     
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("""
         **Contact Information:**
-        - 📧 Email: support@tradingsystem.com
-        - 📱 Phone: +1 (555) 123-4567
-        - 🌐 Website: www.tradingsystem.com
-        - 📍 Office: New York, NY
+        - 📧 Email: [your.email@example.com]
+        - 📱 Phone: [Your Phone - Optional]
+        - 📍 Location: [Your Location - Optional]
         """)
     
     with col2:
         st.markdown("""
-        **Support Hours:**
-        - Monday - Friday: 9:00 AM - 6:00 PM EST
-        - Saturday: 10:00 AM - 2:00 PM EST
-        - Sunday: Closed
-        - Emergency: 24/7 for critical issues
+        **Social & Professional Links:**
+        - 💼 LinkedIn: [Your LinkedIn URL]
+        - 🐙 GitHub: [Your GitHub URL]
+        - 🌐 Website/Blog: [Your Website URL]
+        - 🐦 Twitter/X: [Your Twitter URL - Optional]
+        - 📝 Medium/Dev.to: [Your Blog URL - Optional]
         """)
     
-    # Version information
-    st.subheader("System Information")
+    st.divider()
     
-    info_data = {
-        "Component": ["Trading System", "FastAPI Backend", "Streamlit UI", "Database"],
-        "Version": ["v1.0.0", "v0.100.0", "v1.28.0", "PostgreSQL 15"],
-        "Last Updated": ["2024-01-15", "2024-01-10", "2024-01-12", "2024-01-08"],
-        "Status": ["✅ Active", "✅ Active", "✅ Active", "✅ Active"]
-    }
+    # ============================================
+    # CUSTOMIZE THIS SECTION - Fun Facts
+    # ============================================
+    st.subheader("✨ Fun Facts About Me")
     
-    df_info = pd.DataFrame(info_data)
-    st.dataframe(df_info, width='stretch')
+    st.markdown("""
+    - [Fun fact 1 - e.g., I've been coding since I was 12]
+    - [Fun fact 2 - e.g., I love solving complex problems]
+    - [Fun fact 3 - e.g., I'm passionate about financial markets]
+    - [Fun fact 4 - e.g., I enjoy contributing to open source]
+    - [Add more fun facts...]
+    """)
     
-    # Session state information
-    st.subheader("Current Session Information")
+    st.divider()
     
-    col1, col2 = st.columns(2)
+    # ============================================
+    # CUSTOMIZE THIS SECTION - Current Focus
+    # ============================================
+    st.subheader("🎯 What I'm Working On Now")
     
-    with col1:
-        st.markdown("**Portfolio Status:**")
-        st.write(f"- Portfolio Value: ${st.session_state.portfolio_value:,.0f}")
-        st.write(f"- Total Return: {st.session_state.total_return:.1f}%")
-        st.write(f"- Active Positions: {st.session_state.active_positions}")
-        st.write(f"- Win Rate: {st.session_state.win_rate}%")
+    st.markdown("""
+    **Current Projects:**
+    - [Project 1 you're currently working on]
+    - [Project 2 you're currently working on]
     
-    with col2:
-        st.markdown("**User Preferences:**")
-        st.write(f"- Notifications: {'✅' if st.session_state.user_preferences['notifications'] else '❌'}")
-        st.write(f"- Auto Refresh: {'✅' if st.session_state.user_preferences['auto_refresh'] else '❌'}")
-        st.write(f"- Selected Symbol: {st.session_state.selected_symbol}")
-        st.write(f"- Selected Timeframe: {st.session_state.selected_timeframe}")
+    **Learning:**
+    - [Technology/Skill you're currently learning]
+    - [Another area you're exploring]
+    
+    **Goals:**
+    - [Short-term goal]
+    - [Long-term goal]
+    """)
+    
+    # Optional: Add a call-to-action
+    st.markdown("---")
+    st.markdown("""
+    <div style='text-align: center; padding: 20px;'>
+        <h4>💡 Let's Connect!</h4>
+        <p>Feel free to reach out if you'd like to collaborate, discuss trading systems, or just say hello!</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 def main():
     """Main function for Author page"""

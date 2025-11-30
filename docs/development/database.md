@@ -229,6 +229,130 @@ CREATE INDEX idx_institutional_holders_percent ON data_ingestion.institutional_h
 **Migration Location**: `scripts/10_create_institutional_holders_table.sql`  
 **SQLAlchemy Model**: `src/shared/database/models/institutional_holders.py`
 
+#### Analytics Schema Tables
+
+##### Technical Indicators Tables
+
+Technical indicators are calculated/derived metrics from market data, used across the system for:
+- **Stock Screening**: Fast filtering by RSI, moving averages, volatility
+- **Analysis Page**: Displaying current indicator values
+- **Strategy Engine**: Signal generation based on technical analysis
+- **Backtesting**: Historical indicator values for strategy testing
+- **Portfolio Analysis**: Performance metrics and risk assessment
+
+**Schema Decision**: Stored in `analytics` schema (not `data_ingestion`) because they are calculated/derived metrics, not raw ingested data.
+
+**Data Source**: Technical indicators are calculated using **only Yahoo Finance data** (`data_source = 'yahoo'`) from the `market_data` table. This ensures:
+- Consistent data source for all calculations
+- Single source of truth for technical analysis
+- Avoids mixing data from different providers (Yahoo vs Polygon)
+- Yahoo data is typically more complete for daily OHLCV data
+
+**Architecture**: Hybrid approach with two tables:
+1. **`technical_indicators_latest`**: Latest values for fast screening queries
+2. **`technical_indicators`**: Historical time-series for analysis and backtesting
+
+**Latest Values Table** (for fast screening):
+```sql
+CREATE TABLE analytics.technical_indicators_latest (
+    symbol VARCHAR(20) PRIMARY KEY,
+    calculated_date DATE NOT NULL,
+    
+    -- Moving Averages
+    sma_20 NUMERIC(15,4),
+    sma_50 NUMERIC(15,4),
+    sma_200 NUMERIC(15,4),
+    ema_12 NUMERIC(15,4),
+    ema_26 NUMERIC(15,4),
+    ema_50 NUMERIC(15,4),
+    
+    -- Momentum Indicators
+    rsi NUMERIC(5,2),  -- 0-100
+    rsi_14 NUMERIC(5,2),  -- Explicit 14-period RSI
+    
+    -- MACD
+    macd_line NUMERIC(15,4),
+    macd_signal NUMERIC(15,4),
+    macd_histogram NUMERIC(15,4),
+    
+    -- Bollinger Bands
+    bb_upper NUMERIC(15,4),
+    bb_middle NUMERIC(15,4),
+    bb_lower NUMERIC(15,4),
+    bb_position NUMERIC(5,4),  -- Position within bands (0-1)
+    bb_width NUMERIC(10,4),  -- Band width as percentage
+    
+    -- Volatility & Price Changes
+    volatility_20 NUMERIC(5,2),  -- Annualized volatility percentage
+    price_change_1d NUMERIC(5,2),
+    price_change_5d NUMERIC(5,2),
+    price_change_30d NUMERIC(5,2),
+    
+    -- Volume Indicators
+    avg_volume_20 BIGINT,
+    current_volume BIGINT,
+    
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT technical_indicators_latest_symbol_fkey 
+        FOREIGN KEY (symbol) 
+        REFERENCES data_ingestion.symbols(symbol) 
+        ON DELETE CASCADE
+);
+```
+
+**Time-Series Table** (for historical analysis):
+```sql
+CREATE TABLE analytics.technical_indicators (
+    id BIGSERIAL PRIMARY KEY,
+    symbol VARCHAR(20) NOT NULL,
+    date DATE NOT NULL,
+    
+    -- Same indicator fields as latest table
+    -- Moving Averages: sma_20, sma_50, sma_200, ema_12, ema_26, ema_50
+    -- Momentum: rsi, rsi_14
+    -- MACD: macd_line, macd_signal, macd_histogram
+    -- Bollinger Bands: bb_upper, bb_middle, bb_lower, bb_position, bb_width
+    -- Volatility & Price Changes: volatility_20, price_change_1d, price_change_5d, price_change_30d
+    -- Volume: avg_volume_20, current_volume
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_symbol_date UNIQUE (symbol, date),
+    CONSTRAINT technical_indicators_symbol_fkey 
+        FOREIGN KEY (symbol) 
+        REFERENCES data_ingestion.symbols(symbol) 
+        ON DELETE CASCADE
+);
+```
+
+**Design Features:**
+
+1. **Hybrid Storage**: Latest values for fast queries + time-series for historical analysis
+2. **Yahoo Data Only**: Calculations use only `data_source = 'yahoo'` from market_data table
+3. **Performance Optimization**: Indexes on commonly filtered fields (RSI, SMA, volatility)
+4. **Calculation Fallback**: UI can calculate on-the-fly if database values are missing
+5. **Daily Updates**: Calculated after market close via scheduled Prefect flows
+6. **Incremental Updates**: Only calculates for new market data, skips if already calculated
+
+**Use Cases:**
+
+- Fast stock screening by technical criteria (RSI < 30, price above SMA 50, etc.)
+- Displaying current indicator values in Analysis page
+- Historical backtesting with time-series indicator data
+- Strategy signal generation based on technical analysis
+- Portfolio risk assessment using volatility metrics
+
+**Performance Benefits:**
+
+| Approach | Symbols/Second | Storage | Scalability |
+|----------|---------------|---------|-------------|
+| **On-the-fly Calculation** | 0.5-1 | None | Limited (50 symbols) |
+| **Database Storage** | 10-50 | ~50-100 bytes/symbol/day | Excellent (1000+ symbols) |
+
+**Migration Location**: `scripts/17_create_technical_indicators_tables.sql`  
+**SQLAlchemy Model**: `src/shared/database/models/technical_indicators.py` (Pending)  
+**Calculation Service**: `src/services/analytics/indicator_calculator.py` (Pending)
+
 ##### Orders Table
 ```sql
 CREATE TYPE order_side AS ENUM ('buy', 'sell');

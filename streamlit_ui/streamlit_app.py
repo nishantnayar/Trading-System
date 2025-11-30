@@ -92,24 +92,16 @@ def main():
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.markdown('<div class="metric-container">', unsafe_allow_html=True)
         st.metric("Portfolio Value", f"${st.session_state.portfolio_value:,.0f}", "$5,000")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="metric-container">', unsafe_allow_html=True)
         st.metric("Total Return", f"{st.session_state.total_return:.1f}%", "2.1%")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with col3:
-        st.markdown('<div class="metric-container">', unsafe_allow_html=True)
         st.metric("Active Positions", st.session_state.active_positions, "2")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with col4:
-        st.markdown('<div class="metric-container">', unsafe_allow_html=True)
         st.metric("Win Rate", f"{st.session_state.win_rate}%", "5%")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # Navigation instructions
     st.info(

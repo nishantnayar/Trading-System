@@ -155,10 +155,11 @@ def calculate_volatility(prices: List[float], period: int = 20) -> Optional[floa
 ```
 
 **Implementation Details:**
-- Uses NumPy for numerical calculations
-- Uses pandas for EMA calculations
+- Uses pandas-ta library for all technical indicator calculations
+- Industry-standard implementations (SMA, EMA, RSI, MACD, Bollinger Bands)
 - Handles edge cases (insufficient data, division by zero)
 - Returns `None` when data is insufficient
+- Proper MACD signal line calculation (not simplified)
 
 ### 4. API Client Integration
 

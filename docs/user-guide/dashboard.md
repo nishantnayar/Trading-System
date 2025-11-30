@@ -300,13 +300,14 @@ The Analysis page features interactive financial charts built with Plotly for pr
 
 #### Technical Indicators
 
-The system includes comprehensive technical analysis:
+The system includes comprehensive technical analysis using **pandas-ta** library:
 
-- **Moving Averages**: SMA, EMA with customizable periods
-- **MACD**: Moving Average Convergence Divergence
-- **RSI**: Relative Strength Index
-- **Bollinger Bands**: Price volatility indicators
+- **Moving Averages**: SMA (20, 50, 200), EMA (12, 26, 50) with customizable periods
+- **MACD**: Moving Average Convergence Divergence with proper signal line calculation
+- **RSI**: Relative Strength Index (14 period default)
+- **Bollinger Bands**: Price volatility indicators (20 period, 2 std dev)
 - **Volume Analysis**: Trading volume patterns
+- **Volatility**: Annualized volatility calculations
 
 #### Chart Customization
 

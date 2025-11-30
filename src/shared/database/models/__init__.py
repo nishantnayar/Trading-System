@@ -16,6 +16,7 @@ from .load_runs import LoadRun
 from .market_data import MarketData
 from .stock_splits import StockSplit
 from .symbols import DelistedSymbol, Symbol, SymbolDataStatus
+from .technical_indicators import TechnicalIndicators, TechnicalIndicatorsLatest
 
 __all__ = [
     "Symbol",
@@ -32,4 +33,6 @@ __all__ = [
     "AnalystRecommendation",
     "ESGScore",
     "LoadRun",
+    "TechnicalIndicators",
+    "TechnicalIndicatorsLatest",
 ]

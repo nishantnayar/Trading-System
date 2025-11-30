@@ -4,9 +4,11 @@ Provides SQLAlchemy declarative base and session management
 """
 
 from contextlib import contextmanager
-from typing import Any, Callable, Generator, TypeVar
+from threading import Lock
+from typing import Any, Callable, Dict, Generator, Optional, TypeVar
 
 from loguru import logger
+from sqlalchemy import Engine
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError, ProgrammingError
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
@@ -16,6 +18,36 @@ T = TypeVar("T")
 
 # Create declarative base - all models inherit from this
 Base = declarative_base()
+
+# Cache sessionmakers per engine to prevent creating multiple sessionmakers
+_sessionmaker_cache: Dict[Engine, sessionmaker] = {}
+_sessionmaker_lock: Lock = Lock()
+
+
+def _get_sessionmaker(engine: Engine) -> sessionmaker:
+    """
+    Get or create a sessionmaker for the given engine.
+    Sessionmakers are cached to prevent creating multiple instances.
+    
+    Args:
+        engine: SQLAlchemy engine
+        
+    Returns:
+        Cached sessionmaker instance
+    """
+    # Check cache first (fast path without lock)
+    if engine in _sessionmaker_cache:
+        return _sessionmaker_cache[engine]
+    
+    # Create sessionmaker with lock to prevent race conditions
+    with _sessionmaker_lock:
+        # Double-check after acquiring lock
+        if engine in _sessionmaker_cache:
+            return _sessionmaker_cache[engine]
+        
+        SessionLocal = sessionmaker(bind=engine)
+        _sessionmaker_cache[engine] = SessionLocal
+        return SessionLocal
 
 
 @contextmanager
@@ -48,7 +80,7 @@ def db_transaction() -> Generator[Session, None, None]:
         ProgrammingError: SQL syntax errors
     """
     engine = get_engine("trading")
-    SessionLocal = sessionmaker(bind=engine)
+    SessionLocal = _get_sessionmaker(engine)
     session = SessionLocal()
 
     try:
@@ -116,7 +148,7 @@ def db_readonly_session() -> Generator[Session, None, None]:
     - Can leverage read replicas (future scaling)
     """
     engine = get_engine("trading")
-    SessionLocal = sessionmaker(bind=engine)
+    SessionLocal = _get_sessionmaker(engine)
     session = SessionLocal()
 
     try:
@@ -151,11 +183,11 @@ def get_session() -> Session:
         except:
             session.rollback()
             raise
-        finally:
-            session.close()
+    finally:
+        session.close()
     """
     engine = get_engine("trading")
-    SessionLocal = sessionmaker(bind=engine)
+    SessionLocal = _get_sessionmaker(engine)
     return SessionLocal()
 
 

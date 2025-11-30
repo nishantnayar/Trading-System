@@ -1,17 +1,21 @@
 """
 Technical Indicator Calculations
 RSI, MACD, Moving Averages, etc.
+
+This module uses pandas-ta library for technical indicator calculations
+while maintaining a simple API that accepts lists and returns single values.
 """
 
 from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+import pandas_ta as ta
 
 
 def calculate_sma(prices: List[float], period: int) -> Optional[float]:
     """
-    Calculate Simple Moving Average
+    Calculate Simple Moving Average using pandas-ta
     
     Args:
         prices: List of prices
@@ -22,17 +26,21 @@ def calculate_sma(prices: List[float], period: int) -> Optional[float]:
     """
     if len(prices) < period:
         return None
-    return np.mean(prices[-period:])
+    
+    df = pd.DataFrame({'close': prices})
+    df.ta.sma(length=period, append=True)
+    result = df[f'SMA_{period}'].iloc[-1]
+    return float(result) if pd.notna(result) else None
 
 
 def calculate_ema(prices: List[float], period: int, alpha: Optional[float] = None) -> Optional[float]:
     """
-    Calculate Exponential Moving Average
+    Calculate Exponential Moving Average using pandas-ta
     
     Args:
         prices: List of prices
         period: Period for EMA
-        alpha: Smoothing factor (if None, calculated from period)
+        alpha: Smoothing factor (ignored, pandas-ta calculates automatically)
         
     Returns:
         EMA value or None if insufficient data
@@ -40,18 +48,15 @@ def calculate_ema(prices: List[float], period: int, alpha: Optional[float] = Non
     if len(prices) < period:
         return None
     
-    if alpha is None:
-        alpha = 2.0 / (period + 1)
-    
-    # Convert to pandas Series for easier calculation
-    series = pd.Series(prices)
-    ema = series.ewm(span=period, adjust=False).mean()
-    return float(ema.iloc[-1])
+    df = pd.DataFrame({'close': prices})
+    df.ta.ema(length=period, append=True)
+    result = df[f'EMA_{period}'].iloc[-1]
+    return float(result) if pd.notna(result) else None
 
 
 def calculate_rsi(prices: List[float], period: int = 14) -> Optional[float]:
     """
-    Calculate Relative Strength Index (RSI)
+    Calculate Relative Strength Index (RSI) using pandas-ta
     
     Args:
         prices: List of closing prices
@@ -63,25 +68,10 @@ def calculate_rsi(prices: List[float], period: int = 14) -> Optional[float]:
     if len(prices) < period + 1:
         return None
     
-    # Calculate price changes
-    deltas = np.diff(prices)
-    
-    # Separate gains and losses
-    gains = np.where(deltas > 0, deltas, 0)
-    losses = np.where(deltas < 0, -deltas, 0)
-    
-    # Calculate average gain and loss
-    avg_gain = np.mean(gains[-period:])
-    avg_loss = np.mean(losses[-period:])
-    
-    if avg_loss == 0:
-        return 100.0
-    
-    # Calculate RS and RSI
-    rs = avg_gain / avg_loss
-    rsi = 100 - (100 / (1 + rs))
-    
-    return float(rsi)
+    df = pd.DataFrame({'close': prices})
+    df.ta.rsi(length=period, append=True)
+    result = df[f'RSI_{period}'].iloc[-1]
+    return float(result) if pd.notna(result) else None
 
 
 def calculate_macd(
@@ -91,7 +81,7 @@ def calculate_macd(
     signal_period: int = 9
 ) -> Optional[Dict[str, float]]:
     """
-    Calculate MACD (Moving Average Convergence Divergence)
+    Calculate MACD (Moving Average Convergence Divergence) using pandas-ta
     
     Args:
         prices: List of closing prices
@@ -105,26 +95,25 @@ def calculate_macd(
     if len(prices) < slow_period + signal_period:
         return None
     
-    # Calculate EMAs
-    fast_ema = calculate_ema(prices, fast_period)
-    slow_ema = calculate_ema(prices, slow_period)
+    df = pd.DataFrame({'close': prices})
+    df.ta.macd(fast=fast_period, slow=slow_period, signal=signal_period, append=True)
     
-    if fast_ema is None or slow_ema is None:
+    # pandas-ta column names: MACD_12_26_9, MACDs_12_26_9, MACDh_12_26_9
+    macd_col = f'MACD_{fast_period}_{slow_period}_{signal_period}'
+    signal_col = f'MACDs_{fast_period}_{slow_period}_{signal_period}'
+    hist_col = f'MACDh_{fast_period}_{slow_period}_{signal_period}'
+    
+    macd_line = df[macd_col].iloc[-1]
+    signal_line = df[signal_col].iloc[-1]
+    histogram = df[hist_col].iloc[-1]
+    
+    if pd.isna(macd_line) or pd.isna(signal_line) or pd.isna(histogram):
         return None
     
-    macd_line = fast_ema - slow_ema
-    
-    # For signal line, we need MACD values over time
-    # Simplified: use current MACD as approximation
-    # In production, you'd maintain a history of MACD values
-    signal_line = macd_line  # Simplified
-    
-    histogram = macd_line - signal_line
-    
     return {
-        'macd': macd_line,
-        'signal': signal_line,
-        'histogram': histogram
+        'macd': float(macd_line),
+        'signal': float(signal_line),
+        'histogram': float(histogram)
     }
 
 
@@ -134,7 +123,7 @@ def calculate_bollinger_bands(
     std_dev: float = 2.0
 ) -> Optional[Dict[str, float]]:
     """
-    Calculate Bollinger Bands
+    Calculate Bollinger Bands using pandas-ta
     
     Args:
         prices: List of closing prices
@@ -147,14 +136,29 @@ def calculate_bollinger_bands(
     if len(prices) < period:
         return None
     
-    recent_prices = prices[-period:]
-    middle = np.mean(recent_prices)
-    std = np.std(recent_prices)
+    df = pd.DataFrame({'close': prices})
+    df.ta.bbands(length=period, std=std_dev, append=True)
+    
+    # pandas-ta column names: BBU_20_2.0, BBM_20_2.0, BBL_20_2.0
+    # Find columns dynamically to handle different std_dev formats
+    upper_cols = [col for col in df.columns if col.startswith('BBU_')]
+    middle_cols = [col for col in df.columns if col.startswith('BBM_')]
+    lower_cols = [col for col in df.columns if col.startswith('BBL_')]
+    
+    if not (upper_cols and middle_cols and lower_cols):
+        return None
+    
+    upper = df[upper_cols[0]].iloc[-1]
+    middle = df[middle_cols[0]].iloc[-1]
+    lower = df[lower_cols[0]].iloc[-1]
+    
+    if pd.isna(upper) or pd.isna(middle) or pd.isna(lower):
+        return None
     
     return {
-        'upper': float(middle + (std_dev * std)),
+        'upper': float(upper),
         'middle': float(middle),
-        'lower': float(middle - (std_dev * std))
+        'lower': float(lower)
     }
 
 
@@ -196,18 +200,18 @@ def calculate_volatility(prices: List[float], period: int = 20) -> Optional[floa
     if len(prices) < period + 1:
         return None
     
-    # Calculate returns
-    returns = []
-    for i in range(len(prices) - period, len(prices)):
-        if i > 0 and prices[i-1] != 0:
-            ret = (prices[i] - prices[i-1]) / prices[i-1]
-            returns.append(ret)
+    # Calculate returns using pandas
+    df = pd.DataFrame({'close': prices})
+    returns = df['close'].pct_change().dropna()
     
-    if not returns:
+    # Get the last 'period' returns
+    recent_returns = returns.iloc[-period:]
+    
+    if len(recent_returns) == 0:
         return None
     
     # Calculate standard deviation and annualize (assuming daily data)
-    std_dev = np.std(returns)
+    std_dev = recent_returns.std()
     annualized_vol = std_dev * np.sqrt(252) * 100  # Convert to percentage
     
     return float(annualized_vol)

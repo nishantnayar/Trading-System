@@ -361,10 +361,25 @@ if symbol != st.session_state.get('selected_symbol'):
     st.session_state.selected_symbol = symbol
 ```
 
+## Technical Indicators
+
+### Available Indicators
+
+The system uses **pandas-ta** library for technical indicator calculations:
+
+- **SMA** (Simple Moving Average) - 20, 50, 200 periods
+- **EMA** (Exponential Moving Average) - 12, 26, 50 periods
+- **RSI** (Relative Strength Index) - 14 period default
+- **MACD** (Moving Average Convergence Divergence) - with proper signal line
+- **Bollinger Bands** - 20 period, 2 standard deviations
+- **Volatility** - Annualized volatility calculation
+- **Price Change** - 1d, 5d, 30d percentage changes
+
+All indicators are calculated using industry-standard formulas via pandas-ta library.
+
 ## Future Enhancements
 
 ### Planned Features
-- Technical indicator calculations (SMA, EMA, RSI, MACD)
 - Portfolio performance analytics
 - Risk metrics calculation
 - Backtesting results analysis

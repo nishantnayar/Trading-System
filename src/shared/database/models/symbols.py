@@ -81,6 +81,17 @@ class Symbol(Base):
         back_populates="symbol_ref",
         cascade="all, delete-orphan",
     )
+    technical_indicators_latest = relationship(
+        "TechnicalIndicatorsLatest",
+        back_populates="symbol_ref",
+        cascade="all, delete-orphan",
+        uselist=False,  # One-to-one relationship
+    )
+    technical_indicators = relationship(
+        "TechnicalIndicators",
+        back_populates="symbol_ref",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Symbol(symbol='{self.symbol}', name='{self.name}', status='{self.status}')>"
