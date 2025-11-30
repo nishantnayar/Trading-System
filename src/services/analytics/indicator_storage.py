@@ -151,7 +151,11 @@ class IndicatorStorageService:
                 )
                 
                 result = session.execute(stmt)
-                logger.debug(f"Upserted latest indicators for {symbol}: {result.rowcount} row(s) affected")
+                rowcount = getattr(result, 'rowcount', None)
+                if rowcount is not None:
+                    logger.debug(f"Upserted latest indicators for {symbol}: {rowcount} row(s) affected")
+                else:
+                    logger.debug(f"Upserted latest indicators for {symbol}")
                 # Explicitly flush and commit to ensure data is persisted
                 session.flush()
                 session.commit()

@@ -188,7 +188,8 @@ def get_session() -> Session:
     """
     engine = get_engine("trading")
     SessionLocal = _get_sessionmaker(engine)
-    return SessionLocal()
+    session: Session = SessionLocal()
+    return session
 
 
 # Convenience functions for common operations

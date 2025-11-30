@@ -8,7 +8,7 @@ Uses only Yahoo Finance data (data_source = 'yahoo') for calculations.
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -177,14 +177,14 @@ class IndicatorCalculationService:
         # Calculate BB position (0 = lower band, 1 = upper band)
         bb_position = None
         bb_width = None
-        if bb_result and current_price:
+        if bb_result and current_price and bb_upper is not None and bb_lower is not None:
             if (bb_upper - bb_lower) > 0:
                 bb_position = (current_price - bb_lower) / (bb_upper - bb_lower)
             else:
                 bb_position = 0.5
             
             # Calculate band width as percentage
-            if bb_middle and bb_middle > 0:
+            if bb_middle is not None and bb_middle > 0:
                 bb_width = ((bb_upper - bb_lower) / bb_middle) * 100
         
         # Calculate Volatility & Price Changes
@@ -201,7 +201,7 @@ class IndicatorCalculationService:
             avg_volume_20 = int(np.mean(volumes))
         
         # Helper function to convert numpy types to Python native types
-        def to_python_type(value):
+        def to_python_type(value: Optional[Any]) -> Optional[Union[float, int, bool, list]]:
             """Convert numpy types to Python native types for database storage"""
             if value is None:
                 return None
