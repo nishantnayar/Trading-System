@@ -100,7 +100,15 @@ class IndicatorCalculationService:
         daily_data = []
         for idx, row in daily_df.iterrows():
             # Ensure timestamp is timezone-aware (UTC)
-            timestamp = idx.to_pydatetime()
+            # idx is a DatetimeIndex when resampling to daily frequency
+            if isinstance(idx, pd.Timestamp):
+                timestamp = idx.to_pydatetime()
+            elif hasattr(idx, 'to_pydatetime'):
+                timestamp = idx.to_pydatetime()  # type: ignore[attr-defined]
+            else:
+                # Fallback: try to convert to datetime
+                timestamp = pd.to_datetime(idx).to_pydatetime()
+            
             if timestamp.tzinfo is None:
                 timestamp = timestamp.replace(tzinfo=timezone.utc)
             else:

@@ -335,10 +335,7 @@ class LogQueueManager:
             if not isinstance(data, dict):
                 data = {}
             
-            # Ensure data is JSON-serializable and not empty dict if None is preferred
-            # For JSONB, empty dict {} is valid, but ensure it's a proper dict
-            if data is None:
-                data = {}
+            # data is now guaranteed to be a dict (not None) after the check above
 
             # Get values from formatted record (format_for_database already handles fallbacks)
             service = record.get("service", "unknown")

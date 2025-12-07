@@ -18,7 +18,7 @@ class SymbolService:
     """Service for managing symbols and delisting detection"""
 
     def __init__(self) -> None:
-        self._polygon_client = None  # Lazy initialization - only create when needed
+        self._polygon_client: Optional[PolygonClient] = None  # Lazy initialization - only create when needed
 
     async def get_active_symbols(self) -> List[Symbol]:
         """Get all active symbols"""
@@ -132,6 +132,8 @@ class SymbolService:
         """Lazy-load Polygon client only when needed"""
         if self._polygon_client is None:
             self._polygon_client = PolygonClient()
+        # Type narrowing: after the check above, _polygon_client cannot be None
+        assert self._polygon_client is not None
         return self._polygon_client
 
     async def check_symbol_health(self, symbol: str) -> bool:

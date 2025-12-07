@@ -22,8 +22,8 @@ from .config import (
     load_logging_config,
 )
 from .correlation import get_correlation_id
-from .database_handler import get_queue_manager, shutdown_queue_manager
-from .database_sink import create_database_sink
+from .database_handler import LogQueueManager, get_queue_manager, shutdown_queue_manager
+from .database_sink import DatabaseSink, create_database_sink
 
 
 class LoggingManager:
@@ -33,8 +33,8 @@ class LoggingManager:
         self.config = config or load_logging_config()
         self._setup_complete = False
         self._service_loggers: Dict[str, Any] = {}
-        self._queue_manager = None
-        self._database_sink = None
+        self._queue_manager: Optional[LogQueueManager] = None
+        self._database_sink: Optional[DatabaseSink] = None
 
     def setup_logging(self, service_name: Optional[str] = None) -> None:
         """
@@ -197,14 +197,16 @@ class LoggingManager:
             # Add database sink to loguru
             # When enqueue=True, loguru calls the sink function with message objects
             # The message object has a .record attribute with the log record
-            loguru_logger.add(
-                self._database_sink,
-                level=self.config.level,
-                format=self.config.format,
-                enqueue=True,  # Loguru handles threading, passes message object to sink
-                backtrace=True,
-                diagnose=True,
-            )
+            # Type narrowing: _database_sink cannot be None after assignment above
+            if self._database_sink is not None:
+                loguru_logger.add(
+                    self._database_sink,
+                    level=self.config.level,
+                    format=self.config.format,
+                    enqueue=True,  # Loguru handles threading, passes message object to sink
+                    backtrace=True,
+                    diagnose=True,
+                )
 
             loguru_logger.info("Database logging handler initialized")
 

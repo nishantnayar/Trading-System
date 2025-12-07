@@ -12,9 +12,12 @@ sys.path.insert(0, str(project_root))
 
 from contextlib import asynccontextmanager  # noqa: E402
 
+from typing import Any, Callable  # noqa: E402
+
 from fastapi import FastAPI, Request  # noqa: E402
 from loguru import logger  # noqa: E402
 from starlette.middleware.base import BaseHTTPMiddleware  # noqa: E402
+from starlette.responses import Response  # noqa: E402
 
 from src.shared.logging import setup_logging, shutdown_logging  # noqa: E402
 from src.shared.logging.correlation import (  # noqa: E402
@@ -39,7 +42,7 @@ from src.web.api.routes import router  # noqa: E402
 class CorrelationIDMiddleware(BaseHTTPMiddleware):
     """Middleware to add correlation ID to all requests"""
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Any]) -> Response:
         # Get correlation ID from header or generate new one
         correlation_id = request.headers.get("X-Correlation-ID") or generate_correlation_id()
         
@@ -52,7 +55,7 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> Any:
     """Lifespan context manager for startup and shutdown events"""
     # Startup
     setup_logging(service_name="web")
