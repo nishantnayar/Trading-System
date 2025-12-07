@@ -47,7 +47,7 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
         
         # Set correlation ID in context for logging
         with correlation_context(correlation_id):
-            response = await call_next(request)
+            response: Response = await call_next(request)
             # Add correlation ID to response header
             response.headers["X-Correlation-ID"] = correlation_id
             return response
