@@ -11,7 +11,6 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from contextlib import asynccontextmanager  # noqa: E402
-
 from typing import Any, Callable  # noqa: E402
 
 from fastapi import FastAPI, Request  # noqa: E402
