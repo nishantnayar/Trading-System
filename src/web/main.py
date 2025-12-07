@@ -13,8 +13,8 @@ sys.path.insert(0, str(project_root))
 from contextlib import asynccontextmanager  # noqa: E402
 
 from fastapi import FastAPI, Request  # noqa: E402
-from starlette.middleware.base import BaseHTTPMiddleware  # noqa: E402
 from loguru import logger  # noqa: E402
+from starlette.middleware.base import BaseHTTPMiddleware  # noqa: E402
 
 from src.shared.logging import setup_logging, shutdown_logging  # noqa: E402
 from src.shared.logging.correlation import (  # noqa: E402
@@ -33,6 +33,7 @@ from src.web.api.institutional_holders import (  # noqa: E402
 from src.web.api.key_statistics import router as key_statistics_router  # noqa: E402
 from src.web.api.market_data import router as market_data_router  # noqa: E402
 from src.web.api.routes import router  # noqa: E402
+
 
 # Correlation ID middleware for request tracking
 class CorrelationIDMiddleware(BaseHTTPMiddleware):

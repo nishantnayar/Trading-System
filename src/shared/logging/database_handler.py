@@ -282,15 +282,15 @@ class LogQueueManager:
                         if sys_log:
                             system_logs.append(sys_log)
 
-                # Bulk insert system logs
+                # Add system logs to session (using add_all for better JSONB handling)
                 if system_logs:
-                    session.bulk_save_objects(system_logs)
+                    session.add_all(system_logs)
                     session.flush()
                     loguru_logger.debug(f"Flushed {len(system_logs)} system logs to session")
 
-                # Bulk insert performance logs
+                # Add performance logs to session
                 if performance_logs:
-                    session.bulk_save_objects(performance_logs)
+                    session.add_all(performance_logs)
                     session.flush()
                     loguru_logger.debug(f"Flushed {len(performance_logs)} performance logs to session")
 
@@ -333,6 +333,11 @@ class LogQueueManager:
             # Get metadata/data - format_for_database returns "metadata" key
             data = record.get("metadata", {})
             if not isinstance(data, dict):
+                data = {}
+            
+            # Ensure data is JSON-serializable and not empty dict if None is preferred
+            # For JSONB, empty dict {} is valid, but ensure it's a proper dict
+            if data is None:
                 data = {}
 
             # Get values from formatted record (format_for_database already handles fallbacks)

@@ -13,8 +13,8 @@ sys.path.insert(0, str(project_root))
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from starlette.middleware.base import BaseHTTPMiddleware
 from loguru import logger
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.shared.logging import setup_logging, shutdown_logging
 from src.shared.logging.correlation import (
@@ -29,6 +29,7 @@ from src.web.api.institutional_holders import router as institutional_holders_ro
 from src.web.api.key_statistics import router as key_statistics_router
 from src.web.api.market_data import router as market_data_router
 from src.web.api.routes import router
+
 
 # Correlation ID middleware for request tracking
 class CorrelationIDMiddleware(BaseHTTPMiddleware):

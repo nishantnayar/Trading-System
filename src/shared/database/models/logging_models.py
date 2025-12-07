@@ -13,8 +13,8 @@ from sqlalchemy import BigInteger, DateTime, Index, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ..base import Base
 from ...utils.timezone import ensure_utc_timestamp
+from ..base import Base
 
 
 class SystemLog(Base):
