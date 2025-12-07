@@ -137,7 +137,7 @@ graph TB
 - ✅ **Professional Charts** - Interactive financial visualizations with Plotly
 - ✅ **AI Integration** - Local LLM support via Ollama for natural language queries
 - ✅ **Session State** - Persistent data sharing across pages
-- ✅ **Comprehensive Logging** - Structured logging with Loguru
+- ✅ **Comprehensive Logging** - Database-first logging with PostgreSQL storage and file fallback
 - ✅ **Database Design** - PostgreSQL with comprehensive schema
 - ✅ **Data Quality** - Automated validation and monitoring
 - ✅ **Timezone Support** - UTC storage with Central Time display
@@ -181,9 +181,10 @@ ALPACA_BASE_URL=https://paper-api.alpaca.markets
 # Ollama (Optional, for AI features)
 OLLAMA_BASE_URL=http://localhost:11434
 
-# Logging
+# Logging (Database-first with file fallback)
 LOG_LEVEL=INFO
-LOG_RETENTION_DAYS=30
+# Logs are stored in PostgreSQL logging schema by default
+# See config/logging.yaml for detailed configuration
 ```
 
 ### **Service Ports**

@@ -35,7 +35,7 @@ This system uses a **modular monolithic architecture** with clear service bounda
 - **Modern Tech Stack**: Python + FastAPI + PostgreSQL + Redis + pandas
 - **Professional Frontend**: Streamlit + Plotly Charts + Custom CSS
 - **Scalable Design**: Prepared for future microservices migration
-- **Comprehensive Monitoring**: Loguru logging with structured data
+- **Comprehensive Monitoring**: Database-first logging with Loguru (PostgreSQL + file fallback)
 
 ### Key Features
 
@@ -248,7 +248,7 @@ trading-system/
 ├── deployment/                  # Setup & environment files
 ├── config/                      # Application configuration
 ├── tools/                       # Development tools
-└── logs/                        # Log files
+└── logs/                        # Log files (fallback only - primary logging in PostgreSQL)
 ```
 
 ## 🛠️ Development
@@ -327,6 +327,7 @@ mkdocs build
 ### 📈 Data Processing
 - **Historical Data**: Polygon.io and Yahoo Finance integration for backtesting and analysis
 - **Market Data Analytics**: Comprehensive data processing with pandas
+- **Technical Indicators**: Automatic hourly-to-daily resampling for accurate indicator calculations (SMA, EMA, RSI, MACD, Bollinger Bands)
 - **Data Quality Monitoring**: Automated validation and quality checks
 - **Performance Metrics**: Detailed analytics and reporting
 - **Interactive Charts**: Plotly integration for financial visualizations
@@ -336,13 +337,14 @@ mkdocs build
 - **Real-time Dashboard**: Live portfolio monitoring and control
 - **Performance Tracking**: Strategy performance metrics and analytics
 - **Risk Monitoring**: Continuous risk assessment and alerts
+- **Database Logging**: Queryable logs stored in PostgreSQL for analysis and debugging
 - **Email Notifications**: Critical event notifications and reports
 
 ### 🛠️ Development Features
 - **Modular Architecture**: Service-oriented design ready for scaling
 - **Modern Frontend**: Streamlit + Plotly Charts + Custom CSS interface
 - **AI Integration**: Local LLM support via Ollama for natural language processing
-- **Comprehensive Logging**: Structured logging with Loguru
+- **Comprehensive Logging**: Database-first logging system with PostgreSQL storage and file fallback
 - **Code Quality**: Black, Flake8, mypy, and pre-commit hooks
 - **Testing Suite**: Comprehensive test coverage across all components
 - **Type Safety**: Complete mypy compliance with proper type annotations
@@ -456,7 +458,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 |----------|-------------|------|
 | 📚 **Architecture** | Detailed system architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | 🗄️ **Database** | Database architecture & session management | [docs/development/database.md](docs/development/database.md) |
-| 📋 **Logging** | Comprehensive logging design | [docs/development/logging.md](docs/development/logging.md) |
+| 📋 **Logging** | Database-first logging with PostgreSQL | [docs/development/logging.md](docs/development/logging.md) |
 | 🧪 **Testing** | Testing strategy and guidelines | [docs/development/testing.md](docs/development/testing.md) |
 | 📖 **User Documentation** | Complete user and developer docs | [MkDocs](https://nishantnayar.github.io/Trading-System/) |
 | 🐛 **Issues** | Report bugs and request features | [GitHub Issues](https://github.com/nishantnayar/trading-system/issues) |
