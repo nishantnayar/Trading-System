@@ -295,8 +295,8 @@ The Prefect UI will be available at `http://localhost:4200`.
 ### Step 4: Run the Application
 
 ```bash
-# Start the trading system
-python scripts/run.py
+# Start the trading system API
+python main.py
 ```
 
 Or start individual components:
@@ -364,14 +364,42 @@ psql -h localhost -U postgres -d trading_system
 
 ### Step 4: Check Logs
 
-```bash
-# View system logs
-tail -f logs/trading.log
+The system uses **database-first logging** with file fallback. Logs are primarily stored in PostgreSQL for queryable analysis.
 
-# View specific service logs
-tail -f logs/data_ingestion.log
-tail -f logs/strategy_engine.log
+**Query logs from database:**
+```sql
+-- Connect to PostgreSQL
+psql -h localhost -U postgres -d trading_system
+
+-- View recent system logs
+SELECT timestamp, service, level, message 
+FROM logging.system_logs 
+ORDER BY timestamp DESC 
+LIMIT 50;
+
+-- View errors
+SELECT timestamp, service, level, message 
+FROM logging.system_logs 
+WHERE level IN ('ERROR', 'CRITICAL')
+ORDER BY timestamp DESC;
+
+-- View performance logs
+SELECT service, operation, execution_time_ms, timestamp
+FROM logging.performance_logs
+ORDER BY timestamp DESC
+LIMIT 20;
 ```
+
+**View file logs (fallback only):**
+```bash
+# View error logs (only written if database fails)
+tail -f logs/errors.log
+
+# Note: Most logs are in the database, not files
+# Files are only used as a fallback mechanism
+```
+
+For more information, see the [Logging Architecture](development/logging.md) documentation.
 
 ## Next Steps
 

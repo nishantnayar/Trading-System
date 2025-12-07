@@ -267,10 +267,13 @@ CREATE TABLE notification.notification_logs (
 -- LOGGING SCHEMA
 -- =============================================
 
+-- Drop existing tables if they exist (to recreate with updated schema)
+DROP TABLE IF EXISTS logging.performance_logs CASCADE;
+DROP TABLE IF EXISTS logging.system_logs CASCADE;
+
 -- System Logs Table
 CREATE TABLE logging.system_logs (
     id BIGSERIAL PRIMARY KEY,
-    log_id VARCHAR(100) UNIQUE NOT NULL,
     service VARCHAR(50) NOT NULL,
     level VARCHAR(20) NOT NULL, -- 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
     message TEXT NOT NULL,

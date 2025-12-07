@@ -35,8 +35,8 @@ class DatabaseLoggingConfig(BaseModel):
     enabled: bool = True
     active_table: str = "system_logs"
     archive_table: str = "archived_system_logs"
-    batch_size: int = 100
-    batch_timeout: int = 10  # seconds
+    batch_size: int = 100  # Write when 100 logs are queued
+    batch_timeout: int = 30  # Write every 30 seconds (or when batch is full)
     async_logging: bool = True
     fallback_to_file: bool = True
 
@@ -140,8 +140,8 @@ def load_logging_config(config_path: Optional[str] = None) -> LoggingConfig:
             "enabled": True,
             "active_table": "system_logs",
             "archive_table": "archived_system_logs",
-            "batch_size": 100,
-            "batch_timeout": 10,
+            "batch_size": 100,  # Write when 100 logs are queued
+            "batch_timeout": 30,  # Write every 30 seconds (or when batch is full)
             "async_logging": True,
             "fallback_to_file": True,
         },

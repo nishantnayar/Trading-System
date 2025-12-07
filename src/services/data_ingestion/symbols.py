@@ -18,7 +18,7 @@ class SymbolService:
     """Service for managing symbols and delisting detection"""
 
     def __init__(self) -> None:
-        self.polygon_client = PolygonClient()
+        self._polygon_client = None  # Lazy initialization - only create when needed
 
     async def get_active_symbols(self) -> List[Symbol]:
         """Get all active symbols"""
@@ -126,6 +126,13 @@ class SymbolService:
 
             logger.info(f"Marked symbol {symbol} as delisted")
             return True
+
+    @property
+    def polygon_client(self) -> PolygonClient:
+        """Lazy-load Polygon client only when needed"""
+        if self._polygon_client is None:
+            self._polygon_client = PolygonClient()
+        return self._polygon_client
 
     async def check_symbol_health(self, symbol: str) -> bool:
         """Check if a symbol is still valid by attempting to fetch data"""

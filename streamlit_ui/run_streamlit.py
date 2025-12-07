@@ -6,6 +6,16 @@ Supports both single-file and multipage configurations
 import os
 import subprocess
 import sys
+from pathlib import Path
+
+# Add project root to path for imports
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+# Setup logging before running Streamlit
+from src.shared.logging import setup_logging  # noqa: E402
+
+setup_logging(service_name="streamlit_ui")
 
 
 def run_streamlit():

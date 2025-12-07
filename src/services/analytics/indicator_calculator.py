@@ -6,7 +6,7 @@ Uses only Yahoo Finance data (data_source = 'yahoo') for calculations.
 """
 
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -54,6 +54,101 @@ class IndicatorCalculationService:
             data_source: Data source to use for calculations (default: 'yahoo')
         """
         self.data_source = data_source
+
+    def _resample_to_daily(self, market_data: List[Dict]) -> List[Dict]:
+        """
+        Resample hourly (or any sub-daily) data to daily bars
+        
+        Aggregates hourly data into daily OHLCV bars:
+        - Open: First open of the day
+        - High: Maximum high of the day
+        - Low: Minimum low of the day
+        - Close: Last close of the day
+        - Volume: Sum of volumes for the day
+        - Timestamp: End of day (last timestamp of the day)
+        
+        Args:
+            market_data: List of market data dictionaries (must be sorted by timestamp)
+            
+        Returns:
+            List of daily aggregated market data dictionaries
+        """
+        if not market_data:
+            return []
+        
+        # Convert to DataFrame for easier resampling
+        df = pd.DataFrame(market_data)
+        # Convert timestamps to UTC-aware datetime for pandas compatibility
+        # If timestamps are timezone-aware, convert to UTC; otherwise assume UTC
+        df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
+        df.set_index('timestamp', inplace=True)
+        
+        # Resample to daily bars
+        daily_df = df.resample('D').agg({
+            'open': 'first',      # First open of the day
+            'high': 'max',         # Maximum high of the day
+            'low': 'min',          # Minimum low of the day
+            'close': 'last',       # Last close of the day
+            'volume': 'sum',       # Sum of volumes for the day
+            'symbol': 'first',     # Keep symbol (should be same for all)
+        })
+        
+        # Remove days with no data (weekends, holidays)
+        daily_df = daily_df.dropna(subset=['close'])
+        
+        # Convert back to list of dictionaries
+        daily_data = []
+        for idx, row in daily_df.iterrows():
+            # Ensure timestamp is timezone-aware (UTC)
+            timestamp = idx.to_pydatetime()
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+            else:
+                # Convert to UTC if it has timezone info
+                timestamp = timestamp.astimezone(timezone.utc)
+            
+            daily_data.append({
+                'symbol': row['symbol'],
+                'timestamp': timestamp,
+                'open': float(row['open']),
+                'high': float(row['high']),
+                'low': float(row['low']),
+                'close': float(row['close']),
+                'volume': int(row['volume']),
+            })
+        
+        return daily_data
+
+    def _detect_data_frequency(self, market_data: List[Dict]) -> str:
+        """
+        Detect the frequency of market data (hourly, daily, etc.)
+        
+        Args:
+            market_data: List of market data dictionaries (must be sorted by timestamp)
+            
+        Returns:
+            Frequency string: 'hourly', 'daily', or 'unknown'
+        """
+        if len(market_data) < 2:
+            return 'unknown'
+        
+        # Calculate time differences between consecutive records
+        timestamps = [pd.to_datetime(md['timestamp']) for md in market_data]
+        time_diffs = [(timestamps[i+1] - timestamps[i]).total_seconds() / 3600 
+                      for i in range(min(10, len(timestamps)-1))]  # Check first 10 intervals
+        
+        if not time_diffs:
+            return 'unknown'
+        
+        avg_hours = np.mean(time_diffs)
+        
+        # If average interval is less than 12 hours, consider it hourly/sub-daily
+        if avg_hours < 12:
+            return 'hourly'
+        elif avg_hours >= 20 and avg_hours <= 28:  # Daily (accounting for weekends)
+            return 'daily'
+        else:
+            return 'unknown'
 
     async def get_market_data(
         self,
@@ -123,6 +218,9 @@ class IndicatorCalculationService:
         """
         Calculate all technical indicators from market data
         
+        Technical indicators are calculated on daily bars. If hourly data is provided,
+        it will be automatically resampled to daily bars before calculation.
+        
         Args:
             market_data: List of market data dictionaries (must be sorted by timestamp)
             calculation_date: Date for which to calculate indicators (default: latest date)
@@ -132,6 +230,28 @@ class IndicatorCalculationService:
         """
         if not market_data:
             logger.warning("No market data provided for indicator calculation")
+            return None
+        
+        # Detect data frequency and resample if needed
+        data_frequency = self._detect_data_frequency(market_data)
+        
+        if data_frequency == 'hourly':
+            logger.info(
+                f"Detected hourly data ({len(market_data)} records). "
+                f"Resampling to daily bars for indicator calculation."
+            )
+            market_data = self._resample_to_daily(market_data)
+            logger.info(f"Resampled to {len(market_data)} daily bars")
+        elif data_frequency == 'daily':
+            logger.debug("Data is already daily, no resampling needed")
+        else:
+            logger.warning(
+                f"Unknown data frequency ({data_frequency}). "
+                f"Proceeding with calculation, but results may be incorrect."
+            )
+        
+        if not market_data:
+            logger.warning("No market data after resampling")
             return None
         
         # Extract closing prices and volumes

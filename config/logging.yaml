@@ -53,3 +53,13 @@ logging:
     log_execution_time: true
     log_memory_usage: true
     log_database_queries: false
+  
+  # Database Logging
+  database:
+    enabled: true
+    active_table: "system_logs"
+    archive_table: "archived_system_logs"
+    batch_size: 100  # Write when 100 logs are queued
+    batch_timeout: 3000  # Write every 30 seconds (or when batch is full)
+    async_logging: true
+    fallback_to_file: true

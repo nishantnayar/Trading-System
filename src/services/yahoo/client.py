@@ -143,8 +143,6 @@ class YahooClient:
                 "additional_data": info,
             }
             company_info = CompanyInfo.model_validate(company_payload)
-
-            logger.info(f"Fetched company info for {symbol}")
             return company_info
 
         except YahooSymbolNotFoundError:

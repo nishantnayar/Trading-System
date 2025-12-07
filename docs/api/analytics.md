@@ -377,6 +377,90 @@ The system uses **pandas-ta** library for technical indicator calculations:
 
 All indicators are calculated using industry-standard formulas via pandas-ta library.
 
+### Data Frequency Handling
+
+The technical indicator calculation system automatically handles different data frequencies to ensure accurate daily indicator calculations.
+
+#### Problem Statement
+
+When market data is stored at hourly intervals (e.g., from Yahoo Finance with `interval="1h"`), calculating daily indicators directly on hourly data would produce incorrect results:
+- **SMA_20** would use 20 hours of data instead of 20 days
+- **RSI_14** would use 14 hours of data instead of 14 days
+- **SMA_200** would use 200 hours (~8 days) instead of 200 days
+
+#### Solution: Automatic Resampling
+
+The `IndicatorCalculationService` automatically detects and resamples hourly data to daily bars before calculating indicators:
+
+1. **Frequency Detection**: Analyzes time intervals between consecutive records to detect if data is hourly or daily
+2. **Automatic Resampling**: Converts hourly data to daily OHLCV bars using proper aggregation:
+   - **Open**: First open price of the day
+   - **High**: Maximum high price of the day
+   - **Low**: Minimum low price of the day
+   - **Close**: Last close price of the day
+   - **Volume**: Sum of all volumes for the day
+3. **Indicator Calculation**: Calculates all indicators on the resampled daily bars
+
+#### Implementation Details
+
+```python
+# Automatic detection and resampling
+data_frequency = self._detect_data_frequency(market_data)
+
+if data_frequency == 'hourly':
+    # Resample hourly data to daily bars
+    market_data = self._resample_to_daily(market_data)
+    # Then calculate indicators on daily bars
+```
+
+#### Resampling Rules
+
+The resampling process:
+- Uses pandas `resample('D')` to aggregate to daily frequency
+- Automatically removes weekends and holidays (days with no trading data)
+- Preserves all OHLCV relationships (High >= Open/Close, Low <= Open/Close)
+- Maintains UTC timezone awareness
+
+#### Example
+
+**Input (Hourly Data):**
+```
+2024-01-15 09:00:00 - Open: 150.00, High: 150.50, Low: 149.75, Close: 150.25, Volume: 1000000
+2024-01-15 10:00:00 - Open: 150.25, High: 151.00, Low: 150.20, Close: 150.80, Volume: 1200000
+2024-01-15 11:00:00 - Open: 150.80, High: 151.50, Low: 150.75, Close: 151.20, Volume: 1100000
+... (more hourly bars)
+```
+
+**Output (Daily Bar):**
+```
+2024-01-15 - Open: 150.00, High: 152.00, Low: 149.50, Close: 151.50, Volume: 8500000
+```
+
+**Then Indicators Calculated:**
+- SMA_20 = Average of last 20 daily closes (not 20 hours)
+- RSI_14 = 14-day RSI (not 14-hour RSI)
+
+#### Benefits
+
+1. **Data Storage Flexibility**: Store hourly data for detailed analysis while calculating daily indicators correctly
+2. **Automatic Handling**: No manual intervention required - system detects and handles frequency automatically
+3. **Accurate Indicators**: All daily indicators (SMA_20, RSI_14, etc.) are calculated correctly regardless of input frequency
+4. **Logging**: System logs when resampling occurs for transparency
+
+#### Configuration
+
+The resampling is automatic and requires no configuration. The system:
+- Detects hourly data when average interval < 12 hours
+- Detects daily data when average interval is 20-28 hours (accounting for weekends)
+- Logs resampling operations for monitoring
+
+#### Notes
+
+- Original hourly data remains in the database unchanged
+- Resampling only occurs in-memory during indicator calculation
+- Daily data passes through without modification
+- Unknown frequencies trigger a warning but calculation proceeds
+
 ## Future Enhancements
 
 ### Planned Features

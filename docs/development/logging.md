@@ -4,8 +4,8 @@
 
 This document outlines the logging architecture for the trading system, including design decisions, implementation strategy, and configuration management.
 
-**Last Updated**: November 2025  
-**Status**: Implementation Phase  
+**Last Updated**: December 2024  
+**Status**: ✅ Implemented  
 **Author**: Nishant Nayar
 
 ## Design Decisions
@@ -70,15 +70,17 @@ DEBUG:   Detailed execution (development only)
 │                  Application Code                       │
 ├─────────────────────────────────────────────────────────┤
 │              Logging Module (src/shared/logging/)       │
-│  ├── logger.py         # Main logger setup             │
-│  ├── handlers.py       # Custom handlers (DB, file)    │
-│  ├── formatters.py     # Log formatting                │
-│  └── config.py         # Configuration loader          │
+│  ├── logger.py              # Main logger setup        │
+│  ├── database_handler.py    # Async queue-based DB     │
+│  ├── database_sink.py        # Loguru sink for DB       │
+│  ├── formatters.py          # Log formatting           │
+│  ├── config.py               # Configuration loader     │
+│  └── correlation.py         # Correlation ID tracking  │
 ├─────────────────────────────────────────────────────────┤
 │         Loguru (File)           PostgreSQL (DB)        │
-│  ├── logs/trading.log      ├── logging.system_logs    │
-│  ├── logs/errors.log       ├── logging.performance    │
-│  └── logs/{service}.log    └── logging.trading_logs   │
+│  ├── logs/errors.log         ├── logging.system_logs   │
+│  (minimal fallback)           └── logging.performance  │
+│                                _logs                    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -222,16 +224,26 @@ logger = get_logger(__name__)
 
 ### 4. Database Handler Design
 
+#### Implementation Details
+The database logging system uses an async queue-based architecture:
+
+- **Queue Manager** (`LogQueueManager`): Manages background thread for async log processing
+- **Database Sink** (`DatabaseSink`): Loguru sink that receives log records and enqueues them
+- **Batch Processing**: Logs are batched for efficient database writes
+- **Thread Safety**: All operations are thread-safe using locks
+
 #### Batching Strategy
-- **Method**: Async batching with fallback
-- **Batch Size**: 100 records or 10 seconds
+- **Method**: Async queue-based batching with background worker thread
+- **Batch Size**: 100 records (configurable via `batch_size`)
+- **Batch Timeout**: 10 seconds (configurable via `batch_timeout`)
+- **Queue Size**: Maximum 10,000 logs before blocking
 - **Fallback**: Write to file if database fails
-- **Benefits**: Performance + reliability
+- **Benefits**: Non-blocking writes, efficient bulk inserts, graceful degradation
 
 #### Log Levels for Database
-- **Files**: DEBUG+ (complete debugging info)
-- **Database**: INFO+ (reduce noise, better performance)
-- **Rationale**: Debug logs too verbose for DB, important logs in DB for analytics
+- **Files**: ERROR only (minimal fallback for critical failures)
+- **Database**: INFO+ (all logs INFO and above stored in database)
+- **Rationale**: Database is primary storage, files are minimal fallback only
 
 #### Error Handling
 ```python
@@ -248,72 +260,61 @@ except DatabaseError:
 
 ## Database Schema
 
-### 1. Active Logs Table
+The logging schema is located in the `logging` schema of the PostgreSQL database. Tables are created automatically via SQLAlchemy models or SQL scripts.
+
+### 1. System Logs Table
 ```sql
-CREATE TABLE system_logs (
-    id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+CREATE TABLE logging.system_logs (
+    id BIGSERIAL PRIMARY KEY,
     service VARCHAR(50) NOT NULL,
-    level VARCHAR(10) NOT NULL,
-    event_type VARCHAR(100),
-    message TEXT,
-    correlation_id VARCHAR(100),
-    metadata JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    level VARCHAR(20) NOT NULL,  -- 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
+    message TEXT NOT NULL,
+    data JSONB,                  -- Structured metadata
+    correlation_id VARCHAR(100), -- For request tracking
+    event_type VARCHAR(50),      -- Event classification
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Indexes for performance
-CREATE INDEX idx_system_logs_timestamp ON system_logs(timestamp);
-CREATE INDEX idx_system_logs_service ON system_logs(service);
-CREATE INDEX idx_system_logs_level ON system_logs(level);
-CREATE INDEX idx_system_logs_correlation ON system_logs(correlation_id);
+CREATE INDEX idx_system_logs_timestamp ON logging.system_logs(timestamp);
+CREATE INDEX idx_system_logs_service ON logging.system_logs(service);
+CREATE INDEX idx_system_logs_level ON logging.system_logs(level);
+CREATE INDEX idx_system_logs_correlation ON logging.system_logs(correlation_id);
+CREATE INDEX idx_system_logs_event_type ON logging.system_logs(event_type);
+CREATE INDEX idx_system_logs_service_timestamp ON logging.system_logs(service, timestamp);
 ```
 
-### 2. Archived Logs Table
+### 2. Performance Logs Table
 ```sql
-CREATE TABLE archived_system_logs (
-    id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+CREATE TABLE logging.performance_logs (
+    id BIGSERIAL PRIMARY KEY,
     service VARCHAR(50) NOT NULL,
-    level VARCHAR(10) NOT NULL,
-    event_type VARCHAR(100),
-    message TEXT,
-    correlation_id VARCHAR(100),
-    metadata JSONB,
-    archived_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
-
-### 3. Specialized Log Tables
-```sql
--- Trading-specific logs
-CREATE TABLE trading_logs (
-    id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-    trade_id VARCHAR(100),
-    symbol VARCHAR(20),
-    side VARCHAR(10),
-    quantity DECIMAL,
-    price DECIMAL,
-    strategy VARCHAR(100),
-    execution_time_ms INTEGER,
-    status VARCHAR(50),
-    error_message TEXT,
-    correlation_id VARCHAR(100)
+    operation VARCHAR(100) NOT NULL,
+    execution_time_ms DECIMAL(10,3) NOT NULL,
+    memory_usage_mb DECIMAL(10,3),
+    cpu_usage_percent DECIMAL(5,2),
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Performance logs
-CREATE TABLE performance_logs (
-    id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-    service VARCHAR(50),
-    operation VARCHAR(100),
-    execution_time_ms INTEGER,
-    memory_usage_mb INTEGER,
-    cpu_usage_percent DECIMAL,
-    metadata JSONB
-);
+-- Indexes for performance
+CREATE INDEX idx_performance_logs_timestamp ON logging.performance_logs(timestamp);
+CREATE INDEX idx_performance_logs_service ON logging.performance_logs(service);
+CREATE INDEX idx_performance_logs_operation ON logging.performance_logs(operation);
+CREATE INDEX idx_performance_logs_service_timestamp ON logging.performance_logs(service, timestamp);
 ```
+
+### 3. SQLAlchemy Models
+
+The database models are defined in `src/shared/database/models/logging_models.py`:
+
+- **SystemLog**: Represents general system logs with structured data
+- **PerformanceLog**: Represents performance metrics with execution times and resource usage
+
+Both models use:
+- Timezone-aware timestamps (UTC)
+- Proper indexing for query performance
+- JSONB for flexible metadata storage
+- Automatic timestamp defaults
 
 ## Configuration
 
@@ -324,39 +325,23 @@ logging:
   level: "INFO"
   root_level: "INFO"
   
-  # Log Rotation
+  # Log Rotation (for minimal file fallback)
   rotation:
     size: "10 MB"
     time: "daily"
     retention: "30 days"
-    compression: true
+    compression: false
     
   # Log Format
   format: "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} | {message}"
   
-  # Log Files
+  # Log Files (minimal - only for error fallback)
   files:
     main: "logs/trading.log"
     errors: "logs/errors.log"
     system: "logs/system.log"
     trades: "logs/trades.log"
     performance: "logs/performance.log"
-    
-  # Database Logging
-  database:
-    enabled: true
-    active_table: "system_logs"
-    archive_table: "archived_system_logs"
-    batch_size: 100
-    batch_timeout: 10  # seconds
-    async_logging: true
-    fallback_to_file: true
-    
-  # Retention Settings
-  retention:
-    active_days: 30
-    archive_days: 90
-    cleanup_schedule: "0 2 * * *"  # Daily at 2 AM
     
   # Service-specific Logging
   services:
@@ -389,6 +374,16 @@ logging:
     log_execution_time: true
     log_memory_usage: true
     log_database_queries: false
+  
+  # Database Logging (Primary Storage)
+  database:
+    enabled: true
+    active_table: "system_logs"
+    archive_table: "archived_system_logs"
+    batch_size: 100              # Write when 100 logs are queued
+    batch_timeout: 10             # Write every 10 seconds (or when batch is full)
+    async_logging: true           # Use async queue-based processing
+    fallback_to_file: true        # Fallback to file if database fails
 ```
 
 ### 2. Environment Settings
@@ -496,31 +491,35 @@ WHERE timestamp > NOW() - INTERVAL '1 day'
 GROUP BY service;
 ```
 
-## Implementation Phases
+## Implementation Status
 
-### Phase 1: Core Logging (Essential)
-1. Basic Loguru setup
-2. File logging with rotation
-3. Service detection
-4. Configuration loading
+### ✅ Phase 1: Core Logging (Completed)
+- [x] Basic Loguru setup
+- [x] File logging with rotation (minimal fallback)
+- [x] Service detection
+- [x] Configuration loading
 
-### Phase 2: Database Integration (Important)
-1. Database handler
-2. Async batching
-3. Fallback mechanism
-4. Structured logging
+### ✅ Phase 2: Database Integration (Completed)
+- [x] Database handler with async queue-based processing
+- [x] Database sink for loguru integration
+- [x] Async batching with configurable batch size and timeout
+- [x] Fallback mechanism to file logging
+- [x] Structured logging with JSONB metadata
+- [x] SQLAlchemy models for SystemLog and PerformanceLog
+- [x] Database schema creation
 
-### Phase 3: Advanced Features (Nice to Have)
-1. Correlation ID tracking
-2. Performance decorator
-3. Log aggregation utilities
-4. Dashboard integration
+### ✅ Phase 3: Advanced Features (Completed)
+- [x] Correlation ID tracking
+- [x] Performance logging support
+- [x] Thread-safe queue management
+- [x] Graceful shutdown with log flushing
 
-### Phase 4: Monitoring (Future)
-1. Real-time log streaming
-2. Error alerting
-3. Performance dashboards
-4. Anomaly detection
+### 🚧 Phase 4: Monitoring (Future)
+- [ ] Real-time log streaming
+- [ ] Error alerting
+- [ ] Performance dashboards
+- [ ] Anomaly detection
+- [ ] Log retention and cleanup automation
 
 ## Future Enhancements
 
@@ -556,13 +555,95 @@ GROUP BY service;
 - [ ] Production log optimization
 - [ ] Testing log configurations
 
+## Usage Examples
+
+### Basic Logging
+```python
+from loguru import logger
+
+# Simple logging - automatically goes to database
+logger.info("Application started")
+logger.error("Failed to connect to API", error=str(e))
+```
+
+### Structured Logging
+```python
+# Structured data automatically stored in JSONB
+logger.info(
+    "Order executed",
+    order_id="ORD123",
+    symbol="AAPL",
+    quantity=100,
+    price=150.25,
+    execution_time_ms=45
+)
+```
+
+### Correlation Tracking
+```python
+from src.shared.logging.correlation import set_correlation_id
+
+# Set correlation ID for request tracking
+set_correlation_id("trade-12345")
+logger.info("Order placed")  # Automatically includes correlation_id
+logger.info("Position updated")  # Same correlation_id
+```
+
+### Performance Logging
+```python
+from src.shared.logging import log_performance
+
+@log_performance
+def calculate_indicators(symbol: str, period: int):
+    # Heavy calculation
+    pass
+# Automatically logs execution time to performance_logs table
+```
+
+## Querying Logs
+
+### Find logs by correlation ID
+```sql
+SELECT * FROM logging.system_logs 
+WHERE correlation_id = 'trade-12345'
+ORDER BY timestamp;
+```
+
+### Performance analysis
+```sql
+SELECT 
+    service, 
+    operation,
+    AVG(execution_time_ms) as avg_time,
+    MAX(execution_time_ms) as max_time,
+    COUNT(*) as call_count
+FROM logging.performance_logs 
+WHERE timestamp > NOW() - INTERVAL '1 day'
+GROUP BY service, operation
+ORDER BY avg_time DESC;
+```
+
+### Error analysis
+```sql
+SELECT 
+    service,
+    level,
+    COUNT(*) as error_count,
+    MAX(timestamp) as last_error
+FROM logging.system_logs 
+WHERE level IN ('ERROR', 'CRITICAL')
+    AND timestamp > NOW() - INTERVAL '7 days'
+GROUP BY service, level
+ORDER BY error_count DESC;
+```
+
 ## Next Steps
 
-1. **Database Schema**: Implement log tables in PostgreSQL
-2. **Logging Utilities**: Create shared logging utilities
-3. **Service Integration**: Integrate logging in each microservice
-4. **Cleanup Automation**: Implement Prefect cleanup flows
-5. **Testing**: Test logging configuration and cleanup processes
+1. ✅ **Database Schema**: Log tables implemented in PostgreSQL
+2. ✅ **Logging Utilities**: Shared logging utilities created
+3. ✅ **Service Integration**: Logging integrated across services
+4. 🚧 **Cleanup Automation**: Implement Prefect cleanup flows for log retention
+5. ✅ **Testing**: Logging configuration tested and working
 
 ---
 

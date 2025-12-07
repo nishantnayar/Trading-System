@@ -59,7 +59,8 @@ ALPACA_BASE_URL=https://paper-api.alpaca.markets
 A: Check these in order:
 1. Database connectivity: `python scripts/test_database_connections.py`
 2. Environment variables: `cat .env`
-3. Service logs: `tail -f logs/trading.log`
+3. **Database logs** (primary): Query `logging.system_logs` table in PostgreSQL
+4. **File logs** (fallback): `tail -f logs/errors.log` (only if database fails)
 4. Port availability: Ensure ports 8001, 8501, 4200, 5432, 6379 are free
 
 **Q: How do I check if all services are running?**

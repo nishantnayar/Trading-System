@@ -4,10 +4,20 @@ Handles session state initialization and global configuration
 """
 
 import os
+import sys
 from datetime import datetime
+from pathlib import Path
+
+# Add project root to path for imports
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 import streamlit as st
-from utils import initialize_session_state, load_custom_css
+from src.shared.logging import setup_logging  # noqa: E402
+from utils import initialize_session_state, load_custom_css  # noqa: E402
+
+# Setup logging for Streamlit UI
+setup_logging(service_name="streamlit_ui")
 
 # Configure Streamlit page
 st.set_page_config(

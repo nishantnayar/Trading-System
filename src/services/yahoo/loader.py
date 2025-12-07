@@ -193,7 +193,7 @@ class YahooDataLoader:
             raise ValueError("Symbol cannot be empty or None")
 
         symbol = symbol.upper()
-        logger.info(f"Loading company info for {symbol} from Yahoo Finance")
+        logger.debug(f"Loading company info for {symbol} from Yahoo Finance")
 
         try:
             # Fetch company info from Yahoo

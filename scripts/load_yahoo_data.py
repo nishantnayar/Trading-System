@@ -346,9 +346,13 @@ async def _load_single_symbol(
                 return 1
         else:
             # company_info, key_statistics, or esg_scores (return boolean)
+            # Note: The loader methods already log success/failure, so we don't duplicate here
             success = await single_loader(symbol)
             if success:
-                logger.info(f"Successfully loaded {single_type.replace('_', ' ')} for {symbol}")
+                # Only log if loader didn't already log (for cases where loader is silent)
+                # For company_info, the loader already logs, so we skip to avoid duplicates
+                if single_type != "company_info":
+                    logger.info(f"Successfully loaded {single_type.replace('_', ' ')} for {symbol}")
                 return 0
             else:
                 logger.error(f"Failed to load {single_type.replace('_', ' ')} for {symbol}")
@@ -419,7 +423,7 @@ async def _load_all_symbols(
         total_dividends = 0
 
         for i, sym in enumerate(symbols_list, 1):
-            logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
+            logger.debug(f"Processing {i}/{len(symbols_list)}: {sym}")
             try:
                 count = await loader.load_dividends(
                     symbol=sym,
@@ -459,7 +463,7 @@ async def _load_all_symbols(
         total_splits = 0
 
         for i, sym in enumerate(symbols_list, 1):
-            logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
+            logger.debug(f"Processing {i}/{len(symbols_list)}: {sym}")
             try:
                 count = await loader.load_splits(
                     symbol=sym,
@@ -508,7 +512,7 @@ async def _load_all_symbols(
         total_items = 0
 
         for i, sym in enumerate(symbols_list, 1):
-            logger.info(f"Processing {i}/{len(symbols_list)}: {sym}")
+            logger.debug(f"Processing {i}/{len(symbols_list)}: {sym}")
             try:
                 if single_type == "institutional_holders":
                     count = await single_loader(sym)

@@ -49,6 +49,7 @@ from .logger import (
     get_logger,
     get_service_logger,
     setup_logging,
+    shutdown_logging,
 )
 from .performance import (
     log_database_query,
@@ -63,6 +64,7 @@ __all__ = [
     "get_logger",
     "get_service_logger",
     "get_config",
+    "shutdown_logging",
     "LoggingManager",
     # Configuration
     "load_logging_config",

@@ -8,6 +8,8 @@ from typing import Any
 from typing import Any as LogRecord
 from typing import Dict, Optional
 
+from src.shared.logging.config import detect_service_from_module
+from src.shared.logging.correlation import get_correlation_id
 from src.shared.utils.timezone import ensure_utc_timestamp, format_timestamp_for_logging
 
 
@@ -125,18 +127,61 @@ def format_for_database(record: LogRecord) -> Dict[str, Any]:
     # Base record with timezone-aware timestamp
     timestamp = ensure_utc_timestamp(record["time"])
 
+    # Check if this is a performance log
+    log_type = record["extra"].get("log_type", "system")
+    
+    # Detect service from module name if not in extra context
+    service = record["extra"].get("service")
+    if not service:
+        # Try to detect from module name (record["name"] contains the module path)
+        service = detect_service_from_module(record["name"])
+    
+    # Get correlation_id from extra context or thread-local context
+    correlation_id = record["extra"].get("correlation_id")
+    if not correlation_id:
+        # Try to get from thread-local correlation context
+        correlation_id = get_correlation_id()
+        # If still None, auto-generate one for this log entry
+        # (This ensures every log has a correlation_id for tracking)
+        if not correlation_id:
+            from uuid import uuid4
+            correlation_id = str(uuid4())
+            # Store it in thread-local context so subsequent logs in same thread use same ID
+            from src.shared.logging.correlation import set_correlation_id
+            set_correlation_id(correlation_id)
+    
+    # Get event_type from extra context, or infer from log level
+    event_type = record["extra"].get("event_type")
+    if not event_type:
+        # Auto-infer event_type from log level if not explicitly set
+        level_name = record["level"].name
+        event_type_map = {
+            "DEBUG": "debug",
+            "INFO": "info",
+            "WARNING": "warning",
+            "ERROR": "error",
+            "CRITICAL": "critical",
+        }
+        event_type = event_type_map.get(level_name, "unknown")
+    
     db_record = {
         "timestamp": timestamp,
         "level": record["level"].name,
         "message": record["message"],
-        "service": record["extra"].get("service", "unknown"),
-        "correlation_id": record["extra"].get("correlation_id"),
+        "service": service,
+        "correlation_id": correlation_id,  # Can be None - always include
+        "event_type": event_type,  # Can be None - always include
         "metadata": extract_metadata(record),
+        "log_type": log_type,
     }
 
-    # Add event type if available
-    if "event_type" in record["extra"]:
-        db_record["event_type"] = record["extra"]["event_type"]
+    # For performance logs, add performance-specific fields
+    if log_type == "performance":
+        metadata = extract_metadata(record)
+        db_record["operation"] = record["extra"].get("operation") or metadata.get("operation", "unknown")
+        db_record["execution_time_ms"] = record["extra"].get("execution_time_ms") or metadata.get("execution_time_ms", 0)
+        db_record["memory_usage_mb"] = record["extra"].get("memory_usage_mb") or metadata.get("memory_usage_mb")
+        db_record["cpu_usage_percent"] = record["extra"].get("cpu_usage_percent") or metadata.get("cpu_usage_percent")
 
     return db_record
 

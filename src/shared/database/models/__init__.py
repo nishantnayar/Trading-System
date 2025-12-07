@@ -13,6 +13,7 @@ from .financial_statements import FinancialStatement
 from .institutional_holders import InstitutionalHolder
 from .key_statistics import KeyStatistics
 from .load_runs import LoadRun
+from .logging_models import PerformanceLog, SystemLog
 from .market_data import MarketData
 from .stock_splits import StockSplit
 from .symbols import DelistedSymbol, Symbol, SymbolDataStatus
@@ -35,4 +36,6 @@ __all__ = [
     "LoadRun",
     "TechnicalIndicators",
     "TechnicalIndicatorsLatest",
+    "SystemLog",
+    "PerformanceLog",
 ]

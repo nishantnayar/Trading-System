@@ -10,8 +10,17 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from fastapi import FastAPI  # noqa: E402
+from contextlib import asynccontextmanager  # noqa: E402
 
+from fastapi import FastAPI, Request  # noqa: E402
+from starlette.middleware.base import BaseHTTPMiddleware  # noqa: E402
+from loguru import logger  # noqa: E402
+
+from src.shared.logging import setup_logging, shutdown_logging  # noqa: E402
+from src.shared.logging.correlation import (  # noqa: E402
+    correlation_context,
+    generate_correlation_id,
+)
 from src.web.api.alpaca_routes import router as alpaca_router  # noqa: E402
 from src.web.api.company_info import router as company_info_router  # noqa: E402
 from src.web.api.company_officers import router as company_officers_router  # noqa: E402
@@ -25,13 +34,45 @@ from src.web.api.key_statistics import router as key_statistics_router  # noqa: 
 from src.web.api.market_data import router as market_data_router  # noqa: E402
 from src.web.api.routes import router  # noqa: E402
 
+# Correlation ID middleware for request tracking
+class CorrelationIDMiddleware(BaseHTTPMiddleware):
+    """Middleware to add correlation ID to all requests"""
+
+    async def dispatch(self, request: Request, call_next):
+        # Get correlation ID from header or generate new one
+        correlation_id = request.headers.get("X-Correlation-ID") or generate_correlation_id()
+        
+        # Set correlation ID in context for logging
+        with correlation_context(correlation_id):
+            response = await call_next(request)
+            # Add correlation ID to response header
+            response.headers["X-Correlation-ID"] = correlation_id
+            return response
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events"""
+    # Startup
+    setup_logging(service_name="web")
+    logger.info("Trading System API starting up")
+    yield
+    # Shutdown
+    logger.info("Trading System API shutting down")
+    shutdown_logging()
+
+
 app = FastAPI(
     title="Trading System API",
     description="A production-grade algorithmic trading system API",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan,
 )
+
+# Add correlation ID middleware
+app.add_middleware(CorrelationIDMiddleware)
 
 # Include API routes
 app.include_router(router)
@@ -42,6 +83,7 @@ app.include_router(company_officers_router)
 app.include_router(financial_statements_router)
 app.include_router(institutional_holders_router)
 app.include_router(key_statistics_router)
+
 
 if __name__ == "__main__":
     import uvicorn
