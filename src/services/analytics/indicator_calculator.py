@@ -106,7 +106,8 @@ class IndicatorCalculationService:
             else:
                 # Fallback: convert to Timestamp first, then to datetime
                 # This handles any edge cases where idx might not be a Timestamp
-                ts = pd.Timestamp(idx)
+                # Cast to str first to satisfy type checker, then convert to Timestamp
+                ts = pd.Timestamp(str(idx))
                 timestamp = ts.to_pydatetime()
             
             if timestamp.tzinfo is None:
