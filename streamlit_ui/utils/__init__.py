@@ -57,6 +57,15 @@ __all__ = [
     'generate_ohlc_data',
     'create_lightweight_ohlc_chart',
     'create_lightweight_volume_chart',
+    'create_lightweight_rsi_chart',
+    'create_lightweight_macd_chart',
+    'create_candlestick_chart_with_overlays',
+    'get_technical_indicators_from_db',
+    'get_latest_technical_indicators',
+    'ohlc_data_to_dataframe',
+    'filter_ohlc_data_by_timeframe',
+    'create_rsi_chart',
+    'create_macd_chart',
 ]
 
 # Re-export all functions
@@ -96,3 +105,12 @@ get_real_market_data = utils_module.get_real_market_data
 generate_ohlc_data = utils_module.generate_ohlc_data
 create_lightweight_ohlc_chart = utils_module.create_lightweight_ohlc_chart
 create_lightweight_volume_chart = utils_module.create_lightweight_volume_chart
+create_lightweight_rsi_chart = utils_module.create_lightweight_rsi_chart
+create_lightweight_macd_chart = utils_module.create_lightweight_macd_chart
+create_candlestick_chart_with_overlays = utils_module.create_candlestick_chart_with_overlays
+get_technical_indicators_from_db = utils_module.get_technical_indicators_from_db
+get_latest_technical_indicators = utils_module.get_latest_technical_indicators
+ohlc_data_to_dataframe = utils_module.ohlc_data_to_dataframe
+filter_ohlc_data_by_timeframe = utils_module.filter_ohlc_data_by_timeframe
+create_rsi_chart = utils_module.create_rsi_chart
+create_macd_chart = utils_module.create_macd_chart

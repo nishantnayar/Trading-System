@@ -30,14 +30,7 @@ from streamlit_ui.utils import (
     show_info_message,
     show_loading_spinner,
 )
-from streamlit_ui.utils.technical_indicators import (
-    calculate_bollinger_bands,
-    calculate_macd,
-    calculate_price_change,
-    calculate_rsi,
-    calculate_sma,
-    calculate_volatility,
-)
+# Note: Technical indicators are now fetched from database, not calculated on the fly
 
 # Initialize session state
 if 'screener_results' not in st.session_state:
@@ -61,49 +54,50 @@ def load_custom_css():
         st.warning(f"Error loading CSS: {e}")
 
 
-def calculate_indicators_for_symbol(
-    api_client, 
-    symbol: str, 
+def get_indicators_for_symbol_from_db(
+    symbol: str,
     ohlc_data: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
-    """Calculate all technical indicators for a symbol"""
+    """Get all technical indicators for a symbol from database"""
+    from utils import get_latest_technical_indicators
+    
     if not ohlc_data:
         return {}
     
-    # Extract closing prices
+    # Get latest indicators from database
+    latest_indicators = get_latest_technical_indicators(symbol)
+    
+    if not latest_indicators:
+        # Fallback: return basic info if no database data
+        closing_prices = [item['close'] for item in ohlc_data]
+        volumes = [item.get('volume', 0) for item in ohlc_data]
+        return {
+            'symbol': symbol,
+            'current_price': closing_prices[-1] if closing_prices else None,
+            'current_volume': volumes[-1] if volumes else 0,
+        }
+    
+    # Extract current price and volume from OHLC data
     closing_prices = [item['close'] for item in ohlc_data]
+    volumes = [item.get('volume', 0) for item in ohlc_data]
     
     indicators = {
         'symbol': symbol,
         'current_price': closing_prices[-1] if closing_prices else None,
-        'sma_20': calculate_sma(closing_prices, 20),
-        'sma_50': calculate_sma(closing_prices, 50),
-        'rsi': calculate_rsi(closing_prices, 14),
-        'price_change_1d': calculate_price_change(closing_prices, 1),
-        'price_change_5d': calculate_price_change(closing_prices, 5),
-        'price_change_30d': calculate_price_change(closing_prices, 30),
-        'volatility': calculate_volatility(closing_prices, 20),
+        'sma_20': latest_indicators.get('sma_20'),
+        'sma_50': latest_indicators.get('sma_50'),
+        'rsi': latest_indicators.get('rsi_14') or latest_indicators.get('rsi'),
+        'price_change_1d': latest_indicators.get('price_change_1d'),
+        'price_change_5d': latest_indicators.get('price_change_5d'),
+        'price_change_30d': latest_indicators.get('price_change_30d'),
+        'volatility': latest_indicators.get('volatility_20'),
+        'macd': latest_indicators.get('macd_line'),
+        'macd_signal': latest_indicators.get('macd_signal'),
+        'macd_histogram': latest_indicators.get('macd_histogram'),
+        'bb_position': latest_indicators.get('bb_position'),
+        'avg_volume': latest_indicators.get('avg_volume_20'),
+        'current_volume': volumes[-1] if volumes else latest_indicators.get('current_volume'),
     }
-    
-    # MACD
-    macd = calculate_macd(closing_prices)
-    if macd:
-        indicators['macd'] = macd['macd']
-        indicators['macd_signal'] = macd['signal']
-        indicators['macd_histogram'] = macd['histogram']
-    
-    # Bollinger Bands
-    bb = calculate_bollinger_bands(closing_prices)
-    if bb and indicators['current_price']:
-        indicators['bb_position'] = (
-            (indicators['current_price'] - bb['lower']) / 
-            (bb['upper'] - bb['lower'])
-        ) if (bb['upper'] - bb['lower']) > 0 else 0.5
-    
-    # Volume
-    volumes = [item.get('volume', 0) for item in ohlc_data]
-    indicators['avg_volume'] = np.mean(volumes[-20:]) if len(volumes) >= 20 else np.mean(volumes) if volumes else 0
-    indicators['current_volume'] = volumes[-1] if volumes else 0
     
     return indicators
 
@@ -151,8 +145,8 @@ def screen_stocks(
                 logger.debug(f"Skipping {symbol}: No market data available")
                 continue
             
-            # Calculate indicators
-            indicators = calculate_indicators_for_symbol(api_client, symbol, ohlc_data)
+            # Get indicators from database
+            indicators = get_indicators_for_symbol_from_db(symbol, ohlc_data)
             
             # Get company info
             company_info = api_client.get_company_info(symbol)
@@ -336,7 +330,9 @@ def screener_page():
         if "error" in health:
             st.error("Failed to connect to API. Please check your API connection.")
             return
-        st.success("✅ Connected to API")
+        # Debug: API connection success message (commented out, uncomment if needed for debugging)
+        # st.success("✅ Connected to API")
+        pass
     
     # Initialize LLM service
     llm_service = None

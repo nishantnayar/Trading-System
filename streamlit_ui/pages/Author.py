@@ -18,72 +18,75 @@ def load_custom_css():
     try:
         with open(css_file, "r") as f:
             css_content = f.read()
-        
+
         # Add CSS variables from configuration
         from css_config import generate_css_variables, get_theme_css
         css_variables = generate_css_variables()
         theme_css = get_theme_css()
-        
+
         # Combine all CSS
         full_css = css_variables + css_content + theme_css
         st.markdown(f"<style>{full_css}</style>", unsafe_allow_html=True)
-        
+
     except FileNotFoundError:
         st.warning("Custom CSS file not found. Using default styling.")
     except Exception as e:
         st.error(f"Error loading custom CSS: {e}")
 
+
 def author_page():
     """Author page with personal information"""
-    
+
     # ============================================
     # CUSTOMIZE THIS SECTION - Personal Introduction
     # ============================================
     st.title("👨‍💻 About Me")
-    
+
     # Hero section with name and tagline
     col1, col2 = st.columns([1, 2])
-    
+
     with col1:
         # You can add a profile image here if you have one
         # st.image("path/to/your/profile_image.jpg", width=200)
-        st.markdown("### [YOUR NAME]")
-        st.caption("📌 [Your Title/Role]")
-    
+        st.markdown("### Nishant Nayar")
+        st.caption("📌 Vice President - Lead Solution Analyst")
+
     with col2:
         st.markdown("""
         **Welcome!** 👋
         
-        [Write a brief introduction about yourself here. 
-        What drives you? What's your passion? 
-        What makes you excited about building trading systems?]
+        Nishant is a passionate data management professional with a proven track record of developing and executing 
+        strategic initiatives within Investment Bank, Commercial Bank and Asset Management segments of the financial 
+        services. He excels at translating complex data challenges into actionable solutions by leveraging data 
+        governance best practices and applied data science techniques. Additionally, he is a critical thinker and a 
+        problem solver, bringing a strong work ethic and a commitment to data-driven decision making.
         """)
-    
+
     st.divider()
-    
+
     # ============================================
     # CUSTOMIZE THIS SECTION - Bio & Background
     # ============================================
     st.subheader("📖 My Story")
-    
+
     st.markdown("""
-    [Tell your story here. You might want to include:
+    Tell your story here. You might want to include:
     - Your background and how you got into programming/trading
     - What inspired you to build this trading system
     - Your journey in learning and development
     - Key milestones or achievements
-    - What you're currently working on or learning]
+    - What you're currently working on or learning
     """)
-    
+
     st.divider()
-    
+
     # ============================================
     # CUSTOMIZE THIS SECTION - Technical Skills
     # ============================================
     st.subheader("🛠️ Technical Skills")
-    
+
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
         st.markdown("""
         **Languages:**
@@ -92,7 +95,7 @@ def author_page():
         - [Language 3]
         - [Add more...]
         """)
-    
+
     with col2:
         st.markdown("""
         **Frameworks & Tools:**
@@ -101,7 +104,7 @@ def author_page():
         - [Tool 1]
         - [Add more...]
         """)
-    
+
     with col3:
         st.markdown("""
         **Specializations:**
@@ -110,16 +113,16 @@ def author_page():
         - [Specialization 3]
         - [Add more...]
         """)
-    
+
     st.divider()
-    
+
     # ============================================
     # CUSTOMIZE THIS SECTION - This Project
     # ============================================
     st.subheader("🚀 About This Trading System")
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.markdown("""
         **What I Built:**
@@ -130,7 +133,7 @@ def author_page():
         - 🛡️ [Feature 5 - e.g., Risk management]
         - 📱 [Feature 6 - e.g., Modern web interface]
         """)
-    
+
     with col2:
         st.markdown("""
         **Tech Stack Used:**
@@ -141,7 +144,7 @@ def author_page():
         - Redis (Caching)
         - [Add other technologies you used]
         """)
-    
+
     st.markdown("""
     **Why I Built This:**
     
@@ -149,14 +152,14 @@ def author_page():
     What problem were you trying to solve? 
     What did you learn along the way?]
     """)
-    
+
     st.divider()
-    
+
     # ============================================
     # CUSTOMIZE THIS SECTION - Experience & Education
     # ============================================
     st.subheader("🎓 Experience & Education")
-    
+
     experience_data = {
         "Role/Position": [
             "[Role 1 - e.g., Software Engineer]",
@@ -179,17 +182,17 @@ def author_page():
             "[Achievement 3]"
         ]
     }
-    
+
     df_experience = pd.DataFrame(experience_data)
     st.dataframe(df_experience, width='stretch', hide_index=True)
-    
+
     st.divider()
-    
+
     # ============================================
     # CUSTOMIZE THIS SECTION - Projects & Achievements
     # ============================================
     st.subheader("🏆 Projects & Achievements")
-    
+
     st.markdown("""
     **Notable Projects:**
     - **[Project Name 1]**: [Brief description]
@@ -201,16 +204,16 @@ def author_page():
     - [Achievement 2]
     - [Achievement 3]
     """)
-    
+
     st.divider()
-    
+
     # ============================================
     # CUSTOMIZE THIS SECTION - Interests & Hobbies
     # ============================================
     st.subheader("🎯 Interests & Hobbies")
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.markdown("""
         **Professional Interests:**
@@ -219,7 +222,7 @@ def author_page():
         - [Interest 3 - e.g., Financial Modeling]
         - [Add more...]
         """)
-    
+
     with col2:
         st.markdown("""
         **Personal Hobbies:**
@@ -228,41 +231,38 @@ def author_page():
         - [Hobby 3 - e.g., Photography]
         - [Add more...]
         """)
-    
+
     st.divider()
-    
+
     # ============================================
     # CUSTOMIZE THIS SECTION - Contact & Links
     # ============================================
     st.subheader("📬 Connect With Me")
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.markdown("""
         **Contact Information:**
-        - 📧 Email: [your.email@example.com]
-        - 📱 Phone: [Your Phone - Optional]
-        - 📍 Location: [Your Location - Optional]
+        - 📧 Email: nishant.nayar@hotmail.com
+        - 📍 Location: Greater Chicago Area
         """)
-    
+
     with col2:
         st.markdown("""
         **Social & Professional Links:**
-        - 💼 LinkedIn: [Your LinkedIn URL]
-        - 🐙 GitHub: [Your GitHub URL]
-        - 🌐 Website/Blog: [Your Website URL]
-        - 🐦 Twitter/X: [Your Twitter URL - Optional]
-        - 📝 Medium/Dev.to: [Your Blog URL - Optional]
+        - 💼 LinkedIn: [nishantnayar](https://www.linkedin.com/in/nishantnayar/)
+        - 🐙 GitHub: [nishantnayar](https://github.com/nishantnayar)
+        - 📝 Medium: [@nishant-nayar](https://medium.com/@nishant-nayar)
         """)
-    
+
     st.divider()
-    
+
     # ============================================
     # CUSTOMIZE THIS SECTION - Fun Facts
     # ============================================
     st.subheader("✨ Fun Facts About Me")
-    
+
     st.markdown("""
     - [Fun fact 1 - e.g., I've been coding since I was 12]
     - [Fun fact 2 - e.g., I love solving complex problems]
@@ -270,28 +270,28 @@ def author_page():
     - [Fun fact 4 - e.g., I enjoy contributing to open source]
     - [Add more fun facts...]
     """)
-    
+
     st.divider()
-    
+
     # ============================================
     # CUSTOMIZE THIS SECTION - Current Focus
     # ============================================
     st.subheader("🎯 What I'm Working On Now")
-    
+
     st.markdown("""
     **Current Projects:**
     - [Project 1 you're currently working on]
     - [Project 2 you're currently working on]
     
     **Learning:**
-    - [Technology/Skill you're currently learning]
-    - [Another area you're exploring]
+    - Kaggle’s 5-Day AI Agents Intensive Course
+    - Quantum Computing
     
     **Goals:**
     - [Short-term goal]
     - [Long-term goal]
     """)
-    
+
     # Optional: Add a call-to-action
     st.markdown("---")
     st.markdown("""
@@ -301,10 +301,12 @@ def author_page():
     </div>
     """, unsafe_allow_html=True)
 
+
 def main():
     """Main function for Author page"""
     load_custom_css()
     author_page()
+
 
 if __name__ == "__main__":
     main()
