@@ -673,7 +673,7 @@ def create_rsi_chart(
         Plotly figure
     """
     from streamlit_ui.utils.technical_indicators import calculate_rsi
-    
+
     # Convert OHLC data to DataFrame
     df = ohlc_data_to_dataframe(ohlc_data)
     
@@ -766,7 +766,7 @@ def create_macd_chart(
         Plotly figure
     """
     from streamlit_ui.utils.technical_indicators import calculate_macd
-    
+
     # Convert OHLC data to DataFrame
     df = ohlc_data_to_dataframe(ohlc_data)
     
@@ -1282,8 +1282,9 @@ def get_technical_indicators_from_db(
     """
     try:
         from datetime import date
+
         from sqlalchemy import select
-        
+
         from src.shared.database.base import db_transaction
         from src.shared.database.models.technical_indicators import TechnicalIndicators
         
@@ -1332,9 +1333,11 @@ def get_latest_technical_indicators(symbol: str) -> Optional[Dict[str, Any]]:
     """
     try:
         from sqlalchemy import select
-        
+
         from src.shared.database.base import db_transaction
-        from src.shared.database.models.technical_indicators import TechnicalIndicatorsLatest
+        from src.shared.database.models.technical_indicators import (
+            TechnicalIndicatorsLatest,
+        )
         
         symbol = symbol.upper()
         
@@ -1370,9 +1373,10 @@ def create_lightweight_rsi_chart(
         period: RSI period (default: 14, but uses rsi_14 from database)
         height: Chart height in pixels
     """
+    from datetime import date, datetime
+
     from streamlit_lightweight_charts import Chart, renderLightweightCharts
-    from datetime import datetime, date
-    
+
     if not ohlc_data:
         st.warning("No OHLC data available to determine date range for RSI chart")
         return
@@ -1516,9 +1520,10 @@ def create_lightweight_macd_chart(
         signal_period: Signal line EMA period (default: 9, but uses stored MACD from database)
         height: Chart height in pixels
     """
+    from datetime import date, datetime
+
     from streamlit_lightweight_charts import Chart, renderLightweightCharts
-    from datetime import datetime, date
-    
+
     if not ohlc_data:
         st.warning("No OHLC data available to determine date range for MACD chart")
         return

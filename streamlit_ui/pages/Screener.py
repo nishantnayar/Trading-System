@@ -30,6 +30,7 @@ from streamlit_ui.utils import (
     show_info_message,
     show_loading_spinner,
 )
+
 # Note: Technical indicators are now fetched from database, not calculated on the fly
 
 # Initialize session state

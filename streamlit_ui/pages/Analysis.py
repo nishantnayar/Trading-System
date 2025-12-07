@@ -21,17 +21,17 @@ if parent_dir not in sys.path:
 
 # Import from utils package (which re-exports from utils.py)
 from utils import (
+    calculate_max_drawdown,
     calculate_returns,
     calculate_sharpe_ratio,
-    calculate_max_drawdown,
     calculate_volatility,
     convert_api_data_to_ohlc,
     create_candlestick_chart,
     create_candlestick_chart_with_overlays,
-    create_lightweight_ohlc_chart,
-    create_lightweight_volume_chart,
-    create_lightweight_rsi_chart,
     create_lightweight_macd_chart,
+    create_lightweight_ohlc_chart,
+    create_lightweight_rsi_chart,
+    create_lightweight_volume_chart,
     create_macd_chart,
     create_price_chart,
     create_rsi_chart,
