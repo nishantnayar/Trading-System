@@ -329,7 +329,6 @@ def get_config() -> LoggingConfig:
 
 def shutdown_logging() -> None:
     """Shutdown the logging system"""
-    global _logging_manager
     if _logging_manager:
         _logging_manager.shutdown()
     shutdown_queue_manager()
