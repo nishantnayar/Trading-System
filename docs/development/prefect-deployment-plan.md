@@ -1139,22 +1139,23 @@ Choose based on your needs. Start coarse-grained, refine as needed.
 
 ### Recommended Order:
 
-1. ✅ **Phase 1**: Configuration (`config.py` + settings updates)
-2. ✅ **Phase 2**: One simple flow (Polygon daily ingestion) + tasks
-3. ✅ **Test & Validate**: Run the flow, verify it works
-4. ✅ **Phase 3**: Add another flow (Yahoo market data)
-5. ✅ **Continue incrementally**: Add flows one at a time
-6. ✅ **Phase 7**: Deployment scripts and YAML (after flows work)
+1. ✅ **Phase 1**: Configuration (`config.py` + settings updates) - **COMPLETE**
+2. ⏳ **Phase 2**: One simple flow (Polygon daily ingestion) + tasks - **NEXT**
+3. ⏳ **Test & Validate**: Run the flow, verify it works
+4. ⏳ **Phase 3**: Add another flow (Yahoo market data)
+5. ⏳ **Continue incrementally**: Add flows one at a time
+6. ⏳ **Phase 7**: Deployment scripts and YAML (after flows work)
 
 ### What to Create First:
 
-**Minimum to Start:**
-- `src/shared/prefect/__init__.py`
-- `src/shared/prefect/config.py`
-- Update `src/config/settings.py` (add Prefect fields)
-- Update `deployment/env.example` (add Prefect variables)
+**Phase 1 - COMPLETE ✅:**
+- ✅ `src/shared/prefect/__init__.py`
+- ✅ `src/shared/prefect/config.py`
+- ✅ Update `src/config/settings.py` (add Prefect fields)
+- ✅ Update `deployment/env.example` (add Prefect variables)
+- ✅ Integration tests (`tests/integration/test_prefect_config.py`)
 
-**Then add:**
+**Phase 2 - NEXT ⏳:**
 - First flow file (e.g., `polygon_flows.py`)
 - Tasks file for that flow
 - Test it works

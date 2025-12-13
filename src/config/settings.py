@@ -88,6 +88,22 @@ class Settings(BaseSettings):
     smtp_password: Optional[str] = Field(default=None, alias="SMTP_PASSWORD")
     smtp_from_email: Optional[str] = Field(default=None, alias="SMTP_FROM_EMAIL")
 
+    # Prefect Configuration (Essential)
+    prefect_api_url: str = Field(
+        default="http://localhost:4200/api",
+        alias="PREFECT_API_URL"
+    )
+    
+    prefect_db_connection_url: str = Field(
+        default="postgresql+asyncpg://postgres:password@localhost:5432/prefect",
+        alias="PREFECT_API_DATABASE_CONNECTION_URL"
+    )
+    
+    prefect_work_pool_data_ingestion: str = Field(
+        default="data-ingestion-pool",
+        alias="PREFECT_WORK_POOL_DATA_INGESTION"
+    )
+
     class Config:
         # Allow disabling .env file reading via environment variable (useful for tests)
         env_file = None if os.getenv("DISABLE_ENV_FILE") == "true" else ".env"
