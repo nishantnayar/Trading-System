@@ -1378,14 +1378,10 @@ class YahooDataLoader:
                 )
 
                 # Update on conflict
-                # Use index_elements which works with either constraint:
-                # - "unique_symbol_timestamp" (old, without data_source)
-                # - "unique_symbol_timestamp_source" (new, with data_source)
-                # If the old constraint exists, it will match on (symbol, timestamp)
-                # If the new constraint exists, it will match on (symbol, timestamp, data_source)
-                # Note: If using old constraint, data_source column must exist but won't be part of conflict resolution
+                # The unique constraint is (symbol, timestamp, data_source)
+                # This allows multiple data sources for the same symbol/timestamp
                 stmt = stmt.on_conflict_do_update(
-                    index_elements=["symbol", "timestamp"],
+                    index_elements=["symbol", "timestamp", "data_source"],
                     set_={
                         "open": stmt.excluded.open,
                         "high": stmt.excluded.high,
