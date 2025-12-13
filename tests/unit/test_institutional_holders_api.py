@@ -56,7 +56,7 @@ class TestInstitutionalHoldersAPI:
                 "holder_name": "Vanguard Group Inc",
                 "shares": 1234567890,
                 "value": 24567890123.45,
-                "percent_held": 9.54,
+                "percent_held": 0.0954,  # Stored as decimal (0.0954 = 9.54%)
                 "percent_held_display": "9.54%",
                 "data_source": "yahoo",
             },
@@ -102,7 +102,7 @@ class TestInstitutionalHoldersAPI:
                 mock_calc.return_value = [
                     {
                         **mock_holders_data[0],
-                        "percent_held": 7.85,
+                        "percent_held": 0.0785,  # Stored as decimal (0.0785 = 7.85%)
                         "percent_held_display": "7.85%",
                     }
                 ]
@@ -113,7 +113,7 @@ class TestInstitutionalHoldersAPI:
                 assert result["symbol"] == "AAPL"
                 assert result["count"] == 1
                 assert len(result["holders"]) == 1
-                assert result["holders"][0]["percent_held"] == 7.85
+                assert result["holders"][0]["percent_held"] == 0.0785
 
     @pytest.mark.asyncio
     async def test_get_institutional_holders_with_existing_percentages(
@@ -150,7 +150,7 @@ class TestInstitutionalHoldersAPI:
                 result = await get_institutional_holders("AAPL")
 
                 assert result["success"] is True
-                assert result["holders"][0]["percent_held"] == 9.54
+                assert result["holders"][0]["percent_held"] == 0.0954  # Stored as decimal
                 mock_calc.assert_not_called()
 
     @pytest.mark.asyncio
@@ -239,14 +239,17 @@ class TestInstitutionalHoldersAPI:
             assert len(result) == 2
 
             # Check first holder (1234567890 shares out of 15728714000)
-            expected_percentage_1 = (1234567890 / 15728714000) * 100
-            assert abs(result[0]["percent_held"] - expected_percentage_1) < 0.01
-            assert result[0]["percent_held_display"] == f"{expected_percentage_1:.2f}%"
+            # percent_held is stored as decimal (0.07849 = 7.849%)
+            expected_percentage_decimal_1 = 1234567890 / 15728714000
+            expected_percentage_display_1 = expected_percentage_decimal_1 * 100
+            assert abs(result[0]["percent_held"] - expected_percentage_decimal_1) < 0.0001
+            assert result[0]["percent_held_display"] == f"{expected_percentage_display_1:.2f}%"
 
             # Check second holder (987654321 shares out of 15728714000)
-            expected_percentage_2 = (987654321 / 15728714000) * 100
-            assert abs(result[1]["percent_held"] - expected_percentage_2) < 0.01
-            assert result[1]["percent_held_display"] == f"{expected_percentage_2:.2f}%"
+            expected_percentage_decimal_2 = 987654321 / 15728714000
+            expected_percentage_display_2 = expected_percentage_decimal_2 * 100
+            assert abs(result[1]["percent_held"] - expected_percentage_decimal_2) < 0.0001
+            assert result[1]["percent_held_display"] == f"{expected_percentage_display_2:.2f}%"
 
     @pytest.mark.asyncio
     async def test_calculate_missing_percentages_fallback_method(
@@ -269,14 +272,17 @@ class TestInstitutionalHoldersAPI:
             total_shares = 1234567890 + 987654321
 
             # Check first holder (1234567890 out of 2222222211)
-            expected_percentage_1 = (1234567890 / total_shares) * 100
-            assert abs(result[0]["percent_held"] - expected_percentage_1) < 0.01
-            assert result[0]["percent_held_display"] == f"{expected_percentage_1:.2f}%"
+            # percent_held is stored as decimal (0.5556 = 55.56%)
+            expected_percentage_decimal_1 = 1234567890 / total_shares
+            expected_percentage_display_1 = expected_percentage_decimal_1 * 100
+            assert abs(result[0]["percent_held"] - expected_percentage_decimal_1) < 0.0001
+            assert result[0]["percent_held_display"] == f"{expected_percentage_display_1:.2f}%"
 
             # Check second holder (987654321 out of 2222222211)
-            expected_percentage_2 = (987654321 / total_shares) * 100
-            assert abs(result[1]["percent_held"] - expected_percentage_2) < 0.01
-            assert result[1]["percent_held_display"] == f"{expected_percentage_2:.2f}%"
+            expected_percentage_decimal_2 = 987654321 / total_shares
+            expected_percentage_display_2 = expected_percentage_decimal_2 * 100
+            assert abs(result[1]["percent_held"] - expected_percentage_decimal_2) < 0.0001
+            assert result[1]["percent_held_display"] == f"{expected_percentage_display_2:.2f}%"
 
     @pytest.mark.asyncio
     async def test_calculate_missing_percentages_no_shares_data(self):
@@ -319,9 +325,10 @@ class TestInstitutionalHoldersAPI:
             result = await _calculate_missing_percentages("AAPL", mock_holders_data)
 
             # Should fall back to relative percentages
+            # percent_held is stored as decimal (0.5556 = 55.56%)
             total_shares = 1234567890 + 987654321
-            expected_percentage_1 = (1234567890 / total_shares) * 100
-            assert abs(result[0]["percent_held"] - expected_percentage_1) < 0.01
+            expected_percentage_decimal_1 = 1234567890 / total_shares
+            assert abs(result[0]["percent_held"] - expected_percentage_decimal_1) < 0.0001
 
     def test_api_response_format(self, mock_holders_with_percentages):
         """Test API response format structure"""
