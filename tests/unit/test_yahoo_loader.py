@@ -369,7 +369,7 @@ class TestYahooDataLoader:
             patch("src.services.yahoo.loader.db_transaction") as mock_db,
             patch("src.services.yahoo.loader.update") as mock_update,
             patch("src.services.yahoo.loader.insert") as mock_insert,
-            patch("src.services.yahoo.loader.select") as mock_select,
+            patch("sqlalchemy.select") as mock_select,
         ):
 
             # Setup mock session
