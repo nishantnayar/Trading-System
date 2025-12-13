@@ -3,8 +3,11 @@ Integration tests for Prefect configuration
 
 Tests that Prefect configuration can be read and Prefect can connect.
 """
+
 import os
+
 import pytest
+
 from src.shared.prefect.config import PrefectConfig
 
 
@@ -43,8 +46,8 @@ def test_prefect_config_get_work_pool_name():
 def test_prefect_can_import():
     """Integration test: Verify Prefect can be imported"""
     try:
-        from prefect import flow, task
-        from prefect import get_client
+        from prefect import flow, get_client, task
+
         assert flow is not None
         assert task is not None
         assert get_client is not None
@@ -58,11 +61,11 @@ def test_prefect_config_connection():
     try:
         from prefect import get_client
         from prefect.settings import PREFECT_API_URL
-        
+
         # Get API URL from our config
         api_url = PrefectConfig.get_api_url()
         assert api_url is not None
-        
+
         # Try to get Prefect client (may fail if server not running, that's OK)
         # This test verifies the config is accessible to Prefect
         original_url = os.environ.get("PREFECT_API_URL")
@@ -80,7 +83,6 @@ def test_prefect_config_connection():
                 os.environ["PREFECT_API_URL"] = original_url
             elif "PREFECT_API_URL" in os.environ:
                 del os.environ["PREFECT_API_URL"]
-                
+
     except ImportError:
         pytest.skip("Prefect not available")
-
