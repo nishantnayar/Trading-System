@@ -367,23 +367,61 @@ class TestYahooDataLoader:
                 return_value=mock_institutional_holders,
             ),
             patch("src.services.yahoo.loader.db_transaction") as mock_db,
+            patch("src.services.yahoo.loader.update") as mock_update,
             patch("src.services.yahoo.loader.insert") as mock_insert,
+            patch("src.services.yahoo.loader.select") as mock_select,
         ):
 
             # Setup mock session
             mock_session = Mock()
             mock_db.return_value.__enter__.return_value = mock_session
 
-            # Mock upsert statement
-            mock_upsert_stmt = Mock()
-            mock_insert.return_value.on_conflict_do_update.return_value = (
-                mock_upsert_stmt
-            )
+            # Mock update statement chain (for setting is_latest=False on previous records)
+            # update(InstitutionalHolder).where(...).values(...)
+            mock_update_stmt = Mock()
+            mock_update_where = Mock()
+            mock_update_where.values.return_value = mock_update_stmt
+            mock_update.return_value.where.return_value = mock_update_where
+
+            # Mock select statement chain (for getting previous percent_held)
+            # select(...).where(...).order_by(...).limit(...)
+            mock_select_final = Mock()
+            mock_select_limit = Mock()
+            mock_select_order = Mock()
+            mock_select_where = Mock()
+            mock_select_limit.limit.return_value = mock_select_final
+            mock_select_order.order_by.return_value = mock_select_limit
+            mock_select_where.where.return_value = mock_select_order
+            mock_select.return_value = mock_select_where
+            
+            # Mock insert/upsert statement chain
+            # insert(InstitutionalHolder).values(...).on_conflict_do_update(...)
+            mock_insert_upsert = Mock()
+            mock_insert_values = Mock()
+            mock_insert_values.on_conflict_do_update.return_value = mock_insert_upsert
+            mock_insert.return_value.values.return_value = mock_insert_values
+
+            # Make execute return a result that works for all statement types
+            # For select statements, it needs scalar_one_or_none() which returns None
+            # For update and insert, they don't use the return value, so any Mock works
+            mock_execute_result = Mock()
+            mock_execute_result.scalar_one_or_none.return_value = None  # For select statements
+            
+            # Track executed statements to identify selects
+            executed_statements = []
+            def execute_side_effect(stmt):
+                executed_statements.append(stmt)
+                # All statements return the same result (which has scalar_one_or_none for selects)
+                return mock_execute_result
+
+            mock_session.execute.side_effect = execute_side_effect
 
             result = await loader.load_institutional_holders("AAPL")
 
             assert result == 2  # Method returns count of records loaded
-            assert mock_session.execute.call_count == 2  # Two holders
+            # Each holder: 1 update + 1 select (for percent_change) + 1 insert = 3 calls per holder
+            # Total: 2 holders * 3 = 6 calls
+            assert mock_session.execute.call_count == 6
             mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
