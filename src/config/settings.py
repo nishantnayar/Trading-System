@@ -2,6 +2,7 @@
 Application Settings Configuration
 """
 
+import os
 from typing import Optional
 
 from pydantic import Field
@@ -88,7 +89,8 @@ class Settings(BaseSettings):
     smtp_from_email: Optional[str] = Field(default=None, alias="SMTP_FROM_EMAIL")
 
     class Config:
-        env_file = ".env"
+        # Allow disabling .env file reading via environment variable (useful for tests)
+        env_file = None if os.getenv("DISABLE_ENV_FILE") == "true" else ".env"
         case_sensitive = False
         extra = "ignore"  # Ignore extra fields from environment
 

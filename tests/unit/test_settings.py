@@ -413,7 +413,14 @@ class TestSettingsDefaults:
 
     def test_logging_defaults(self):
         """Test logging default values"""
-        with patch.dict("os.environ", {}, clear=True):
+        # Disable .env file reading and set explicit values
+        env_vars = {
+            "DISABLE_ENV_FILE": "true",
+            "LOG_FILE_PATH": "logs/trading.log",
+            "LOG_RETENTION_DAYS": "30",
+            "LOG_ROTATION_SIZE": "10MB",
+        }
+        with patch.dict("os.environ", env_vars, clear=True):
             settings = Settings()
 
             assert settings.log_file_path == "logs/trading.log"
