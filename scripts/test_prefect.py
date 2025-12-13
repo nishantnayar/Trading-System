@@ -33,10 +33,9 @@ if "PREFECT_API_URL" not in os.environ:
     os.environ["PREFECT_API_URL"] = "http://localhost:4200/api"
 
 try:
-    from prefect import flow, task
-    from prefect import get_client
-    from prefect.settings import PREFECT_API_URL, temporary_settings
     from loguru import logger
+    from prefect import flow, get_client, task
+    from prefect.settings import PREFECT_API_URL, temporary_settings
 except ImportError as e:
     print(f"❌ Error importing Prefect: {e}")
     print("Please install Prefect: pip install prefect>=3.4.14")
@@ -135,7 +134,8 @@ def test_retry_flow(should_fail: bool = False) -> str:
 def test_prefect_imports() -> bool:
     """Test that Prefect 3.4.14 can be imported"""
     try:
-        from prefect import flow, task, get_client
+        from prefect import flow, get_client, task
+
         # Test Prefect 3.x imports
         try:
             from prefect.server.schemas.schedules import CronSchedule
@@ -153,6 +153,7 @@ def check_prefect_server() -> bool:
     """Check if Prefect server is accessible (Prefect 3.4.14)"""
     try:
         import requests
+
         # Prefect 3.x health endpoint
         api_url = "http://localhost:4200/api"
         response = requests.get(f"{api_url}/health", timeout=2)

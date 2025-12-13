@@ -7,7 +7,16 @@ SQLAlchemy model for institutional ownership data.
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import TIMESTAMP, BigInteger, Boolean, Date, ForeignKey, Index, Numeric, String
+from sqlalchemy import (
+    TIMESTAMP,
+    BigInteger,
+    Boolean,
+    Date,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.shared.database.base import Base

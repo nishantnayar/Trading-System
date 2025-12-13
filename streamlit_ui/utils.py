@@ -1798,7 +1798,7 @@ def get_latest_esg_scores(symbol: str) -> Optional[Dict[str, Any]]:
         Dictionary with ESG scores data, or None if not available
     """
     try:
-        from sqlalchemy import select, desc
+        from sqlalchemy import desc, select
 
         from src.shared.database.base import db_transaction
         from src.shared.database.models.esg_scores import ESGScore
@@ -2088,7 +2088,7 @@ def display_institutional_holders_grid(
     # Try to use ag-grid
     try:
         from st_aggrid import AgGrid, GridOptionsBuilder
-        
+
         # Process data and create DataFrame
         holders_df = _create_institutional_holders_dataframe(holders)
         
