@@ -6,6 +6,7 @@ Market data analysis, technical indicators, and trading opportunities
 import os
 import sys
 from datetime import datetime, timedelta
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -36,11 +37,16 @@ from utils import (
     create_price_chart,
     create_rsi_chart,
     create_volume_chart,
+    display_institutional_holders_grid,
     filter_ohlc_data_by_timeframe,
     format_currency,
+    format_number,
     format_percentage,
     generate_ohlc_data,
     get_date_range,
+    get_latest_esg_scores,
+    get_latest_key_statistics,
+    get_institutional_holders,
     get_latest_technical_indicators,
     get_real_market_data,
     get_technical_indicators_from_db,
@@ -377,6 +383,237 @@ def analysis_page():
                             st.write("**Website:** N/A")
                         st.write(f"**ZIP:** {safe_text(company_info.get('zip'))}")
                         st.write(f"**Country:** {safe_text(company_info.get('country'))}")
+
+                    # ESG Scores Section
+                    st.divider()
+                    st.subheader("🌱 ESG Scores")
+                    
+                    with show_loading_spinner("Loading ESG scores..."):
+                        esg_data = get_latest_esg_scores(symbol)
+                    
+                    if esg_data:
+                        # Helper function for ESG score color coding
+                        def get_esg_color(score: Optional[float]) -> str:
+                            """Get color based on ESG score (0-100 scale)"""
+                            if score is None:
+                                return "#999999"  # Gray for missing data
+                            if score >= 70:
+                                return "#26a69a"  # Green for good
+                            elif score >= 50:
+                                return "#ffa726"  # Orange for moderate
+                            else:
+                                return "#ef5350"  # Red for poor
+                        
+                        # Main ESG Metrics in columns
+                        esg_col1, esg_col2, esg_col3, esg_col4 = st.columns(4)
+                        
+                        with esg_col1:
+                            total_esg = esg_data.get('total_esg')
+                            if total_esg is not None:
+                                st.metric(
+                                    "Total ESG Score",
+                                    f"{total_esg:.1f}",
+                                    help="Overall ESG score (0-100 scale)"
+                                )
+                            else:
+                                st.metric("Total ESG Score", "N/A")
+                        
+                        with esg_col2:
+                            env_score = esg_data.get('environment_score')
+                            if env_score is not None:
+                                st.metric(
+                                    "🌍 Environment",
+                                    f"{env_score:.1f}",
+                                    help="Environmental score (0-100 scale)"
+                                )
+                            else:
+                                st.metric("🌍 Environment", "N/A")
+                        
+                        with esg_col3:
+                            social_score = esg_data.get('social_score')
+                            if social_score is not None:
+                                st.metric(
+                                    "👥 Social",
+                                    f"{social_score:.1f}",
+                                    help="Social responsibility score (0-100 scale)"
+                                )
+                            else:
+                                st.metric("👥 Social", "N/A")
+                        
+                        with esg_col4:
+                            gov_score = esg_data.get('governance_score')
+                            if gov_score is not None:
+                                st.metric(
+                                    "⚖️ Governance",
+                                    f"{gov_score:.1f}",
+                                    help="Governance score (0-100 scale)"
+                                )
+                            else:
+                                st.metric("⚖️ Governance", "N/A")
+                        
+                        # Additional ESG Information
+                        esg_info_col1, esg_info_col2 = st.columns(2)
+                        
+                        with esg_info_col1:
+                            st.write("**ESG Details:**")
+                            
+                            # Controversy Level
+                            controversy = esg_data.get('controversy_level_str', 'Unknown')
+                            controversy_color = {
+                                'None': '#26a69a',
+                                'Low': '#66bb6a',
+                                'Moderate': '#ffa726',
+                                'Significant': '#ff7043',
+                                'High': '#ef5350',
+                                'Very High': '#c62828'
+                            }.get(controversy, '#999999')
+                            st.markdown(f"**Controversy Level:** <span style='color: {controversy_color}'>{controversy}</span>", unsafe_allow_html=True)
+                            
+                            # ESG Performance
+                            esg_performance = esg_data.get('esg_performance')
+                            if esg_performance:
+                                st.write(f"**ESG Performance:** {esg_performance}")
+                            
+                            # Score Date
+                            score_date = esg_data.get('date')
+                            if score_date:
+                                st.write(f"**Score Date:** {score_date}")
+                        
+                        with esg_info_col2:
+                            st.write("**Peer Comparison:**")
+                            
+                            # Peer Group
+                            peer_group = esg_data.get('peer_group')
+                            if peer_group:
+                                st.write(f"**Peer Group:** {peer_group}")
+                            
+                            # Peer Count
+                            peer_count = esg_data.get('peer_count')
+                            if peer_count:
+                                st.write(f"**Peer Count:** {peer_count:,}")
+                            
+                            # Percentile
+                            percentile = esg_data.get('percentile')
+                            if percentile is not None:
+                                percentile_str = f"{percentile:.1f}th"
+                                st.write(f"**Percentile Rank:** {percentile_str}")
+                    else:
+                        st.info("ESG scores are not available for this symbol. ESG data may not have been loaded yet.")
+
+                    # Key Statistics Section
+                    st.divider()
+                    st.subheader("📊 Key Statistics")
+                    
+                    with show_loading_spinner("Loading key statistics..."):
+                        key_stats = get_latest_key_statistics(symbol)
+                    
+                    if key_stats:
+                        # Valuation Metrics
+                        st.write("**Valuation Metrics:**")
+                        val_col1, val_col2, val_col3, val_col4 = st.columns(4)
+                        
+                        with val_col1:
+                            if key_stats.get('market_cap'):
+                                st.metric("Market Cap", format_currency(key_stats['market_cap']))
+                            if key_stats.get('trailing_pe') is not None:
+                                st.metric("Trailing P/E", f"{key_stats['trailing_pe']:.2f}")
+                        
+                        with val_col2:
+                            if key_stats.get('forward_pe') is not None:
+                                st.metric("Forward P/E", f"{key_stats['forward_pe']:.2f}")
+                            if key_stats.get('price_to_book') is not None:
+                                st.metric("Price/Book", f"{key_stats['price_to_book']:.2f}")
+                        
+                        with val_col3:
+                            if key_stats.get('price_to_sales') is not None:
+                                st.metric("Price/Sales", f"{key_stats['price_to_sales']:.2f}")
+                            if key_stats.get('peg_ratio') is not None:
+                                st.metric("PEG Ratio", f"{key_stats['peg_ratio']:.2f}")
+                        
+                        with val_col4:
+                            if key_stats.get('enterprise_value'):
+                                st.metric("Enterprise Value", format_currency(key_stats['enterprise_value']))
+                        
+                        # Profitability Metrics
+                        st.write("**Profitability Metrics:**")
+                        prof_col1, prof_col2, prof_col3 = st.columns(3)
+                        
+                        with prof_col1:
+                            if key_stats.get('profit_margin') is not None:
+                                st.metric("Profit Margin", format_percentage(key_stats['profit_margin']))
+                            if key_stats.get('operating_margin') is not None:
+                                st.metric("Operating Margin", format_percentage(key_stats['operating_margin']))
+                        
+                        with prof_col2:
+                            if key_stats.get('return_on_equity') is not None:
+                                st.metric("ROE", format_percentage(key_stats['return_on_equity']))
+                            if key_stats.get('return_on_assets') is not None:
+                                st.metric("ROA", format_percentage(key_stats['return_on_assets']))
+                        
+                        with prof_col3:
+                            if key_stats.get('gross_margin') is not None:
+                                st.metric("Gross Margin", format_percentage(key_stats['gross_margin']))
+                        
+                        # Financial Health
+                        st.write("**Financial Health:**")
+                        health_col1, health_col2, health_col3 = st.columns(3)
+                        
+                        with health_col1:
+                            if key_stats.get('total_cash'):
+                                st.metric("Total Cash", format_currency(key_stats['total_cash']))
+                            if key_stats.get('total_debt'):
+                                st.metric("Total Debt", format_currency(key_stats['total_debt']))
+                        
+                        with health_col2:
+                            if key_stats.get('debt_to_equity') is not None:
+                                st.metric("Debt/Equity", f"{key_stats['debt_to_equity']:.2f}")
+                            if key_stats.get('current_ratio') is not None:
+                                st.metric("Current Ratio", f"{key_stats['current_ratio']:.2f}")
+                        
+                        with health_col3:
+                            if key_stats.get('free_cash_flow'):
+                                st.metric("Free Cash Flow", format_currency(key_stats['free_cash_flow']))
+                            if key_stats.get('earnings_per_share') is not None:
+                                st.metric("EPS", f"${key_stats['earnings_per_share']:.2f}")
+                        
+                        # Trading & Dividend Metrics
+                        st.write("**Trading & Dividends:**")
+                        trade_col1, trade_col2, trade_col3 = st.columns(3)
+                        
+                        with trade_col1:
+                            if key_stats.get('beta') is not None:
+                                st.metric("Beta", f"{key_stats['beta']:.2f}")
+                            if key_stats.get('dividend_yield') is not None:
+                                st.metric("Dividend Yield", format_percentage(key_stats['dividend_yield']))
+                        
+                        with trade_col2:
+                            if key_stats.get('fifty_two_week_high') is not None:
+                                st.metric("52W High", f"${key_stats['fifty_two_week_high']:.2f}")
+                            if key_stats.get('dividend_rate') is not None:
+                                st.metric("Dividend Rate", f"${key_stats['dividend_rate']:.2f}")
+                        
+                        with trade_col3:
+                            if key_stats.get('fifty_two_week_low') is not None:
+                                st.metric("52W Low", f"${key_stats['fifty_two_week_low']:.2f}")
+                            if key_stats.get('payout_ratio') is not None:
+                                st.metric("Payout Ratio", format_percentage(key_stats['payout_ratio']))
+                        
+                        # Statistics Date
+                        stats_date = key_stats.get('date')
+                        if stats_date:
+                            st.caption(f"Statistics as of: {stats_date}")
+                    else:
+                        st.info("Key statistics are not available for this symbol. Statistics data may not have been loaded yet.")
+
+                    # Institutional Holders Section
+                    st.divider()
+                    st.subheader("🏦 Top Institutional Holders")
+                    
+                    with show_loading_spinner("Loading institutional holders..."):
+                        holders = get_institutional_holders(symbol, limit=10)
+                    
+                    # Display using standardized ag-grid component
+                    display_institutional_holders_grid(holders, height=400, show_summary=True)
 
                 else:
                     st.warning("Company information not available for this symbol.")

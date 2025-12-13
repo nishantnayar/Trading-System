@@ -1781,3 +1781,350 @@ def get_real_market_data(
     except Exception as e:
         print(f"Error fetching real market data: {e}")
         return []
+
+
+# ============================================================================
+# ESG SCORES, KEY STATISTICS, AND INSTITUTIONAL HOLDERS UTILITIES
+# ============================================================================
+
+def get_latest_esg_scores(symbol: str) -> Optional[Dict[str, Any]]:
+    """
+    Get latest ESG scores for a symbol from the database
+    
+    Args:
+        symbol: Stock symbol
+        
+    Returns:
+        Dictionary with ESG scores data, or None if not available
+    """
+    try:
+        from sqlalchemy import select, desc
+
+        from src.shared.database.base import db_transaction
+        from src.shared.database.models.esg_scores import ESGScore
+        
+        symbol = symbol.upper()
+        
+        with db_transaction() as session:
+            query = (
+                select(ESGScore)
+                .where(ESGScore.symbol == symbol)
+                .order_by(desc(ESGScore.date))
+                .limit(1)
+            )
+            
+            result = session.execute(query).scalar_one_or_none()
+            
+            if result:
+                return {
+                    "symbol": result.symbol,
+                    "date": result.date.isoformat() if result.date else None,
+                    "total_esg": float(result.total_esg) if result.total_esg else None,
+                    "environment_score": float(result.environment_score) if result.environment_score else None,
+                    "social_score": float(result.social_score) if result.social_score else None,
+                    "governance_score": float(result.governance_score) if result.governance_score else None,
+                    "controversy_level": result.controversy_level,
+                    "esg_performance": result.esg_performance,
+                    "peer_group": result.peer_group,
+                    "peer_count": result.peer_count,
+                    "percentile": float(result.percentile) if result.percentile else None,
+                }
+            
+            return None
+    except Exception as e:
+        print(f"Error fetching ESG scores: {e}")
+        return None
+
+
+def get_latest_key_statistics(symbol: str) -> Optional[Dict[str, Any]]:
+    """
+    Get latest key statistics for a symbol from the API
+    
+    Args:
+        symbol: Stock symbol
+        
+    Returns:
+        Dictionary with key statistics data, or None if not available
+    """
+    try:
+        from api_client import get_api_client
+        
+        api_client = get_api_client()
+        result = api_client.get_key_statistics(symbol)
+        
+        if "error" in result:
+            return None
+        
+        # Return the key statistics data if available
+        if result.get("success") and result.get("key_statistics"):
+            return result["key_statistics"]
+        
+        return None
+    except Exception as e:
+        print(f"Error fetching key statistics: {e}")
+        return None
+
+
+def get_institutional_holders(symbol: str, limit: int = 10) -> Optional[List[Dict[str, Any]]]:
+    """
+    Get institutional holders for a symbol from the API
+    
+    Args:
+        symbol: Stock symbol
+        limit: Maximum number of holders to return (default: 10)
+        
+    Returns:
+        List of holder dictionaries, or None if not available
+    """
+    try:
+        from api_client import get_api_client
+        
+        api_client = get_api_client()
+        result = api_client.get_institutional_holders(symbol, limit=limit)
+        
+        if "error" in result:
+            return None
+        
+        # Return the holders list if available
+        if result.get("success") and result.get("holders"):
+            return result["holders"]
+        
+        return None
+    except Exception as e:
+        print(f"Error fetching institutional holders: {e}")
+        return None
+
+
+def _process_holder_data(holder: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Process individual holder data for display.
+    
+    Returns processed data with Direction and numeric % Change (absolute value).
+    """
+    percent_change_val = holder.get('percent_change')
+    
+    if percent_change_val is not None:
+        change_pct = float(percent_change_val) * 100
+        # Store absolute value rounded to 2 decimals (no sign, no % symbol) for numeric sorting
+        # Take absolute value FIRST, then round to avoid any sign issues
+        change_numeric = round(abs(change_pct), 2)
+        # Double-check: ensure it's never negative (handle edge cases)
+        if change_numeric < 0:
+            change_numeric = abs(change_numeric)
+        # Store sign for color coding: 1 (positive), -1 (negative), 0 (neutral)
+        change_sign = 1 if change_pct > 0 else (-1 if change_pct < 0 else 0)
+        # Direction text
+        direction = "Up" if change_pct > 0 else ("Down" if change_pct < 0 else "—")
+    else:
+        change_numeric = None
+        change_sign = None
+        direction = "N/A"
+    
+    return {
+        "Institution": holder.get('holder_name', 'N/A'),
+        "Shares": holder.get('shares_display', 'N/A'),
+        "Value": holder.get('value_display', 'N/A'),
+        "% Held": holder.get('percent_held_display', 'N/A'),
+        "Direction": direction,
+        "% Change": change_numeric,  # Absolute value, numeric, sortable (always positive or None)
+        "_change_sign": change_sign,  # Hidden: used only for color coding
+        "Date Reported": holder.get('date_reported', 'N/A')
+    }
+
+
+def _create_institutional_holders_dataframe(holders: List[Dict[str, Any]]) -> pd.DataFrame:
+    """Create DataFrame from holder data with all formatting applied."""
+    holders_data = [_process_holder_data(holder) for holder in holders]
+    df = pd.DataFrame(holders_data)
+    # Ensure % Change column is always positive (absolute values only)
+    if "% Change" in df.columns:
+        df["% Change"] = df["% Change"].apply(lambda x: abs(x) if x is not None and pd.notna(x) and x < 0 else x)
+    return df
+
+
+def _setup_color_css() -> None:
+    """Add CSS styles for color-coded % Change cells."""
+    st.markdown("""
+    <style>
+    .positive-pct-change {
+        background-color: #d4edda !important;
+        color: #155724 !important;
+        font-weight: 500;
+    }
+    .negative-pct-change {
+        background-color: #f8d7da !important;
+        color: #721c24 !important;
+        font-weight: 500;
+    }
+    .neutral-pct-change {
+        background-color: #e2e3e5 !important;
+        color: #383d41 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
+def _configure_aggrid_columns(gb: "GridOptionsBuilder") -> None:
+    """Configure ag-grid column definitions with all required settings (no filters)."""
+    # Institution column
+    gb.configure_column("Institution", width=300, filterable=False)
+    
+    # Shares column
+    gb.configure_column("Shares", width=120, filterable=False)
+    
+    # Value column
+    gb.configure_column("Value", width=120, filterable=False)
+    
+    # % Held column
+    gb.configure_column("% Held", width=100, filterable=False)
+    
+    # Direction column
+    gb.configure_column("Direction", width=80, filterable=False)
+    
+    # % Change column: numeric, sortable, color-coded, formatted with % symbol
+    # Value is always positive (absolute), sign determined by _change_sign for coloring
+    gb.configure_column(
+        "% Change",
+        width=120,
+        type=["numericColumn"],
+        filterable=False,
+        cellClassRules={
+            "positive-pct-change": "params.data._change_sign === 1",
+            "negative-pct-change": "params.data._change_sign === -1",
+            "neutral-pct-change": "params.data._change_sign === 0 || params.data._change_sign === null || params.data._change_sign === undefined"
+        },
+        # Format as absolute value with % symbol (no +/- signs)
+        valueFormatter="params.value !== null && params.value !== undefined ? Math.abs(params.value).toFixed(2) + '%' : 'N/A'"
+    )
+    
+    # Hide helper column used for color coding
+    gb.configure_column("_change_sign", hide=True, filterable=False)
+    
+    # Date Reported column
+    gb.configure_column("Date Reported", width=130, filterable=False)
+
+
+def _display_summary_metrics(holders: List[Dict[str, Any]], before_table: bool = False) -> None:
+    """
+    Display summary metrics above or below the grid.
+    
+    Args:
+        holders: List of holder dictionaries
+        before_table: If True, display directly before table (no expander); if False, display after table with divider
+    """
+    total_holders = len(holders)
+    total_shares = sum(h.get('shares', 0) or 0 for h in holders)
+    total_value = sum(h.get('value', 0) or 0 for h in holders)
+    
+    # Display metrics in columns
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Number of Holders", total_holders)
+    with col2:
+        if total_shares > 0:
+            st.metric("Total Shares", format_number(total_shares))
+        else:
+            st.metric("Total Shares", "N/A")
+    with col3:
+        if total_value > 0:
+            st.metric("Total Value", format_currency(total_value))
+        else:
+            st.metric("Total Value", "N/A")
+    
+    # Add divider only when displaying after table
+    if not before_table:
+        st.markdown("---")
+
+
+def _display_fallback_dataframe(holders: List[Dict[str, Any]]) -> None:
+    """Fallback display using standard Streamlit dataframe."""
+    holders_data = []
+    for holder in holders:
+        processed = _process_holder_data(holder)
+        # For fallback, format % Change as string
+        pct_change = processed.get("% Change")
+        if pct_change is not None:
+            processed["% Change"] = f"{pct_change:.2f}%"
+        holders_data.append(processed)
+    
+    # Remove hidden column
+    for row in holders_data:
+        row.pop("_change_sign", None)
+    
+    df = pd.DataFrame(holders_data)
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+
+def display_institutional_holders_grid(
+    holders: List[Dict[str, Any]],
+    height: int = 400,
+    show_summary: bool = True
+) -> None:
+    """
+    Display institutional holders in a standardized ag-grid format.
+    
+    Features:
+    - Numeric, sortable % Change column (absolute value, no +/- signs, displays with %)
+    - Direction column (Up/Down/—) indicating change direction
+    - Color-coded cells: green (positive), red (negative), gray (neutral)
+    - All columns sortable and resizable
+    - Summary metrics displayed between header and table
+    
+    Args:
+        holders: List of holder dictionaries from API
+        height: Grid height in pixels (default: 400)
+        show_summary: Whether to display summary metrics (default: True)
+    """
+    # Handle empty data
+    if not holders:
+        st.info("Institutional holders data is not available for this symbol. Holder data may not have been loaded yet.")
+        return
+    
+    # Display summary metrics before table if requested
+    if show_summary:
+        _display_summary_metrics(holders, before_table=True)
+    
+    # Try to use ag-grid
+    try:
+        from st_aggrid import AgGrid, GridOptionsBuilder
+        
+        # Process data and create DataFrame
+        holders_df = _create_institutional_holders_dataframe(holders)
+        
+        # Setup CSS for color coding
+        _setup_color_css()
+        
+        # Configure ag-grid
+        gb = GridOptionsBuilder.from_dataframe(holders_df)
+        gb.configure_pagination(paginationAutoPageSize=True)
+        gb.configure_side_bar(filters_panel=False, columns_panel=True)
+        gb.configure_default_column(
+            groupable=True,
+            sortable=True,
+            filterable=False,
+            resizable=True
+        )
+        
+        # Configure individual columns
+        _configure_aggrid_columns(gb)
+        
+        # Build and display grid
+        grid_options = gb.build()
+        AgGrid(
+            holders_df,
+            gridOptions=grid_options,
+            theme='streamlit',
+            height=height,
+            allow_unsafe_jscode=False
+        )
+            
+    except ImportError:
+        # Fallback if ag-grid is not available
+        st.warning("⚠️ ag-grid not available. Using standard dataframe display.")
+        _display_fallback_dataframe(holders)
+    
+    except Exception as e:
+        # Error fallback
+        st.error(f"Error displaying institutional holders grid: {e}")
+        _display_fallback_dataframe(holders)

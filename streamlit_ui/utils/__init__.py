@@ -62,6 +62,10 @@ __all__ = [
     'create_candlestick_chart_with_overlays',
     'get_technical_indicators_from_db',
     'get_latest_technical_indicators',
+    'get_latest_esg_scores',
+    'get_latest_key_statistics',
+    'get_institutional_holders',
+    'display_institutional_holders_grid',
     'ohlc_data_to_dataframe',
     'filter_ohlc_data_by_timeframe',
     'create_rsi_chart',
@@ -110,6 +114,10 @@ create_lightweight_macd_chart = utils_module.create_lightweight_macd_chart
 create_candlestick_chart_with_overlays = utils_module.create_candlestick_chart_with_overlays
 get_technical_indicators_from_db = utils_module.get_technical_indicators_from_db
 get_latest_technical_indicators = utils_module.get_latest_technical_indicators
+get_latest_esg_scores = utils_module.get_latest_esg_scores
+get_latest_key_statistics = utils_module.get_latest_key_statistics
+get_institutional_holders = utils_module.get_institutional_holders
+display_institutional_holders_grid = utils_module.display_institutional_holders_grid
 ohlc_data_to_dataframe = utils_module.ohlc_data_to_dataframe
 filter_ohlc_data_by_timeframe = utils_module.filter_ohlc_data_by_timeframe
 create_rsi_chart = utils_module.create_rsi_chart

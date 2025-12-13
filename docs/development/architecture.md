@@ -1364,6 +1364,505 @@ echo "Prefect configuration backup completed."
 - **Flow Editor**: Visual flow creation and editing
 - **Deployment Management**: Flow deployment and scheduling
 
+### Prefect Implementation Plan
+
+#### Overview
+
+This section outlines the implementation plan for integrating Prefect workflow orchestration into the Trading System. The goal is to replace manual script execution with automated, scheduled, and monitored workflows that provide better observability, error handling, and reliability.
+
+**Current State:**
+- Prefect dependencies already in `requirements.txt` (prefect>=2.14.0)
+- Manual scripts exist: `load_historical_data.py`, `load_yahoo_data.py`, `populate_technical_indicators.py`
+- Architecture documentation includes Prefect flows (not yet implemented)
+- Database tracking via `load_runs` table for incremental loading
+- Separate database strategy: `trading_system` and `prefect` databases
+
+**Target State:**
+- Automated scheduled workflows for data ingestion
+- Centralized workflow monitoring via Prefect UI
+- Retry logic and error handling built into flows
+- Task dependencies and orchestration
+- Work pools for resource management
+- Integration with existing logging and database infrastructure
+
+#### Directory Structure
+
+```
+src/
+├── shared/
+│   └── prefect/
+│       ├── __init__.py
+│       ├── config.py              # Prefect configuration
+│       ├── flows/
+│       │   ├── __init__.py
+│       │   ├── data_ingestion/
+│       │   │   ├── __init__.py
+│       │   │   ├── polygon_flows.py      # Polygon.io data flows
+│       │   │   ├── yahoo_flows.py        # Yahoo Finance flows
+│       │   │   └── validation_flows.py   # Data quality checks
+│       │   ├── analytics/
+│       │   │   ├── __init__.py
+│       │   │   └── indicator_flows.py    # Technical indicators
+│       │   └── maintenance/
+│       │       ├── __init__.py
+│       │       └── cleanup_flows.py      # Data archival, cleanup
+│       ├── deployments/
+│       │   ├── __init__.py
+│       │   └── deployments.py            # Deployment definitions
+│       ├── tasks/
+│       │   ├── __init__.py
+│       │   ├── data_ingestion.py         # Reusable data ingestion tasks
+│       │   └── validation.py             # Data validation tasks
+│       └── utils/
+│           ├── __init__.py
+│           └── helpers.py                # Prefect utilities
+└── ...
+
+scripts/
+├── prefect/
+│   ├── start_prefect_server.py          # Server startup script
+│   ├── start_prefect_worker.py          # Worker startup script
+│   └── deploy_flows.py                  # Deployment script
+└── ...
+```
+
+#### Implementation Phases
+
+##### Phase 1: Foundation Setup (Week 1)
+
+**Objectives:**
+- Set up Prefect configuration
+- Create directory structure
+- Configure Prefect database connection
+- Create base utilities and helpers
+
+**Tasks:**
+1. Create Prefect Configuration
+   - `src/shared/prefect/config.py` - Prefect settings from environment
+   - Update `src/config/settings.py` with Prefect settings
+   - Update `deployment/env.example` with Prefect variables
+
+2. Database Setup
+   - Verify `prefect` database exists
+   - Document connection string format
+   - Create database initialization script if needed
+
+3. Base Infrastructure
+   - `src/shared/prefect/utils/helpers.py` - Common utilities
+   - Logging integration with existing Loguru setup
+   - Error handling patterns
+
+##### Phase 2: Data Ingestion Flows - Polygon.io (Week 1-2)
+
+**Objectives:**
+- Convert `load_historical_data.py` to Prefect flows
+- Implement scheduled data ingestion
+- Add retry logic and error handling
+- Integrate with existing `load_runs` tracking
+
+**Tasks:**
+1. Create Polygon Flows
+   - `src/shared/prefect/flows/data_ingestion/polygon_flows.py`
+   - Daily end-of-day data ingestion flow
+   - Historical backfill flow
+   - Incremental update flow
+
+2. Create Reusable Tasks
+   - `src/shared/prefect/tasks/data_ingestion.py`
+   - Task for loading single symbol
+   - Task for loading all symbols
+   - Task for updating load_runs tracking
+
+3. Flow Features
+   - Retry on API failures (3 retries, 60s delay)
+   - Incremental loading using `load_runs` table
+   - Parallel processing for multiple symbols
+   - Health checks before execution
+
+**Schedules:**
+- **Daily EOD Update**: `0 20 * * 1-5` (8 PM CT, weekdays) - After market close
+- **Hourly Update** (optional): `0 * * * 1-5` (Every hour during market hours)
+
+##### Phase 3: Data Ingestion Flows - Yahoo Finance (Week 2-3)
+
+**Objectives:**
+- Convert `load_yahoo_data.py` to Prefect flows
+- Support multiple data types (market data, company info, key statistics, etc.)
+- Implement efficient batch processing
+
+**Tasks:**
+1. Create Yahoo Flows
+   - `src/shared/prefect/flows/data_ingestion/yahoo_flows.py`
+   - Market data ingestion flow
+   - Company information update flow
+   - Key statistics update flow
+   - Financial statements update flow
+   - Institutional holders update flow
+   - Company officers update flow
+
+2. Flow Features
+   - Rate limiting (delay between requests)
+   - Batch processing for multiple symbols
+   - Conditional loading based on update frequency
+   - Error handling with detailed logging
+
+**Schedules:**
+- **Market Data (Hourly)**: `0 * * * 1-5` (Every hour, weekdays)
+- **Company Info (Weekly)**: `0 9 * * 1` (9 AM CT, Monday) - Weekly updates
+- **Key Statistics (Weekly)**: `0 9 * * 1` (9 AM CT, Monday)
+- **Financial Statements (Quarterly)**: `0 9 1 * *` (9 AM CT, 1st of month) - After earnings
+- **Institutional Holders (Monthly)**: `0 9 1 * *` (9 AM CT, 1st of month)
+
+##### Phase 4: Analytics Flows - Technical Indicators (Week 3)
+
+**Objectives:**
+- Convert `populate_technical_indicators.py` to Prefect flows
+- Scheduled indicator calculations
+- Integration with data ingestion flows
+
+**Tasks:**
+1. Create Indicator Flows
+   - `src/shared/prefect/flows/analytics/indicator_flows.py`
+   - Daily indicator calculation flow
+   - Historical backfill flow
+   - Missing data backfill flow
+
+2. Flow Features
+   - Calculate indicators after market data ingestion
+   - Batch processing for multiple symbols
+   - Incremental calculation (only missing dates)
+
+**Schedules:**
+- **Daily Calculation**: `0 21 * * 1-5` (9 PM CT, weekdays) - After data ingestion
+- **Historical Backfill**: On-demand or scheduled monthly
+
+##### Phase 5: Data Validation & Quality Flows (Week 3-4)
+
+**Objectives:**
+- Implement data quality validation
+- Automated data quality monitoring
+- Alerting on data quality issues
+
+**Tasks:**
+1. Create Validation Flows
+   - `src/shared/prefect/flows/data_ingestion/validation_flows.py`
+   - Data completeness checks
+   - Price range validation
+   - Volume consistency checks
+   - Missing data detection
+
+2. Create Validation Tasks
+   - `src/shared/prefect/tasks/validation.py`
+   - Reusable validation tasks
+
+**Schedules:**
+- **Daily Validation**: `0 22 * * 1-5` (10 PM CT, weekdays) - After data ingestion
+
+##### Phase 6: Maintenance Flows (Week 4)
+
+**Objectives:**
+- Data archival and cleanup
+- Log rotation
+- Database maintenance
+
+**Tasks:**
+1. Create Maintenance Flows
+   - `src/shared/prefect/flows/maintenance/cleanup_flows.py`
+   - Old data archival
+   - Log cleanup
+   - Database optimization
+
+**Schedules:**
+- **Data Archival**: `0 2 * * 0` (2 AM CT, Sunday) - Weekly
+- **Log Cleanup**: `0 1 * * *` (1 AM CT, daily)
+
+##### Phase 7: Deployment & Monitoring (Week 4-5)
+
+**Objectives:**
+- Create deployment scripts
+- Set up Prefect server
+- Configure work pools
+- Monitoring and observability
+
+**Tasks:**
+1. Deployment Configuration
+   - `src/shared/prefect/deployments/deployments.py`
+   - Deployment definitions for all flows
+   - Work pool configuration
+   - Schedule definitions
+
+2. Server Setup
+   - `scripts/prefect/start_prefect_server.py`
+   - `scripts/prefect/start_prefect_worker.py`
+   - `scripts/prefect/deploy_flows.py`
+
+3. Monitoring
+   - Prefect UI configuration
+   - Logging integration
+   - Metrics collection
+
+#### Configuration Details
+
+##### Environment Variables
+
+Add to `deployment/env.example`:
+
+```bash
+# Prefect Configuration
+PREFECT_API_URL=http://localhost:4200/api
+PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://postgres:password@localhost:5432/prefect
+PREFECT_LOGGING_LEVEL=INFO
+PREFECT_LOGGING_TO_API_ENABLED=true
+PREFECT_SERVER_API_HOST=0.0.0.0
+PREFECT_UI_URL=http://localhost:4200
+
+# Prefect Work Pools
+PREFECT_WORK_POOL_DATA_INGESTION=default-agent-pool
+PREFECT_WORK_POOL_ANALYTICS=default-agent-pool
+PREFECT_WORK_POOL_MAINTENANCE=default-agent-pool
+
+# Prefect Flow Configuration
+PREFECT_FLOW_RETRY_ATTEMPTS=3
+PREFECT_FLOW_RETRY_DELAY_SECONDS=60
+PREFECT_FLOW_TIMEOUT_SECONDS=3600
+```
+
+##### Settings Configuration
+
+Update `src/config/settings.py` to include:
+
+```python
+# Prefect Configuration
+prefect_api_url: str = Field(
+    default="http://localhost:4200/api",
+    alias="PREFECT_API_URL"
+)
+prefect_db_url: str = Field(
+    default="postgresql+asyncpg://postgres:password@localhost:5432/prefect",
+    alias="PREFECT_API_DATABASE_CONNECTION_URL"
+)
+prefect_logging_level: str = Field(
+    default="INFO",
+    alias="PREFECT_LOGGING_LEVEL"
+)
+```
+
+#### Flow Design Patterns
+
+##### Data Ingestion Flow Pattern
+
+```python
+from prefect import flow, task
+from prefect.tasks import task_input_hash
+from datetime import timedelta
+
+@task(
+    retries=3,
+    retry_delay_seconds=60,
+    cache_key_fn=task_input_hash,
+    cache_expiration=timedelta(hours=1)
+)
+async def load_symbol_data_task(symbol: str, days_back: int):
+    """Load data for a single symbol"""
+    # Implementation using existing HistoricalDataLoader
+    pass
+
+@flow(
+    name="polygon-daily-ingestion",
+    retries=2,
+    timeout_seconds=3600
+)
+async def polygon_daily_ingestion():
+    """Daily end-of-day data ingestion from Polygon.io"""
+    # Get active symbols
+    # Load data for each symbol
+    # Update load_runs tracking
+    # Validate data quality
+    pass
+```
+
+##### Task Dependencies
+
+```python
+@flow(name="data-ingestion-pipeline")
+async def data_ingestion_pipeline():
+    """Complete data ingestion pipeline"""
+    # Step 1: Load Polygon data
+    polygon_result = await polygon_daily_ingestion()
+    
+    # Step 2: Load Yahoo data (after Polygon completes)
+    yahoo_result = await yahoo_daily_ingestion()
+    
+    # Step 3: Calculate indicators (after data loads complete)
+    indicator_result = await calculate_daily_indicators()
+    
+    # Step 4: Validate data quality
+    validation_result = await validate_data_quality()
+    
+    return {
+        "polygon": polygon_result,
+        "yahoo": yahoo_result,
+        "indicators": indicator_result,
+        "validation": validation_result
+    }
+```
+
+#### Migration Strategy
+
+##### Script to Flow Migration Steps
+
+1. **Extract Core Logic**
+   - Identify reusable functions in scripts
+   - Extract to task functions
+   - Maintain existing business logic
+
+2. **Create Flow Wrapper**
+   - Wrap script logic in Prefect flow
+   - Add retry logic and error handling
+   - Add logging and monitoring
+
+3. **Add Scheduling**
+   - Define appropriate schedules
+   - Configure work pools
+   - Set up dependencies
+
+4. **Deploy**
+   - Deploy flows to Prefect server
+   - Test in staging environment
+   - Monitor initial runs
+
+5. **Deprecate Scripts**
+   - Keep scripts for manual runs (on-demand)
+   - Update documentation
+   - Add deprecation notices
+
+##### Backward Compatibility
+
+- Keep scripts functional for on-demand manual runs
+- Scripts can be used for ad-hoc operations
+- Flows become the primary execution method
+- Migration guide for users
+
+#### Testing Strategy
+
+##### Unit Tests
+
+- Test individual tasks in isolation
+- Mock external dependencies (API calls, database)
+- Test error handling and retry logic
+- Test data transformation logic
+
+##### Integration Tests
+
+- Test complete flows end-to-end
+- Use test database and API mocks
+- Test scheduling and triggers
+- Test work pool execution
+
+#### Deployment Guide
+
+##### Prefect Server Setup
+
+1. **Database Setup**
+   ```bash
+   # Create Prefect database
+   createdb -U postgres prefect
+   
+   # Set connection string
+   prefect config set PREFECT_API_DATABASE_CONNECTION_URL="postgresql+asyncpg://postgres:password@localhost:5432/prefect"
+   
+   # Initialize database
+   prefect database upgrade
+   ```
+
+2. **Start Prefect Server**
+   ```bash
+   # Using script
+   python scripts/prefect/start_prefect_server.py
+   
+   # Or manually
+   prefect server start --host 0.0.0.0 --port 4200
+   ```
+
+3. **Access Prefect UI**
+   - Open browser to `http://localhost:4200`
+
+##### Worker Setup
+
+1. **Start Worker**
+   ```bash
+   # Using script
+   python scripts/prefect/start_prefect_worker.py --pool default-agent-pool
+   
+   # Or manually
+   prefect worker start --pool default-agent-pool --limit 10
+   ```
+
+2. **Verify Worker**
+   - Check Prefect UI for worker status
+   - Verify work pool has available workers
+
+##### Flow Deployment
+
+1. **Deploy Flows**
+   ```bash
+   # Using script
+   python scripts/prefect/deploy_flows.py
+   
+   # Or manually for individual flows
+   prefect deployment build src/shared/prefect/flows/data_ingestion/polygon_flows.py:polygon_daily_ingestion
+   prefect deployment apply polygon_daily_ingestion-deployment.yaml
+   ```
+
+2. **Verify Deployments**
+   - Check Prefect UI for deployments
+   - Verify schedules are active
+   - Monitor initial flow runs
+
+#### Success Criteria
+
+##### Phase 1 Success
+
+- ✅ Prefect server running and accessible
+- ✅ Database connection established
+- ✅ Configuration working correctly
+- ✅ Basic utilities functional
+
+##### Phase 2-4 Success
+
+- ✅ All data ingestion flows deployed
+- ✅ Flows executing on schedule
+- ✅ Data quality maintained
+- ✅ No regression in data completeness
+
+##### Phase 5-7 Success
+
+- ✅ All flows deployed and operational
+- ✅ Monitoring and alerting working
+- ✅ Documentation complete
+- ✅ Team trained on Prefect usage
+
+##### Overall Success Metrics
+
+- **Reliability**: >95% flow run success rate
+- **Performance**: Flows complete within expected timeframes
+- **Observability**: All flows visible in Prefect UI
+- **Maintainability**: Clear documentation and code organization
+
+#### Timeline Summary
+
+| Phase | Duration | Key Deliverables |
+|-------|----------|------------------|
+| Phase 1: Foundation | Week 1 | Configuration, structure, utilities |
+| Phase 2: Polygon Flows | Week 1-2 | Polygon.io data ingestion flows |
+| Phase 3: Yahoo Flows | Week 2-3 | Yahoo Finance data ingestion flows |
+| Phase 4: Analytics Flows | Week 3 | Technical indicators flows |
+| Phase 5: Validation Flows | Week 3-4 | Data quality validation flows |
+| Phase 6: Maintenance Flows | Week 4 | Cleanup and archival flows |
+| Phase 7: Deployment | Week 4-5 | Deployment scripts, monitoring |
+
+**Total Estimated Time: 4-5 weeks**
+
 ## Communication Patterns
 
 ### Service Communication

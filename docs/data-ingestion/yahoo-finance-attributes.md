@@ -320,7 +320,7 @@ for holder in holders[:10]:
 
 ### Enhanced API Features
 
-The institutional holders data is now enhanced with automatic percentage calculations and horizontal bar visualization:
+The institutional holders data is now enhanced with automatic percentage calculations and standardized ag-grid display:
 
 #### Automatic Percentage Calculation
 When Yahoo Finance doesn't provide percentage data, the system automatically calculates percentages using:
@@ -341,7 +341,11 @@ if data["success"]:
 ```
 
 #### Frontend Visualization
-The institutional holders are displayed with horizontal bars showing ownership percentages:
+The institutional holders are displayed in a standardized ag-grid table with:
+- **Direction column**: Shows "Up", "Down", or "—" based on % Change
+- **% Change column**: Color-coded (green for positive, red for negative, gray for neutral)
+- **Summary metrics**: Number of Holders, Total Shares, and Total Value displayed above the table
+- **All columns**: Sortable and resizable
 - Blue gradient bars for visual representation
 - Black text positioned for optimal readability
 - Responsive design that scales with container width

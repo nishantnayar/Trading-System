@@ -7,7 +7,7 @@ SQLAlchemy model for institutional ownership data.
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import TIMESTAMP, BigInteger, Date, ForeignKey, Index, Numeric, String
+from sqlalchemy import TIMESTAMP, BigInteger, Boolean, Date, ForeignKey, Index, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.shared.database.base import Base
@@ -32,6 +32,7 @@ class InstitutionalHolder(Base):
         Index("idx_institutional_holders_holder_name", "holder_name"),
         Index("idx_institutional_holders_shares", "symbol", "shares"),
         Index("idx_institutional_holders_percent", "symbol", "percent_held"),
+        Index("idx_institutional_holders_latest", "symbol", "is_latest"),
         {"schema": "data_ingestion"},
     )
 
@@ -51,6 +52,10 @@ class InstitutionalHolder(Base):
     shares: Mapped[Optional[int]] = mapped_column(BigInteger)
     value: Mapped[Optional[int]] = mapped_column(BigInteger)
     percent_held: Mapped[Optional[float]] = mapped_column(Numeric(10, 4))
+    percent_change: Mapped[Optional[float]] = mapped_column(Numeric(10, 4))
+    
+    # Flag to indicate latest record for this holder
+    is_latest: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Metadata
     data_source: Mapped[str] = mapped_column(
@@ -117,6 +122,22 @@ class InstitutionalHolder(Base):
         if self.percent_held is None:
             return "N/A"
         return f"{float(self.percent_held) * 100:.2f}%"
+    
+    @property
+    def percent_change_display(self) -> str:
+        """Display percentage change with arrow indicators"""
+        if self.percent_change is None:
+            return "N/A"
+        change_val = float(self.percent_change) * 100  # Convert to percentage
+        if change_val > 0:
+            arrow = "↑"
+            return f"{arrow} {abs(change_val):.2f}%"
+        elif change_val < 0:
+            arrow = "↓"
+            return f"{arrow} {abs(change_val):.2f}%"
+        else:
+            arrow = "→"
+            return f"{arrow} {abs(change_val):.2f}%"
 
     def to_dict(self) -> dict:
         """Convert to dictionary for API responses"""
@@ -128,7 +149,10 @@ class InstitutionalHolder(Base):
             "shares_display": self.shares_display,
             "value": self.value,
             "value_display": self.value_display,
-            "percent_held": float(self.percent_held) if self.percent_held else None,
+            "percent_held": float(self.percent_held) if self.percent_held is not None else None,
             "percent_held_display": self.percent_held_display,
+            "percent_change": float(self.percent_change) if self.percent_change is not None else None,
+            "percent_change_display": self.percent_change_display,
+            "is_latest": self.is_latest,
             "data_source": self.data_source,
         }

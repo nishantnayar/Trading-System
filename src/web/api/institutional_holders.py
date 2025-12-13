@@ -32,10 +32,13 @@ async def get_institutional_holders(
 
     try:
         with db_transaction() as session:
-            # Get latest holders ordered by shares
+            # Get latest holders only (filter by is_latest = TRUE) ordered by shares
             query = (
                 select(InstitutionalHolder)
-                .where(InstitutionalHolder.symbol == symbol)
+                .where(
+                    InstitutionalHolder.symbol == symbol,
+                    InstitutionalHolder.is_latest == True,
+                )
                 .order_by(InstitutionalHolder.shares.desc())
                 .limit(limit)
             )
@@ -128,13 +131,14 @@ async def _calculate_missing_percentages(
             if result is not None and result > 0:
                 shares_outstanding = float(result)
 
-                # Calculate percentages for each holder
+                # Calculate percentages for each holder (store as decimal format: 0.0947 = 9.47%)
                 for holder in holders:
                     shares = holder.get("shares")
                     if shares is not None and shares > 0:
-                        percentage = (holder["shares"] / shares_outstanding) * 100
-                        holder["percent_held"] = percentage
-                        holder["percent_held_display"] = f"{percentage:.2f}%"
+                        percentage_decimal = holder["shares"] / shares_outstanding  # Decimal format (0.0947)
+                        percentage_display = percentage_decimal * 100  # For display (9.47)
+                        holder["percent_held"] = percentage_decimal
+                        holder["percent_held_display"] = f"{percentage_display:.2f}%"
                     else:
                         holder["percent_held"] = 0.0
                         holder["percent_held_display"] = "0.00%"
@@ -148,11 +152,12 @@ async def _calculate_missing_percentages(
                     for holder in holders:
                         shares = holder.get("shares")
                         if shares is not None and shares > 0:
-                            percentage = (
+                            percentage_decimal = (
                                 holder["shares"] / total_institutional_shares
-                            ) * 100
-                            holder["percent_held"] = percentage
-                            holder["percent_held_display"] = f"{percentage:.2f}%"
+                            )  # Decimal format (0.0947)
+                            percentage_display = percentage_decimal * 100  # For display (9.47)
+                            holder["percent_held"] = percentage_decimal
+                            holder["percent_held_display"] = f"{percentage_display:.2f}%"
                         else:
                             holder["percent_held"] = 0.0
                             holder["percent_held_display"] = "0.00%"

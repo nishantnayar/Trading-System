@@ -794,9 +794,13 @@ Retrieves institutional holders data for a specific symbol with automatic percen
       "date_reported": "2024-09-30",
       "holder_name": "Vanguard Group Inc",
       "shares": 1234567890,
+      "shares_display": "1.23B",
       "value": 24567890123.45,
-      "percent_held": 9.54,
+      "value_display": "$24.57B",
+      "percent_held": 0.0954,
       "percent_held_display": "9.54%",
+      "percent_change": 0.0125,
+      "percent_change_display": "1.25%",
       "data_source": "yahoo",
       "created_at": "2024-10-16T19:30:00Z",
       "updated_at": "2024-10-16T19:30:00Z"
@@ -839,14 +843,30 @@ When Yahoo Finance doesn't provide percentage data, the API automatically calcul
    percentage = (holder_shares / total_institutional_shares) * 100
    ```
 
-#### Horizontal Bars Visualization
+#### Standardized ag-Grid Display
 
-The frontend displays institutional ownership using horizontal bars:
+The frontend displays institutional holders using a standardized ag-grid component:
 
-- **Blue gradient bars** showing relative ownership percentage
-- **Black text** positioned to the right of bars for readability
-- **Responsive design** that scales with container width
-- **Consistent positioning** regardless of bar length
+**Table Features:**
+- **Standardized Columns**: Institution, Shares, Value, % Held, Direction, % Change, Date Reported
+- **Direction Column**: Shows "Up", "Down", or "—" based on % Change direction
+- **% Change Column**: 
+  - Numeric, sortable column (absolute value, rounded to 2 decimal places)
+  - No +/- signs displayed (shows only absolute value with % symbol)
+  - Color-coded cells:
+    - 🟢 **Green background** for positive changes (increases)
+    - 🔴 **Red background** for negative changes (decreases)
+    - ⚪ **Gray background** for no change
+- **All columns**: Sortable, resizable, but no filtering enabled
+- **Summary Metrics**: Displayed above the table in a single line:
+  - Number of Holders
+  - Total Shares (formatted with B/M/K)
+  - Total Value (formatted currency with B/M/K)
+
+**UI Layout:**
+1. Section Header: "🏦 Top Institutional Holders"
+2. Summary Metrics (single line): Number of Holders | Total Shares | Total Value
+3. ag-Grid Table with all institutional holder data
 
 ### Error Handling
 

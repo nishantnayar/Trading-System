@@ -130,6 +130,19 @@ class TradingSystemAPI:
     def get_symbols_by_industry_and_sector(self, industry: str, sector: str) -> List[Dict[str, Any]]:
         """Get symbols filtered by both industry and sector"""
         return self.get_symbols_by_filter(sector=sector, industry=industry)
+    
+    # Key Statistics API
+    @st.cache_data(ttl=3600)  # Cache for 1 hour
+    def get_key_statistics(_self, symbol: str) -> Dict[str, Any]:
+        """Get key statistics for a symbol"""
+        return _self._make_request("GET", f"/api/key-statistics/{symbol}")
+    
+    # Institutional Holders API
+    @st.cache_data(ttl=3600)  # Cache for 1 hour
+    def get_institutional_holders(_self, symbol: str, limit: int = 10) -> Dict[str, Any]:
+        """Get institutional holders for a symbol"""
+        params = {"limit": limit}
+        return _self._make_request("GET", f"/api/institutional-holders/{symbol}", params=params)
 
 
 # Global API client instance

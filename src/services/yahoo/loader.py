@@ -10,6 +10,7 @@ from datetime import date
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
+from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert
 
 from src.services.data_ingestion.symbols import SymbolService
@@ -434,7 +435,42 @@ class YahooDataLoader:
             loaded_count = 0
 
             with db_transaction() as session:
+                from sqlalchemy import select
+                
                 for holder in holders_data:
+                    # Before inserting, unset is_latest for previous records of this holder
+                    # Update old records for this holder to is_latest = FALSE
+                    update_stmt = (
+                        update(InstitutionalHolder)
+                        .where(
+                            InstitutionalHolder.symbol == symbol,
+                            InstitutionalHolder.holder_name == holder.holder_name,
+                        )
+                        .values(is_latest=False)
+                    )
+                    session.execute(update_stmt)
+                    
+                    # If percent_change not provided by Yahoo, calculate it from previous period
+                    percent_change_value = holder.percent_change
+                    if percent_change_value is None and holder.percent_held is not None:
+                        # Get previous period's percent_held
+                        prev_stmt = (
+                            select(InstitutionalHolder.percent_held)
+                            .where(
+                                InstitutionalHolder.symbol == symbol,
+                                InstitutionalHolder.holder_name == holder.holder_name,
+                                InstitutionalHolder.date_reported < holder.date_reported,
+                            )
+                            .order_by(InstitutionalHolder.date_reported.desc())
+                            .limit(1)
+                        )
+                        prev_result = session.execute(prev_stmt).scalar_one_or_none()
+                        if prev_result is not None:
+                            # Calculate change: current - previous
+                            percent_change_value = (
+                                float(holder.percent_held) - float(prev_result)
+                            )
+                    
                     stmt = insert(InstitutionalHolder).values(
                         symbol=symbol,
                         date_reported=holder.date_reported,
@@ -444,6 +480,10 @@ class YahooDataLoader:
                         percent_held=(
                             float(holder.percent_held) if holder.percent_held else None
                         ),
+                        percent_change=(
+                            float(percent_change_value) if percent_change_value is not None else None
+                        ),
+                        is_latest=True,  # New record is always latest
                         data_source=self.data_source,
                     )
 
@@ -454,6 +494,8 @@ class YahooDataLoader:
                             "shares": stmt.excluded.shares,
                             "value": stmt.excluded.value,
                             "percent_held": stmt.excluded.percent_held,
+                            "percent_change": stmt.excluded.percent_change,
+                            "is_latest": stmt.excluded.is_latest,
                             "updated_at": stmt.excluded.updated_at,
                         },
                     )
@@ -956,9 +998,13 @@ class YahooDataLoader:
             esg_data = await self.client.get_esg_scores(symbol=symbol)
 
             if not esg_data:
-                # No need to log - this is expected for many symbols
-                # The client already logs at debug level
+                logger.debug(f"No ESG data available for {symbol} from Yahoo Finance")
                 return False
+
+            logger.debug(
+                f"Fetched ESG data for {symbol}: total_esg={esg_data.total_esg}, "
+                f"date={esg_data.date}"
+            )
 
             # Insert into database using upsert
             with db_transaction() as session:
@@ -994,14 +1040,38 @@ class YahooDataLoader:
                     },
                 )
 
-                session.execute(stmt)
+                result = session.execute(stmt)
                 session.commit()
 
-            logger.info(f"Successfully loaded ESG scores for {symbol}")
-            return True
+                # Verify the record was inserted/updated
+                from sqlalchemy import select
 
+                verify_stmt = select(ESGScore).where(
+                    ESGScore.symbol == symbol,
+                    ESGScore.date == esg_data.date,
+                    ESGScore.data_source == self.data_source,
+                )
+                verify_result = session.execute(verify_stmt).scalar_one_or_none()
+
+                if verify_result:
+                    logger.info(
+                        f"Successfully loaded ESG scores for {symbol} "
+                        f"(ID: {verify_result.id}, Total ESG: {verify_result.total_esg})"
+                    )
+                    return True
+                else:
+                    logger.warning(
+                        f"ESG scores insert/update executed but record not found for {symbol}"
+                    )
+                    return False
+
+        except YahooAPIError:
+            # Re-raise YahooAPIError as-is
+            raise
         except Exception as e:
-            logger.error(f"Failed to load ESG scores for {symbol}: {e}")
+            logger.error(
+                f"Failed to load ESG scores for {symbol}: {e}", exc_info=True
+            )
             raise YahooAPIError(f"Failed to load ESG scores for {symbol}: {str(e)}")
 
     async def load_all_data(
@@ -1308,8 +1378,14 @@ class YahooDataLoader:
                 )
 
                 # Update on conflict
+                # Use index_elements which works with either constraint:
+                # - "unique_symbol_timestamp" (old, without data_source)
+                # - "unique_symbol_timestamp_source" (new, with data_source)
+                # If the old constraint exists, it will match on (symbol, timestamp)
+                # If the new constraint exists, it will match on (symbol, timestamp, data_source)
+                # Note: If using old constraint, data_source column must exist but won't be part of conflict resolution
                 stmt = stmt.on_conflict_do_update(
-                    index_elements=["symbol", "timestamp", "data_source"],
+                    index_elements=["symbol", "timestamp"],
                     set_={
                         "open": stmt.excluded.open,
                         "high": stmt.excluded.high,

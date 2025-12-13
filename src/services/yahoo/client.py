@@ -471,7 +471,8 @@ class YahooClient:
                         "holder_name": row["Holder"],
                         "shares": int(row["Shares"]) if pd.notna(row["Shares"]) else None,
                         "value": int(row["Value"]) if pd.notna(row["Value"]) else None,
-                        "pctHeld": float(row["% Out"]) if pd.notna(row.get("% Out")) else None,
+                        "pctHeld": float(row["pctHeld"]) if pd.notna(row.get("pctHeld")) else None,
+                        "pctChange": float(row["pctChange"]) if pd.notna(row.get("pctChange")) else None,
                     }
                     holder = InstitutionalHolder.model_validate(holder_payload)
                     holders.append(holder)
@@ -628,13 +629,37 @@ class YahooClient:
         """
         try:
             ticker = yf.Ticker(symbol)
-            esg_df = ticker.sustainability
+            
+            # Access sustainability data - this may raise HTTPError for 404
+            try:
+                esg_df = ticker.sustainability
+            except Exception as http_error:
+                # Handle HTTP errors (like 404) that occur when accessing sustainability
+                error_str = str(http_error).lower()
+                if "404" in error_str or "not found" in error_str or "http error" in error_str:
+                    logger.debug(f"No ESG data available for {symbol} (404)")
+                    return None
+                # Re-raise if it's not a 404
+                raise
 
             if esg_df is None or esg_df.empty:
-                logger.debug(f"No ESG data for {symbol}")
+                logger.debug(f"No ESG data for {symbol} (empty DataFrame)")
                 return None
 
-            esg_data = esg_df.iloc[:, 0].to_dict() if not esg_df.empty else {}
+            # Transpose the DataFrame to access values by column name
+            # The sustainability DataFrame has metrics as rows, values as columns
+            # After transpose, we can access values by metric name
+            esg_transposed = pd.DataFrame.transpose(esg_df)
+            
+            if esg_transposed.empty:
+                logger.debug(f"Transposed ESG DataFrame is empty for {symbol}")
+                return None
+
+            # Get the first row which contains all the ESG values
+            # The transposed DataFrame has one row with all the metric values
+            esg_data = esg_transposed.iloc[0].to_dict() if not esg_transposed.empty else {}
+
+            logger.debug(f"ESG data keys for {symbol}: {list(esg_data.keys())}")
 
             esg_payload = {
                 "symbol": symbol,
@@ -650,7 +675,7 @@ class YahooClient:
             }
             esg = ESGScore.model_validate(esg_payload)
 
-            logger.info(f"Fetched ESG scores for {symbol}")
+            logger.info(f"Fetched ESG scores for {symbol}: total_esg={esg.total_esg}")
             return esg
 
         except Exception as e:

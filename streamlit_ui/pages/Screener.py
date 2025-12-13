@@ -359,7 +359,7 @@ def screener_page():
         
         col1, col2 = st.columns([1, 4])
         with col1:
-            search_button = st.button("🔍 Search", type="primary", use_container_width=True)
+            search_button = st.button("🔍 Search", type="primary", width='stretch')
         
         if search_button and query:
             st.session_state.screener_query = query
@@ -453,7 +453,7 @@ def screener_page():
             min_price_change = st.number_input("Min Price Change % (30d)", min_value=-100.0, value=0.0, step=1.0)
             max_price_change = st.number_input("Max Price Change % (30d)", min_value=-100.0, value=100.0, step=1.0)
         
-        filter_button = st.button("🔍 Apply Filters", type="primary", use_container_width=True)
+        filter_button = st.button("🔍 Apply Filters", type="primary", width='stretch')
         
         if filter_button:
             # Build criteria
