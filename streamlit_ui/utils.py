@@ -4,7 +4,10 @@ Common utilities for the Trading System Streamlit UI
 
 import os
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+
+if TYPE_CHECKING:
+    from st_aggrid import GridOptionsBuilder
 
 import numpy as np
 import pandas as pd
