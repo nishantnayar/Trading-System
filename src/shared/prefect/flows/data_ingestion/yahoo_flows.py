@@ -387,6 +387,7 @@ async def deploy_all_flows() -> None:
         },
         tags=["data-ingestion", "yahoo", "market-data", "scheduled"],
         description="Daily end-of-day market data ingestion from Yahoo Finance (hourly bars)",
+        ignore_warnings=True,
     )
 
     # Deploy company info flow (weekly)
@@ -402,6 +403,7 @@ async def deploy_all_flows() -> None:
         cron="0 2 * * 0",  # 2 AM Sunday (weekly) - UTC
         tags=["data-ingestion", "yahoo", "company-info", "scheduled"],
         description="Weekly company information update from Yahoo Finance",
+        ignore_warnings=True,
     )
 
     # Deploy key statistics flow (weekly)
@@ -417,6 +419,7 @@ async def deploy_all_flows() -> None:
         cron="0 3 * * 0",  # 3 AM Sunday (weekly) - UTC
         tags=["data-ingestion", "yahoo", "key-statistics", "scheduled"],
         description="Weekly key statistics update from Yahoo Finance",
+        ignore_warnings=True,
     )
 
     # Deploy combined company info -> key statistics flow (weekly)
@@ -438,6 +441,7 @@ async def deploy_all_flows() -> None:
             "scheduled",
         ],
         description="Weekly company information and key statistics update from Yahoo Finance",
+        ignore_warnings=True,
     )
 
     logger.info("All Yahoo Finance flows deployed successfully!")

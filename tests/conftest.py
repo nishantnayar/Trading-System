@@ -133,9 +133,10 @@ def setup_test_tables(trading_engine):
         exchange VARCHAR(50),
         sector VARCHAR(100),
         industry VARCHAR(100),
+        market_cap BIGINT,
         status VARCHAR(20) DEFAULT 'active',
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        added_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     );
     """
 
