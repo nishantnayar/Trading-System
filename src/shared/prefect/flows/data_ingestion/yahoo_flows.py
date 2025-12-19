@@ -34,6 +34,34 @@ from src.shared.prefect.tasks.data_ingestion_tasks import (
 )
 
 
+def _market_data_run_name() -> str:
+    """Generate business-friendly run name for market data flow."""
+    from datetime import datetime
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    return f"Market Data Update - {run_date}"
+
+
+def _company_info_run_name() -> str:
+    """Generate business-friendly run name for company info flow."""
+    from datetime import datetime
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    return f"Company Information Update - {run_date}"
+
+
+def _key_statistics_run_name() -> str:
+    """Generate business-friendly run name for key statistics flow."""
+    from datetime import datetime
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    return f"Key Statistics Update - {run_date}"
+
+
+def _combined_run_name() -> str:
+    """Generate business-friendly run name for combined flow."""
+    from datetime import datetime
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    return f"Company Data Update - {run_date}"
+
+
 @flow(
     name="Daily Market Data Update",
     flow_run_name=_market_data_run_name,
@@ -332,34 +360,6 @@ async def _resolve_deployment(
     return deployment
 
 
-def _market_data_run_name() -> str:
-    """Generate business-friendly run name for market data flow."""
-    from datetime import datetime
-    run_date = datetime.now().strftime("%Y-%m-%d")
-    return f"Market Data Update - {run_date}"
-
-
-def _company_info_run_name() -> str:
-    """Generate business-friendly run name for company info flow."""
-    from datetime import datetime
-    run_date = datetime.now().strftime("%Y-%m-%d")
-    return f"Company Information Update - {run_date}"
-
-
-def _key_statistics_run_name() -> str:
-    """Generate business-friendly run name for key statistics flow."""
-    from datetime import datetime
-    run_date = datetime.now().strftime("%Y-%m-%d")
-    return f"Key Statistics Update - {run_date}"
-
-
-def _combined_run_name() -> str:
-    """Generate business-friendly run name for combined flow."""
-    from datetime import datetime
-    run_date = datetime.now().strftime("%Y-%m-%d")
-    return f"Company Data Update - {run_date}"
-
-
 # Deployment configuration using .deploy() API (Prefect 3.x)
 async def deploy_all_flows() -> None:
     """Deploy all Yahoo Finance flows."""
@@ -376,7 +376,7 @@ async def deploy_all_flows() -> None:
             entrypoint=f"{flow_file}:yahoo_market_data_flow",
         )
     )
-    market_data_deployment.deploy(
+    await market_data_deployment.deploy(
         name="Daily Market Data Update",
         work_pool_name=PrefectConfig.get_work_pool_name(),
         cron="15 22 * * 1-5",  # 22:15 UTC Mon–Fri (~after US market close; adjust in UI)
@@ -395,7 +395,7 @@ async def deploy_all_flows() -> None:
             entrypoint=f"{flow_file}:yahoo_company_info_flow",
         )
     )
-    company_info_deployment.deploy(
+    await company_info_deployment.deploy(
         name="Weekly Company Information Update",
         work_pool_name=PrefectConfig.get_work_pool_name(),
         cron="0 2 * * 0",  # 2 AM Sunday (weekly) - UTC
@@ -410,7 +410,7 @@ async def deploy_all_flows() -> None:
             entrypoint=f"{flow_file}:yahoo_key_statistics_flow",
         )
     )
-    key_stats_deployment.deploy(
+    await key_stats_deployment.deploy(
         name="Weekly Key Statistics Update",
         work_pool_name=PrefectConfig.get_work_pool_name(),
         cron="0 3 * * 0",  # 3 AM Sunday (weekly) - UTC
@@ -425,7 +425,7 @@ async def deploy_all_flows() -> None:
             entrypoint=f"{flow_file}:yahoo_company_info_then_key_statistics_flow",
         )
     )
-    combined_deployment.deploy(
+    await combined_deployment.deploy(
         name="Weekly Company Data Update",
         work_pool_name=PrefectConfig.get_work_pool_name(),
         cron="0 2 * * 0",  # 2 AM Sunday (weekly) - UTC
