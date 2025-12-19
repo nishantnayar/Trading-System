@@ -34,6 +34,34 @@ from src.shared.prefect.tasks.data_ingestion_tasks import (
 )
 
 
+def _market_data_run_name() -> str:
+    """Generate business-friendly run name for market data flow."""
+    from datetime import datetime
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    return f"Market Data Update - {run_date}"
+
+
+def _company_info_run_name() -> str:
+    """Generate business-friendly run name for company info flow."""
+    from datetime import datetime
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    return f"Company Information Update - {run_date}"
+
+
+def _key_statistics_run_name() -> str:
+    """Generate business-friendly run name for key statistics flow."""
+    from datetime import datetime
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    return f"Key Statistics Update - {run_date}"
+
+
+def _combined_run_name() -> str:
+    """Generate business-friendly run name for combined flow."""
+    from datetime import datetime
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    return f"Company Data Update - {run_date}"
+
+
 @flow(
     name="Daily Market Data Update",
     flow_run_name=_market_data_run_name,
@@ -199,6 +227,7 @@ async def yahoo_company_info_flow(
 
 @flow(
     name="Weekly Key Statistics Update",
+    flow_run_name=_key_statistics_run_name,
     log_prints=True,
     retries=1,
     retry_delay_seconds=300,
@@ -330,34 +359,6 @@ async def _resolve_deployment(
     if inspect.iscoroutine(deployment):
         return await deployment
     return deployment
-
-
-def _market_data_run_name() -> str:
-    """Generate business-friendly run name for market data flow."""
-    from datetime import datetime
-    run_date = datetime.now().strftime("%Y-%m-%d")
-    return f"Market Data Update - {run_date}"
-
-
-def _company_info_run_name() -> str:
-    """Generate business-friendly run name for company info flow."""
-    from datetime import datetime
-    run_date = datetime.now().strftime("%Y-%m-%d")
-    return f"Company Information Update - {run_date}"
-
-
-def _key_statistics_run_name() -> str:
-    """Generate business-friendly run name for key statistics flow."""
-    from datetime import datetime
-    run_date = datetime.now().strftime("%Y-%m-%d")
-    return f"Key Statistics Update - {run_date}"
-
-
-def _combined_run_name() -> str:
-    """Generate business-friendly run name for combined flow."""
-    from datetime import datetime
-    run_date = datetime.now().strftime("%Y-%m-%d")
-    return f"Company Data Update - {run_date}"
 
 
 # Deployment configuration using .deploy() API (Prefect 3.x)
