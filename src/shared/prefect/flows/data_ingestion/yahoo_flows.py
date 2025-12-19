@@ -4,10 +4,13 @@ Yahoo Finance Data Ingestion Flows
 Prefect flows for loading data from Yahoo Finance.
 """
 
+import asyncio
+import inspect
 import sys
+from collections.abc import Coroutine
 from datetime import date, timedelta
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 # Add project root to path when running directly
 # Check if running as script (not imported)
@@ -309,8 +312,26 @@ async def yahoo_company_info_then_key_statistics_flow(
     return combined
 
 
+async def _resolve_deployment(
+    deployment: Any,
+) -> Any:
+    """
+    Resolve a deployment that may be a coroutine.
+    
+    Args:
+        deployment: Either a deployment object or a coroutine that returns one
+        
+    Returns:
+        The resolved deployment object
+    """
+    if inspect.iscoroutine(deployment):
+        return await deployment
+    return deployment
+
+
 # Deployment configuration using .deploy() API (Prefect 3.x)
-if __name__ == "__main__":
+async def deploy_all_flows() -> None:
+    """Deploy all Yahoo Finance flows."""
     # Get project root for source path
     project_root = Path(__file__).parent.parent.parent.parent.parent.parent
     source_path = str(project_root)
@@ -318,10 +339,13 @@ if __name__ == "__main__":
 
     # Deploy market data flow (daily end-of-day, still fetching hourly bars)
     # Using from_source with local path for Prefect 3.4
-    yahoo_market_data_flow.from_source(
-        source=source_path,
-        entrypoint=f"{flow_file}:yahoo_market_data_flow",
-    ).deploy(
+    market_data_deployment = await _resolve_deployment(
+        yahoo_market_data_flow.from_source(
+            source=source_path,
+            entrypoint=f"{flow_file}:yahoo_market_data_flow",
+        )
+    )
+    market_data_deployment.deploy(
         name="yahoo-market-data-daily-eod",
         work_pool_name=PrefectConfig.get_work_pool_name(),
         cron="15 22 * * 1-5",  # 22:15 UTC Mon–Fri (~after US market close; adjust in UI)
@@ -334,10 +358,13 @@ if __name__ == "__main__":
     )
 
     # Deploy company info flow (weekly)
-    yahoo_company_info_flow.from_source(
-        source=source_path,
-        entrypoint=f"{flow_file}:yahoo_company_info_flow",
-    ).deploy(
+    company_info_deployment = await _resolve_deployment(
+        yahoo_company_info_flow.from_source(
+            source=source_path,
+            entrypoint=f"{flow_file}:yahoo_company_info_flow",
+        )
+    )
+    company_info_deployment.deploy(
         name="yahoo-company-info-weekly",
         work_pool_name=PrefectConfig.get_work_pool_name(),
         cron="0 2 * * 0",  # 2 AM Sunday (weekly) - UTC
@@ -346,10 +373,13 @@ if __name__ == "__main__":
     )
 
     # Deploy key statistics flow (weekly)
-    yahoo_key_statistics_flow.from_source(
-        source=source_path,
-        entrypoint=f"{flow_file}:yahoo_key_statistics_flow",
-    ).deploy(
+    key_stats_deployment = await _resolve_deployment(
+        yahoo_key_statistics_flow.from_source(
+            source=source_path,
+            entrypoint=f"{flow_file}:yahoo_key_statistics_flow",
+        )
+    )
+    key_stats_deployment.deploy(
         name="yahoo-key-statistics-weekly",
         work_pool_name=PrefectConfig.get_work_pool_name(),
         cron="0 3 * * 0",  # 3 AM Sunday (weekly) - UTC
@@ -358,10 +388,13 @@ if __name__ == "__main__":
     )
 
     # Deploy combined company info -> key statistics flow (weekly)
-    yahoo_company_info_then_key_statistics_flow.from_source(
-        source=source_path,
-        entrypoint=f"{flow_file}:yahoo_company_info_then_key_statistics_flow",
-    ).deploy(
+    combined_deployment = await _resolve_deployment(
+        yahoo_company_info_then_key_statistics_flow.from_source(
+            source=source_path,
+            entrypoint=f"{flow_file}:yahoo_company_info_then_key_statistics_flow",
+        )
+    )
+    combined_deployment.deploy(
         name="yahoo-company-info-and-key-statistics-weekly",
         work_pool_name=PrefectConfig.get_work_pool_name(),
         cron="0 2 * * 0",  # 2 AM Sunday (weekly) - UTC
@@ -376,3 +409,7 @@ if __name__ == "__main__":
     )
 
     logger.info("✅ All Yahoo Finance flows deployed successfully!")
+
+
+if __name__ == "__main__":
+    asyncio.run(deploy_all_flows())
