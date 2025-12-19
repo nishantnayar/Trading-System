@@ -227,6 +227,7 @@ async def yahoo_company_info_flow(
 
 @flow(
     name="Weekly Key Statistics Update",
+    flow_run_name=_key_statistics_run_name,
     log_prints=True,
     retries=1,
     retry_delay_seconds=300,
