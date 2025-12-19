@@ -7,6 +7,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-red?style=flat-square&logo=fastapi)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue?style=flat-square&logo=postgresql)
 ![Redis](https://img.shields.io/badge/Redis-7+-red?style=flat-square&logo=redis)
+![Prefect](https://img.shields.io/badge/Prefect-3.4+-purple?style=flat-square&logo=prefect)
 
 **A production-grade algorithmic trading system for equities trading**
 
@@ -33,6 +34,7 @@ This system uses a **modular monolithic architecture** with clear service bounda
 
 - **Service-Oriented Modules**: Data Ingestion, Strategy Engine, Execution, Risk Management, Analytics, and Notification
 - **Modern Tech Stack**: Python + FastAPI + PostgreSQL + Redis + pandas
+- **Workflow Orchestration**: Prefect 3.4+ for automated data ingestion and scheduled tasks
 - **Professional Frontend**: Streamlit + Plotly Charts + Custom CSS
 - **Scalable Design**: Prepared for future microservices migration
 - **Comprehensive Monitoring**: Database-first logging with Loguru (PostgreSQL + file fallback)
@@ -53,6 +55,7 @@ This system uses a **modular monolithic architecture** with clear service bounda
 | 🗄️ **Database** | PostgreSQL with comprehensive schema design |
 | 📊 **Data Quality** | Automated data validation and quality monitoring |
 | 🌍 **Timezone Support** | UTC storage with Central Time display for all data |
+| ⚙️ **Workflow Orchestration** | Prefect-powered automated data ingestion with scheduled flows |
 
 ## 🚀 Quick Start
 
@@ -78,6 +81,7 @@ The trading system now features a modern **Streamlit multipage interface** with:
 | **PostgreSQL** | 15+ | Primary database |
 | **Redis** | 7+ | Caching and messaging (optional) |
 | **Alpaca API** | - | Trading and market data |
+| **Prefect** | 3.4+ | Workflow orchestration (optional, for automated data ingestion) |
 | **Ollama** | Latest | Local LLM for AI-powered features (optional) |
 
 > **Note**: Alpaca paper trading account is free and recommended for testing
@@ -116,6 +120,11 @@ REDIS_URL=redis://localhost:6379/0
 # Application Configuration
 DEBUG=true
 LOG_LEVEL=INFO
+
+# Prefect Configuration (optional, for workflow orchestration)
+PREFECT_API_URL=http://localhost:4200/api
+PREFECT_LOGGING_LEVEL=INFO
+PREFECT_WORK_POOL_NAME=default-agent-pool
 ```
 
 #### 3. Alpaca API Features Available
@@ -242,6 +251,10 @@ trading-system/
 │   │   ├── analytics/           # Performance analysis
 │   │   └── notification/        # Alerts & notifications
 │   ├── shared/                  # Shared utilities
+│   │   └── prefect/             # Prefect workflow orchestration
+│   │       ├── flows/           # Prefect flows (data ingestion, analytics)
+│   │       ├── tasks/           # Reusable Prefect tasks
+│   │       └── config.py        # Prefect configuration
 │   └── web/                     # Web interface
 ├── tests/                       # Test suite
 ├── docs/                        # Documentation
@@ -326,6 +339,7 @@ mkdocs build
 
 ### 📈 Data Processing
 - **Historical Data**: Polygon.io and Yahoo Finance integration for backtesting and analysis
+- **Automated Data Ingestion**: Prefect-powered scheduled flows for daily market data and weekly company information updates
 - **Market Data Analytics**: Comprehensive data processing with pandas
 - **Technical Indicators**: Automatic hourly-to-daily resampling for accurate indicator calculations (SMA, EMA, RSI, MACD, Bollinger Bands)
 - **Data Quality Monitoring**: Automated validation and quality checks
@@ -343,6 +357,7 @@ mkdocs build
 ### 🛠️ Development Features
 - **Modular Architecture**: Service-oriented design ready for scaling
 - **Modern Frontend**: Streamlit + Plotly Charts + Custom CSS interface
+- **Workflow Orchestration**: Prefect 3.4+ integration for automated data ingestion workflows
 - **AI Integration**: Local LLM support via Ollama for natural language processing
 - **Comprehensive Logging**: Database-first logging system with PostgreSQL storage and file fallback
 - **Code Quality**: Black, Flake8, mypy, and pre-commit hooks
@@ -436,6 +451,83 @@ The system includes an AI-powered stock screener with natural language query sup
 
 See [Stock Screener Guide](docs/user-guide/stock-screener.md) for detailed documentation.
 
+### Prefect Workflow Orchestration
+
+The system includes Prefect-powered workflow orchestration for automated data ingestion:
+
+#### Available Flows
+
+1. **Daily Market Data Update**
+   - Scheduled: Daily at 22:15 UTC (Mon-Fri) - after US market close
+   - Fetches hourly market data from Yahoo Finance
+   - Automatically processes all active symbols
+
+2. **Weekly Company Information Update**
+   - Scheduled: Weekly on Sunday at 2:00 AM UTC
+   - Updates company information and metadata
+
+3. **Weekly Key Statistics Update**
+   - Scheduled: Weekly on Sunday at 3:00 AM UTC
+   - Updates key financial statistics
+
+4. **Weekly Company Data Update** (Combined)
+   - Scheduled: Weekly on Sunday at 2:00 AM UTC
+   - Runs company info and key statistics updates sequentially
+
+#### Setting Up Prefect
+
+1. **Install Prefect** (if not already installed):
+   ```bash
+   pip install prefect>=3.4.0
+   ```
+
+2. **Start Prefect Server**:
+   ```bash
+   prefect server start
+   ```
+   Access Prefect UI at: http://localhost:4200
+
+3. **Deploy Flows**:
+   ```bash
+   # Deploy all Yahoo Finance flows
+   python src/shared/prefect/flows/data_ingestion/yahoo_flows.py
+   ```
+
+4. **Start Prefect Worker** (in a separate terminal):
+   ```bash
+   prefect worker start --pool default-agent-pool
+   ```
+
+#### Prefect UI
+
+- **Access**: http://localhost:4200
+- **Features**:
+  - Monitor flow runs in real-time
+  - View execution logs and history
+  - Manage schedules and deployments
+  - Track flow performance and failures
+
+#### Manual Flow Execution
+
+You can also run flows manually for testing:
+
+```python
+from src.shared.prefect.flows.data_ingestion.yahoo_flows import (
+    yahoo_market_data_flow,
+    yahoo_company_info_flow,
+    yahoo_key_statistics_flow,
+)
+
+# Run market data flow for specific symbols
+await yahoo_market_data_flow(
+    symbols=["AAPL", "GOOGL"],
+    days_back=7,
+    interval="1h"
+)
+```
+
+See [Prefect Deployment Plan](docs/development/prefect-deployment-plan.md) for detailed documentation.
+
 ## 🚨 Risk Disclaimer
 
 **This software is for educational and research purposes only. Trading involves substantial risk of loss and is not suitable for all investors. Past performance is not indicative of future results.**
@@ -459,6 +551,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 | 📚 **Architecture** | Detailed system architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | 🗄️ **Database** | Database architecture & session management | [docs/development/database.md](docs/development/database.md) |
 | 📋 **Logging** | Database-first logging with PostgreSQL | [docs/development/logging.md](docs/development/logging.md) |
+| ⚙️ **Prefect** | Workflow orchestration and deployment | [docs/development/prefect-deployment-plan.md](docs/development/prefect-deployment-plan.md) |
 | 🧪 **Testing** | Testing strategy and guidelines | [docs/development/testing.md](docs/development/testing.md) |
 | 📖 **User Documentation** | Complete user and developer docs | [MkDocs](https://nishantnayar.github.io/Trading-System/) |
 | 🐛 **Issues** | Report bugs and request features | [GitHub Issues](https://github.com/nishantnayar/trading-system/issues) |
@@ -469,9 +562,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 | Version | Status | Features |
 |---------|--------|----------|
-| **v1.0.0** | Current | Paper trading, market data integration, web dashboard, AI-powered stock screener |
+| **v1.0.0** | Current | Paper trading, market data integration, web dashboard, AI-powered stock screener, Prefect orchestration |
 | **v1.1.0** | Planned | Strategy engine implementation, backtesting, risk management |
-| **v1.2.0** | Roadmap | Prefect orchestration, automated workflows |
+| **v1.2.0** | Roadmap | Advanced Prefect workflows, analytics flows, data validation |
 | **v1.3.0** | Roadmap | Microservices architecture, cloud deployment |
 
 ## 🏆 Acknowledgments
@@ -479,6 +572,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Alpaca Markets** for providing excellent trading APIs
 - **FastAPI** team for the amazing web framework
 - **Polygon.io** for historical market data
+- **Prefect** team for workflow orchestration platform
 - **Python Community** for the incredible ecosystem
 
 ---
