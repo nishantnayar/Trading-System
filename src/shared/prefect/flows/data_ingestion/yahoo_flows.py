@@ -35,7 +35,8 @@ from src.shared.prefect.tasks.data_ingestion_tasks import (
 
 
 @flow(
-    name="yahoo-market-data-daily-eod",
+    name="Daily Market Data Update",
+    flow_run_name=_market_data_run_name,
     log_prints=True,
     retries=1,
     retry_delay_seconds=300,
@@ -129,7 +130,8 @@ async def yahoo_market_data_flow(
 
 
 @flow(
-    name="yahoo-company-info-weekly",
+    name="Weekly Company Information Update",
+    flow_run_name=_company_info_run_name,
     log_prints=True,
     retries=1,
     retry_delay_seconds=300,
@@ -196,7 +198,7 @@ async def yahoo_company_info_flow(
 
 
 @flow(
-    name="yahoo-key-statistics-weekly",
+    name="Weekly Key Statistics Update",
     log_prints=True,
     retries=1,
     retry_delay_seconds=300,
@@ -266,7 +268,8 @@ async def yahoo_key_statistics_flow(
 
 
 @flow(
-    name="yahoo-company-info-and-key-statistics-weekly",
+    name="Weekly Company Data Update",
+    flow_run_name=_combined_run_name,
     log_prints=True,
     retries=1,
     retry_delay_seconds=300,
@@ -329,6 +332,34 @@ async def _resolve_deployment(
     return deployment
 
 
+def _market_data_run_name() -> str:
+    """Generate business-friendly run name for market data flow."""
+    from datetime import datetime
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    return f"Market Data Update - {run_date}"
+
+
+def _company_info_run_name() -> str:
+    """Generate business-friendly run name for company info flow."""
+    from datetime import datetime
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    return f"Company Information Update - {run_date}"
+
+
+def _key_statistics_run_name() -> str:
+    """Generate business-friendly run name for key statistics flow."""
+    from datetime import datetime
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    return f"Key Statistics Update - {run_date}"
+
+
+def _combined_run_name() -> str:
+    """Generate business-friendly run name for combined flow."""
+    from datetime import datetime
+    run_date = datetime.now().strftime("%Y-%m-%d")
+    return f"Company Data Update - {run_date}"
+
+
 # Deployment configuration using .deploy() API (Prefect 3.x)
 async def deploy_all_flows() -> None:
     """Deploy all Yahoo Finance flows."""
@@ -346,7 +377,7 @@ async def deploy_all_flows() -> None:
         )
     )
     market_data_deployment.deploy(
-        name="yahoo-market-data-daily-eod",
+        name="Daily Market Data Update",
         work_pool_name=PrefectConfig.get_work_pool_name(),
         cron="15 22 * * 1-5",  # 22:15 UTC Mon–Fri (~after US market close; adjust in UI)
         parameters={
@@ -354,7 +385,7 @@ async def deploy_all_flows() -> None:
             "interval": "1h",
         },
         tags=["data-ingestion", "yahoo", "market-data", "scheduled"],
-        description="Daily end-of-day ingestion (hourly interval) from Yahoo Finance",
+        description="Daily end-of-day market data ingestion from Yahoo Finance (hourly bars)",
     )
 
     # Deploy company info flow (weekly)
@@ -365,7 +396,7 @@ async def deploy_all_flows() -> None:
         )
     )
     company_info_deployment.deploy(
-        name="yahoo-company-info-weekly",
+        name="Weekly Company Information Update",
         work_pool_name=PrefectConfig.get_work_pool_name(),
         cron="0 2 * * 0",  # 2 AM Sunday (weekly) - UTC
         tags=["data-ingestion", "yahoo", "company-info", "scheduled"],
@@ -380,7 +411,7 @@ async def deploy_all_flows() -> None:
         )
     )
     key_stats_deployment.deploy(
-        name="yahoo-key-statistics-weekly",
+        name="Weekly Key Statistics Update",
         work_pool_name=PrefectConfig.get_work_pool_name(),
         cron="0 3 * * 0",  # 3 AM Sunday (weekly) - UTC
         tags=["data-ingestion", "yahoo", "key-statistics", "scheduled"],
@@ -395,7 +426,7 @@ async def deploy_all_flows() -> None:
         )
     )
     combined_deployment.deploy(
-        name="yahoo-company-info-and-key-statistics-weekly",
+        name="Weekly Company Data Update",
         work_pool_name=PrefectConfig.get_work_pool_name(),
         cron="0 2 * * 0",  # 2 AM Sunday (weekly) - UTC
         tags=[
@@ -405,10 +436,10 @@ async def deploy_all_flows() -> None:
             "key-statistics",
             "scheduled",
         ],
-        description="Weekly company info followed by key statistics from Yahoo Finance",
+        description="Weekly company information and key statistics update from Yahoo Finance",
     )
 
-    logger.info("✅ All Yahoo Finance flows deployed successfully!")
+    logger.info("All Yahoo Finance flows deployed successfully!")
 
 
 if __name__ == "__main__":
