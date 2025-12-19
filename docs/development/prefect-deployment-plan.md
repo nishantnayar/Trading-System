@@ -112,17 +112,60 @@ prefect:
         - polygon
         - scheduled
       
-    - name: yahoo-market-data-hourly
-      flow_name: yahoo-market-data-hourly
+    - name: Daily Market Data Update
+      flow_name: Daily Market Data Update
       entrypoint: src/shared/prefect/flows/data_ingestion/yahoo_flows.py:yahoo_market_data_flow
       work_pool_name: data-ingestion-pool
       schedule:
-        cron: "0 * * * 1-5"  # Every hour weekdays
-        timezone: "America/Chicago"
-      parameters: {}
+        cron: "15 22 * * 1-5"  # 22:15 UTC Mon-Fri (after US market close)
+        timezone: "UTC"
+      parameters:
+        days_back: 7
+        interval: "1h"
       tags:
         - data-ingestion
         - yahoo
+        - market-data
+        - scheduled
+      
+    - name: Weekly Company Information Update
+      flow_name: Weekly Company Information Update
+      entrypoint: src/shared/prefect/flows/data_ingestion/yahoo_flows.py:yahoo_company_info_flow
+      work_pool_name: data-ingestion-pool
+      schedule:
+        cron: "0 2 * * 0"  # 2 AM UTC Sunday (weekly)
+        timezone: "UTC"
+      tags:
+        - data-ingestion
+        - yahoo
+        - company-info
+        - scheduled
+      
+    - name: Weekly Key Statistics Update
+      flow_name: Weekly Key Statistics Update
+      entrypoint: src/shared/prefect/flows/data_ingestion/yahoo_flows.py:yahoo_key_statistics_flow
+      work_pool_name: data-ingestion-pool
+      schedule:
+        cron: "0 3 * * 0"  # 3 AM UTC Sunday (weekly)
+        timezone: "UTC"
+      tags:
+        - data-ingestion
+        - yahoo
+        - key-statistics
+        - scheduled
+      
+    - name: Weekly Company Data Update
+      flow_name: Weekly Company Data Update
+      entrypoint: src/shared/prefect/flows/data_ingestion/yahoo_flows.py:yahoo_company_info_then_key_statistics_flow
+      work_pool_name: data-ingestion-pool
+      schedule:
+        cron: "0 2 * * 0"  # 2 AM UTC Sunday (weekly)
+        timezone: "UTC"
+      tags:
+        - data-ingestion
+        - yahoo
+        - company-info
+        - key-statistics
         - scheduled
       
     - name: indicators-daily-calculation
@@ -627,16 +670,56 @@ def create_deployments():
         description="Daily end-of-day data ingestion from Polygon.io"
     )
     
-    # Yahoo Market Data Hourly
+    # Yahoo Market Data Daily End-of-Day
     yahoo_market_data_flow.serve(
-        name="yahoo-market-data-hourly",
+        name="Daily Market Data Update",
         work_pool_name="data-ingestion-pool",
         schedule=CronSchedule(
-            cron="0 * * * 1-5",  # Every hour weekdays
-            timezone="America/Chicago"
+            cron="15 22 * * 1-5",  # 22:15 UTC Mon-Fri (after US market close)
+            timezone="UTC"
         ),
-        tags=["data-ingestion", "yahoo", "scheduled"],
-        description="Hourly market data ingestion from Yahoo Finance"
+        parameters={
+            "days_back": 7,
+            "interval": "1h"
+        },
+        tags=["data-ingestion", "yahoo", "market-data", "scheduled"],
+        description="Daily end-of-day market data ingestion from Yahoo Finance (hourly bars)"
+    )
+    
+    # Yahoo Company Information Weekly
+    yahoo_company_info_flow.serve(
+        name="Weekly Company Information Update",
+        work_pool_name="data-ingestion-pool",
+        schedule=CronSchedule(
+            cron="0 2 * * 0",  # 2 AM UTC Sunday (weekly)
+            timezone="UTC"
+        ),
+        tags=["data-ingestion", "yahoo", "company-info", "scheduled"],
+        description="Weekly company information update from Yahoo Finance"
+    )
+    
+    # Yahoo Key Statistics Weekly
+    yahoo_key_statistics_flow.serve(
+        name="Weekly Key Statistics Update",
+        work_pool_name="data-ingestion-pool",
+        schedule=CronSchedule(
+            cron="0 3 * * 0",  # 3 AM UTC Sunday (weekly)
+            timezone="UTC"
+        ),
+        tags=["data-ingestion", "yahoo", "key-statistics", "scheduled"],
+        description="Weekly key statistics update from Yahoo Finance"
+    )
+    
+    # Combined Company Data Weekly (runs company info first, then key statistics)
+    yahoo_company_info_then_key_statistics_flow.serve(
+        name="Weekly Company Data Update",
+        work_pool_name="data-ingestion-pool",
+        schedule=CronSchedule(
+            cron="0 2 * * 0",  # 2 AM UTC Sunday (weekly)
+            timezone="UTC"
+        ),
+        tags=["data-ingestion", "yahoo", "company-info", "key-statistics", "scheduled"],
+        description="Weekly company information and key statistics update from Yahoo Finance"
     )
     
     # Indicators Daily Calculation

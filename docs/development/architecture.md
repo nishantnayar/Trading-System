@@ -1511,9 +1511,10 @@ scripts/
    - Error handling with detailed logging
 
 **Schedules:**
-- **Market Data (Hourly)**: `0 * * * 1-5` (Every hour, weekdays)
-- **Company Info (Weekly)**: `0 9 * * 1` (9 AM CT, Monday) - Weekly updates
-- **Key Statistics (Weekly)**: `0 9 * * 1` (9 AM CT, Monday)
+- **Market Data (Daily End-of-Day)**: `15 22 * * 1-5` (22:15 UTC Mon-Fri, after US market close) - Fetches hourly bars
+- **Company Info (Weekly)**: `0 2 * * 0` (2 AM UTC Sunday) - Weekly updates
+- **Key Statistics (Weekly)**: `0 3 * * 0` (3 AM UTC Sunday)
+- **Company Data Combined (Weekly)**: `0 2 * * 0` (2 AM UTC Sunday) - Runs company info first, then key statistics
 - **Financial Statements (Quarterly)**: `0 9 1 * *` (9 AM CT, 1st of month) - After earnings
 - **Institutional Holders (Monthly)**: `0 9 1 * *` (9 AM CT, 1st of month)
 
