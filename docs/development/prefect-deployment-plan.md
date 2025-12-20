@@ -493,6 +493,21 @@ async def polygon_daily_ingestion(
     logger.info(f"Total records: {result['total_records']}")
     logger.info("=" * 60)
     
+    # Optional: Trigger technical indicators calculation after data ingestion
+    # Note: This uses days_back=300 to fetch sufficient history from database
+    # (not from API), so it's efficient even with 300 days
+    if result['successful'] > 0:
+        try:
+            from src.shared.prefect.flows.analytics.indicator_flows import calculate_daily_indicators
+            indicators_result = await calculate_daily_indicators(
+                symbols=result['successful_symbols'],
+                days_back=300,  # Fetch 300 days from DB for indicator calculations
+            )
+            result['indicators'] = indicators_result
+        except Exception as e:
+            logger.error(f"Failed to calculate indicators: {e}")
+            result['indicators'] = {"error": str(e)}
+    
     return result
 
 
@@ -553,7 +568,7 @@ from src.services.data_ingestion.symbols import SymbolService
     tags=["analytics", "indicators", "scheduled"]
 )
 async def calculate_daily_indicators(
-    days_back: int = 1,
+    days_back: int = 300,
     symbols: Optional[List[str]] = None,
     calculation_date: Optional[date] = None
 ) -> dict:
@@ -563,7 +578,9 @@ async def calculate_daily_indicators(
     Runs after data ingestion flows complete.
     
     Args:
-        days_back: Days of history to fetch for calculations
+        days_back: Days of history to fetch from database for calculations (default: 300)
+                   Note: This fetches historical data from DB, not from API.
+                   Need at least 200 days for SMA_200, 14 days for RSI, etc.
         symbols: Optional list of specific symbols
         calculation_date: Date to calculate for (default: today)
         
@@ -731,7 +748,8 @@ def create_deployments():
             timezone="America/Chicago"
         ),
         parameters={
-            "days_back": 300  # Need more history for indicators
+            "days_back": 300  # Need sufficient history from DB to calculate indicators
+                               # (SMA_200 needs 200 days, RSI_14 needs 14 days, etc.)
         },
         tags=["analytics", "indicators", "scheduled"],
         description="Daily technical indicators calculation"
@@ -1209,7 +1227,42 @@ Choose based on your needs. Start coarse-grained, refine as needed.
 
 ---
 
-## 12. Implementation Approach
+## 12. Understanding days_back Parameter
+
+### Different Meanings for Different Contexts
+
+The `days_back` parameter has different meanings depending on whether it's used for data ingestion or indicator calculation:
+
+#### For Data Ingestion Flows
+- **Purpose**: How many days of NEW data to fetch from external API (Yahoo Finance, Polygon)
+- **Typical Value**: `7` days (for hourly data) or `30` days (for daily data)
+- **Why**: Efficient - only fetches recent data that might be missing or updated
+- **Example**: `yahoo_market_data_flow` uses `days_back=7` to fetch 7 days of hourly data
+
+#### For Indicator Calculation Flows
+- **Purpose**: How many days of HISTORICAL data to fetch from the database
+- **Typical Value**: `300` days (default)
+- **Why**: Required for accurate indicator calculations:
+  - **SMA_200**: Needs 200 days of history
+  - **SMA_50**: Needs 50 days
+  - **SMA_20**: Needs 20 days
+  - **RSI_14**: Needs 14 days
+  - **MACD**: Needs 26 days (slow EMA)
+  - **Bollinger Bands**: Needs 20 days
+  - **Volatility_20**: Needs 20 days
+- **Note**: This fetches from the database (not API), so fetching 300 days is efficient
+- **Example**: `calculate_daily_indicators` uses `days_back=300` to fetch historical data from DB
+
+### Key Point
+Even if you only ingest 2-7 days of new data from the API, the indicator calculation still needs 300 days of historical data from the database to calculate all indicators correctly.
+
+### Automatic Indicator Calculation
+The `yahoo_market_data_flow` automatically triggers indicator calculation after successful data ingestion:
+- Data ingestion uses `days_back=7` (fetches 7 days from API)
+- Indicator calculation uses `days_back=300` (fetches 300 days from database)
+- Both values are correct for their respective purposes
+
+## 13. Implementation Approach
 
 ### Incremental Development Strategy
 

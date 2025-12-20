@@ -271,6 +271,17 @@ class IndicatorCalculationService:
             logger.warning("No closing prices found in market data")
             return None
         
+        # Check if we have enough data for meaningful indicator calculations
+        data_days = len(closing_prices)
+        min_required_days = 20  # Minimum for SMA_20, BB, volatility
+        
+        if data_days < min_required_days:
+            logger.warning(
+                f"Insufficient data for indicator calculation: {data_days} days available, "
+                f"but at least {min_required_days} days needed for most indicators. "
+                f"Many indicators will be None."
+            )
+        
         # Determine calculation date
         if calculation_date is None:
             calculation_date = market_data[-1]['timestamp'].date()

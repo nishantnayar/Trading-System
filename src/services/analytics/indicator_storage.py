@@ -52,6 +52,28 @@ class IndicatorStorageService:
             logger.error(f"No symbol in indicators dictionary. Keys: {list(indicators.keys())}")
             return False
         
+        # Check if we have any actual indicator values (not just symbol and date)
+        indicator_keys = [
+            "sma_20", "sma_50", "sma_200", "ema_12", "ema_26", "ema_50",
+            "rsi", "rsi_14", "macd_line", "macd_signal", "macd_histogram",
+            "bb_upper", "bb_middle", "bb_lower", "bb_position", "bb_width",
+            "volatility_20", "price_change_1d", "price_change_5d", "price_change_30d",
+            "avg_volume_20", "current_volume"
+        ]
+        
+        has_values = any(
+            indicators.get(key) is not None 
+            for key in indicator_keys
+        )
+        
+        if not has_values:
+            logger.warning(
+                f"No indicator values calculated for {symbol} on {calculation_date}. "
+                f"This usually means insufficient historical data. "
+                f"Skipping storage to avoid blank rows."
+            )
+            return False
+        
         if calculation_date is None:
             calculation_date = indicators.get("calculated_date")
             if not calculation_date:

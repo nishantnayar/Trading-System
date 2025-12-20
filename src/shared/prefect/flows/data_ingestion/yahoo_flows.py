@@ -32,6 +32,9 @@ from src.shared.prefect.tasks.data_ingestion_tasks import (
     load_yahoo_key_statistics_task,
     load_yahoo_market_data_task,
 )
+from src.shared.prefect.flows.analytics.indicator_flows import (
+    calculate_daily_indicators,
+)
 
 
 def _market_data_run_name() -> str:
@@ -153,6 +156,40 @@ async def yahoo_market_data_flow(
     logger.info(f"Failed: {result['failed']}")
     logger.info(f"Total records loaded: {result['total_records']}")
     logger.info("=" * 60)
+
+    # Trigger technical indicators calculation after data ingestion completes
+    if result['successful'] > 0:
+        logger.info("")
+        logger.info("=" * 60)
+        logger.info("Triggering Technical Indicators Calculation")
+        logger.info("=" * 60)
+        
+        try:
+            # Calculate indicators for successfully loaded symbols
+            # Note: days_back=300 is needed to fetch enough historical data from database
+            # to calculate indicators (SMA_200 needs 200 days, RSI_14 needs 14 days, etc.)
+            # This is different from data ingestion days_back which only fetches new data
+            indicators_result = await calculate_daily_indicators(
+                symbols=result['successful_symbols'],
+                days_back=300,  # Need enough history from DB to calculate indicators
+                max_symbols=max_symbols,  # Pass through max_symbols if set
+            )
+            
+            logger.info("")
+            logger.info("=" * 60)
+            logger.info("Indicators Calculation Completed")
+            logger.info(f"Successful: {indicators_result['successful']}/{indicators_result['total_symbols']}")
+            logger.info(f"Failed: {indicators_result['failed']}")
+            logger.info("=" * 60)
+            
+            # Add indicators result to the main result
+            result['indicators'] = indicators_result
+            
+        except Exception as e:
+            logger.error(f"Failed to calculate indicators: {e}")
+            result['indicators'] = {"error": str(e)}
+    else:
+        logger.warning("Skipping indicators calculation - no symbols were successfully loaded")
 
     return result
 
@@ -447,5 +484,46 @@ async def deploy_all_flows() -> None:
     logger.info("All Yahoo Finance flows deployed successfully!")
 
 
+async def deploy_indicator_flow() -> None:
+    """Deploy the technical indicators flow as a standalone deployment."""
+    from src.shared.prefect.flows.analytics.indicator_flows import (
+        calculate_daily_indicators,
+    )
+    
+    # Get project root for source path
+    project_root = Path(__file__).parent.parent.parent.parent.parent.parent
+    source_path = str(project_root)
+    flow_file = "src/shared/prefect/flows/analytics/indicator_flows.py"
+    
+    # Deploy indicators flow as standalone (can run independently)
+    indicators_deployment = await _resolve_deployment(
+        calculate_daily_indicators.from_source(
+            source=source_path,
+            entrypoint=f"{flow_file}:calculate_daily_indicators",
+        )
+    )
+    await indicators_deployment.deploy(
+        name="Daily Technical Indicators Calculation",
+        work_pool_name=PrefectConfig.get_work_pool_name(),
+        cron="30 22 * * 1-5",  # 22:30 UTC Mon–Fri (15 min after data ingestion)
+        parameters={
+            "days_back": 300,  # Need enough history from DB to calculate indicators (SMA_200 needs 200 days)
+        },
+        tags=["analytics", "indicators", "scheduled"],
+        description="Daily technical indicators calculation (can also run automatically after data ingestion)",
+        ignore_warnings=True,
+    )
+    
+    logger.info("Technical Indicators flow deployed successfully!")
+
+
+async def deploy_all_flows_with_indicators() -> None:
+    """Deploy all flows including the standalone indicators flow."""
+    await deploy_all_flows()
+    await deploy_indicator_flow()
+    logger.info("✅ All flows (including indicators) deployed successfully!")
+
+
 if __name__ == "__main__":
-    asyncio.run(deploy_all_flows())
+    # Deploy all flows including standalone indicators deployment
+    asyncio.run(deploy_all_flows_with_indicators())
