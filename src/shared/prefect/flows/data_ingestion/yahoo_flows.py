@@ -27,13 +27,13 @@ from prefect import flow
 
 from src.services.data_ingestion.symbols import SymbolService
 from src.shared.prefect.config import PrefectConfig
+from src.shared.prefect.flows.analytics.indicator_flows import (
+    calculate_daily_indicators,
+)
 from src.shared.prefect.tasks.data_ingestion_tasks import (
     load_yahoo_company_info_task,
     load_yahoo_key_statistics_task,
     load_yahoo_market_data_task,
-)
-from src.shared.prefect.flows.analytics.indicator_flows import (
-    calculate_daily_indicators,
 )
 
 
@@ -489,7 +489,7 @@ async def deploy_indicator_flow() -> None:
     from src.shared.prefect.flows.analytics.indicator_flows import (
         calculate_daily_indicators,
     )
-    
+
     # Get project root for source path
     project_root = Path(__file__).parent.parent.parent.parent.parent.parent
     source_path = str(project_root)
