@@ -186,3 +186,4 @@ KEY_STATISTICS_LOADER.md
 /logs
 symbols.txt
 simple_symbol_loader.py
+notebooks/lstm_price_prediction.ipynb

@@ -246,6 +246,16 @@ def main(
                 to_date_obj = to_date_obj or date.today()
                 from_date_obj = to_date_obj - timedelta(days=30)
 
+            # yfinance's end parameter is exclusive, so add 1 day to include today's data
+            # Only do this if to_date_obj is today (to get latest data)
+            today = date.today()
+            if to_date_obj == today:
+                to_date_obj = to_date_obj + timedelta(days=1)
+                logger.debug(
+                    f"Adjusted end_date to {to_date_obj} to include today's data "
+                    f"(yfinance end is exclusive)"
+                )
+
             logger.info(f"Date range: {from_date_obj} to {to_date_obj}")
             if data_flags["market_data"]:
                 logger.info(f"Interval: {interval}")
