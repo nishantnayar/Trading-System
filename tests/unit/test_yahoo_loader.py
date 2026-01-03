@@ -398,6 +398,10 @@ class TestYahooDataLoader:
             # insert(InstitutionalHolder).values(...).on_conflict_do_update(...)
             mock_insert_upsert = Mock()
             mock_insert_values = Mock()
+            # Make excluded support subscripting for _upsert_records
+            mock_excluded = Mock()
+            mock_excluded.__getitem__ = Mock(side_effect=lambda key: Mock())
+            mock_insert_values.excluded = mock_excluded
             mock_insert_values.on_conflict_do_update.return_value = mock_insert_upsert
             mock_insert.return_value.values.return_value = mock_insert_values
 
@@ -419,10 +423,13 @@ class TestYahooDataLoader:
             result = await loader.load_institutional_holders("AAPL")
 
             assert result == 2  # Method returns count of records loaded
-            # Each holder: 1 update + 1 select (for percent_change) + 1 insert = 3 calls per holder
-            # Total: 2 holders * 3 = 6 calls
-            assert mock_session.execute.call_count == 6
-            mock_session.commit.assert_called_once()
+            # Each holder: 1 update + 1 select (for percent_change) = 2 calls per holder
+            # Outer transaction: 2 holders * 2 = 4 calls
+            # Inner transaction (_upsert_records): 1 bulk insert = 1 call
+            # Total: 5 calls
+            assert mock_session.execute.call_count == 5
+            # Only _upsert_records commits; outer transaction is just for queries/updates
+            assert mock_session.commit.call_count == 1
 
     @pytest.mark.asyncio
     async def test_load_institutional_holders_no_data(self, loader):
@@ -461,11 +468,17 @@ class TestYahooDataLoader:
             mock_session = Mock()
             mock_db.return_value.__enter__.return_value = mock_session
 
-            # Mock upsert statement
+            # Mock upsert statement chain
+            # insert(model).values(records) returns object with .excluded and .on_conflict_do_update()
             mock_upsert_stmt = Mock()
-            mock_insert.return_value.on_conflict_do_update.return_value = (
-                mock_upsert_stmt
-            )
+            mock_insert_values = Mock()
+            # Make excluded support subscripting for _upsert_records
+            # Also need to support model.__table__.columns when update_fields is None
+            mock_excluded = Mock()
+            mock_excluded.__getitem__ = Mock(side_effect=lambda key: Mock())
+            mock_insert_values.excluded = mock_excluded
+            mock_insert_values.on_conflict_do_update.return_value = mock_upsert_stmt
+            mock_insert.return_value.values.return_value = mock_insert_values
 
             result = await loader.load_financial_statements("AAPL")
 
@@ -475,7 +488,8 @@ class TestYahooDataLoader:
                 len(mock_financial_statements) * 2
             )  # Annual + Quarterly calls
             assert len(result) == expected_count
-            assert mock_session.execute.call_count >= 2  # At least 2 statements
+            # _upsert_records does a single bulk insert for all financial statements
+            assert mock_session.execute.call_count == 1  # Single bulk insert
             mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
@@ -495,17 +509,29 @@ class TestYahooDataLoader:
                 return_value=mock_company_officers,
             ),
             patch("src.services.yahoo.loader.db_transaction") as mock_db,
+            patch("src.services.yahoo.loader.insert") as mock_insert,
         ):
 
             # Setup mock session
             mock_session = Mock()
             mock_db.return_value.__enter__.return_value = mock_session
 
+            # Mock upsert statement chain
+            # insert(model).values(records) returns object with .excluded and .on_conflict_do_update()
+            mock_upsert_stmt = Mock()
+            mock_insert_values = Mock()
+            # Make excluded support subscripting for _upsert_records
+            mock_excluded = Mock()
+            mock_excluded.__getitem__ = Mock(side_effect=lambda key: Mock())
+            mock_insert_values.excluded = mock_excluded
+            mock_insert_values.on_conflict_do_update.return_value = mock_upsert_stmt
+            mock_insert.return_value.values.return_value = mock_insert_values
+
             result = await loader.load_company_officers("AAPL")
 
             assert result == mock_company_officers
-            # Changed from merge to execute (using insert().on_conflict_do_update())
-            assert mock_session.execute.call_count == 2  # Two officers
+            # _upsert_records does a single bulk insert for all officers
+            assert mock_session.execute.call_count == 1  # Single bulk insert
             mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
@@ -530,11 +556,16 @@ class TestYahooDataLoader:
             mock_session = Mock()
             mock_db.return_value.__enter__.return_value = mock_session
 
-            # Mock upsert statement
+            # Mock upsert statement chain
+            # insert(model).values(records) returns object with .excluded and .on_conflict_do_update()
             mock_upsert_stmt = Mock()
-            mock_insert.return_value.on_conflict_do_update.return_value = (
-                mock_upsert_stmt
-            )
+            mock_insert_values = Mock()
+            # Make excluded support subscripting for _upsert_records
+            mock_excluded = Mock()
+            mock_excluded.__getitem__ = Mock(side_effect=lambda key: Mock())
+            mock_insert_values.excluded = mock_excluded
+            mock_insert_values.on_conflict_do_update.return_value = mock_upsert_stmt
+            mock_insert.return_value.values.return_value = mock_insert_values
 
             result = await loader.load_dividends(
                 symbol="AAPL",
@@ -543,7 +574,8 @@ class TestYahooDataLoader:
             )
 
             assert result == 3  # Method returns count of dividends loaded
-            assert mock_session.execute.call_count == 3  # Three dividends
+            # _upsert_records does a single bulk insert for all dividends
+            assert mock_session.execute.call_count == 1  # Single bulk insert
             mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
@@ -585,11 +617,16 @@ class TestYahooDataLoader:
             mock_session = Mock()
             mock_db.return_value.__enter__.return_value = mock_session
 
-            # Mock upsert statement
+            # Mock upsert statement chain
+            # insert(model).values(records) returns object with .excluded and .on_conflict_do_update()
             mock_upsert_stmt = Mock()
-            mock_insert.return_value.on_conflict_do_update.return_value = (
-                mock_upsert_stmt
-            )
+            mock_insert_values = Mock()
+            # Make excluded support subscripting for _upsert_records
+            mock_excluded = Mock()
+            mock_excluded.__getitem__ = Mock(side_effect=lambda key: Mock())
+            mock_insert_values.excluded = mock_excluded
+            mock_insert_values.on_conflict_do_update.return_value = mock_upsert_stmt
+            mock_insert.return_value.values.return_value = mock_insert_values
 
             result = await loader.load_splits(
                 symbol="AAPL",
@@ -598,7 +635,8 @@ class TestYahooDataLoader:
             )
 
             assert result == 2  # Method returns count of splits loaded
-            assert mock_session.execute.call_count == 2  # Two splits
+            # _upsert_records does a single bulk insert for all splits
+            assert mock_session.execute.call_count == 1  # Single bulk insert
             mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
@@ -644,16 +682,22 @@ class TestYahooDataLoader:
             mock_session = Mock()
             mock_db.return_value.__enter__.return_value = mock_session
 
-            # Mock upsert statement
+            # Mock upsert statement chain
+            # insert(model).values(records) returns object with .excluded and .on_conflict_do_update()
             mock_upsert_stmt = Mock()
-            mock_insert.return_value.on_conflict_do_update.return_value = (
-                mock_upsert_stmt
-            )
+            mock_insert_values = Mock()
+            # Make excluded support subscripting for _upsert_records
+            mock_excluded = Mock()
+            mock_excluded.__getitem__ = Mock(side_effect=lambda key: Mock())
+            mock_insert_values.excluded = mock_excluded
+            mock_insert_values.on_conflict_do_update.return_value = mock_upsert_stmt
+            mock_insert.return_value.values.return_value = mock_insert_values
 
             count = await loader.load_analyst_recommendations("AAPL")
 
             assert count == 3  # Method returns count of recommendations loaded
-            assert mock_session.execute.call_count == 3  # Three recommendations
+            # _upsert_records does a single bulk insert for all recommendations
+            assert mock_session.execute.call_count == 1  # Single bulk insert
             mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
