@@ -78,6 +78,15 @@ python main.py
 
 ## 🏗️ **System Architecture**
 
+```mermaid
+graph LR
+    A[Data Sources] --> B[Data Ingestion]
+    B --> C[Core Services]
+    C --> D[Frontend]
+    B --> E[PostgreSQL]
+    C --> E
+```
+
 The Trading System follows a modular, service-oriented architecture:
 
 **Data Flow:**
