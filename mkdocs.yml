@@ -54,7 +54,12 @@ nav:
     - Risk Management: user-guide/risk-management.md
   - API Reference:
     - Overview: api/index.md
-    - Data Ingestion: api/data-ingestion.md
+    - Data Ingestion:
+      - Overview: api/data-ingestion.md
+      - Data Ingestion Overview: api/data-ingestion-overview.md
+      - Polygon.io Integration: api/data-ingestion-polygon.md
+      - Yahoo Finance Integration: api/data-ingestion-yahoo.md
+      - Alpaca Integration: api/data-ingestion-alpaca.md
     - Strategy Engine: api/strategy-engine.md
     - Execution Engine: api/execution.md
     - Risk Management: api/risk-management.md

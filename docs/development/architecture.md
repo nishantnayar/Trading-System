@@ -10,33 +10,33 @@ This is the main architecture documentation index for the Trading System. The ar
 
 ### Core Architecture
 
-- **[Architecture Overview](development/architecture-overview.md)** - System overview, requirements, technology stack, communication patterns, security, monitoring, development workflow, configuration, performance, and future enhancements
+- **[Architecture Overview](architecture-overview.md)** - System overview, requirements, technology stack, communication patterns, security, monitoring, development workflow, configuration, performance, and future enhancements
 
-- **[Services Architecture](development/architecture-services.md)** - Detailed breakdown of all six microservices (Data Ingestion, Strategy Engine, Execution, Risk Management, Analytics, Notification)
+- **[Services Architecture](architecture-services.md)** - Detailed breakdown of all six microservices (Data Ingestion, Strategy Engine, Execution, Risk Management, Analytics, Notification)
 
-- **[Database Architecture](development/architecture-database.md)** - Database connectivity strategy, schema design, and concurrent access patterns
+- **[Database Architecture](architecture-database.md)** - Database connectivity strategy, schema design, and concurrent access patterns
 
-- **[UI Architecture](development/architecture-ui.md)** - Frontend design, Streamlit components, and backend API architecture
+- **[UI Architecture](architecture-ui.md)** - Frontend design, Streamlit components, and backend API architecture
 
 ### Specialized Architecture
 
-- **[Prefect Architecture](development/architecture-prefect.md)** - Prefect 3.4.14 orchestration strategy, service-specific flows, deployment configuration, and implementation plan
+- **[Prefect Architecture](architecture-prefect.md)** - Prefect 3.4.14 orchestration strategy, service-specific flows, deployment configuration, and implementation plan
 
-- **[Deployment Architecture](development/architecture-deployment.md)** - Local deployment strategy, service deployment, startup scripts, health monitoring, and production considerations
+- **[Deployment Architecture](architecture-deployment.md)** - Local deployment strategy, service deployment, startup scripts, health monitoring, and production considerations
 
-- **[Timezone Architecture](development/architecture-timezone.md)** - Comprehensive timezone handling strategy for UTC storage, EST trading operations, and CST user interface
+- **[Timezone Architecture](architecture-timezone.md)** - Comprehensive timezone handling strategy for UTC storage, EST trading operations, and CST user interface
 
 ## Quick Navigation
 
 | Document | Focus Area | Lines |
 |----------|------------|-------|
-| [Overview](development/architecture-overview.md) | System overview, tech stack, communication | ~200 |
-| [Services](development/architecture-services.md) | Microservices breakdown | ~150 |
-| [Database](development/architecture-database.md) | Database design and connectivity | ~250 |
-| [UI](development/architecture-ui.md) | Frontend and API architecture | ~120 |
-| [Prefect](development/architecture-prefect.md) | Workflow orchestration | ~1,250 |
-| [Deployment](development/architecture-deployment.md) | Deployment strategy | ~380 |
-| [Timezone](development/architecture-timezone.md) | Timezone handling | ~460 |
+| [Overview](architecture-overview.md) | System overview, tech stack, communication | ~200 |
+| [Services](architecture-services.md) | Microservices breakdown | ~150 |
+| [Database](architecture-database.md) | Database design and connectivity | ~250 |
+| [UI](architecture-ui.md) | Frontend and API architecture | ~120 |
+| [Prefect](architecture-prefect.md) | Workflow orchestration | ~1,250 |
+| [Deployment](architecture-deployment.md) | Deployment strategy | ~380 |
+| [Timezone](architecture-timezone.md) | Timezone handling | ~460 |
 
 ## Architecture Summary
 

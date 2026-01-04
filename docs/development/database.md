@@ -6,9 +6,9 @@ This document provides an index to the database architecture documentation. For 
 
 ## Database Sub-documents
 
-- [**Database Overview**](development/database-overview.md): High-level architecture, distribution strategy, setup options, and implementation approach.
-- [**Database Schema**](development/database-schema.md): Comprehensive schema definitions for all database tables, including constraints, indexes, and relationships.
-- [**Database Optimization**](development/database-optimization.md): Performance tuning, indexing strategies, partitioning, ORM patterns, monitoring, and maintenance.
+- [**Database Overview**](database-overview.md): High-level architecture, distribution strategy, setup options, and implementation approach.
+- [**Database Schema**](database-schema.md): Comprehensive schema definitions for all database tables, including constraints, indexes, and relationships.
+- [**Database Optimization**](database-optimization.md): Performance tuning, indexing strategies, partitioning, ORM patterns, monitoring, and maintenance.
 
 ---
 
