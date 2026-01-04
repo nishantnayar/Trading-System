@@ -78,71 +78,7 @@ python main.py
 
 ## 🏗️ **System Architecture**
 
-```mermaid
-graph TB
-    subgraph DataSources["Data Sources"]
-        Polygon[Polygon.io]
-        Yahoo[Yahoo Finance]
-        AlpacaExt[Alpaca API]
-    end
-    
-    subgraph DataIngestionGroup["Data Ingestion"]
-        DataIngestion[Data Ingestion Service]
-    end
-    
-    subgraph CoreServices["Core Services"]
-        Strategy[Strategy Engine]
-        Risk[Risk Management]
-        Execution[Execution Service]
-        Analytics[Analytics Service]
-    end
-    
-    subgraph Storage["Storage"]
-        PostgreSQL[PostgreSQL]
-        Redis[Redis]
-    end
-    
-    subgraph Orchestration["Orchestration"]
-        Prefect[Prefect]
-    end
-    
-    subgraph Frontend["Frontend"]
-        Streamlit[Streamlit UI]
-        FastAPI[FastAPI API]
-    end
-    
-    Polygon --> DataIngestion
-    Yahoo --> DataIngestion
-    AlpacaExt --> DataIngestion
-    
-    DataIngestion --> PostgreSQL
-    DataIngestion --> Redis
-    DataIngestion --> Prefect
-    
-    DataIngestion --> Strategy
-    Strategy --> Risk
-    Risk --> Execution
-    Execution --> Analytics
-    
-    Strategy --> PostgreSQL
-    Risk --> PostgreSQL
-    Execution --> PostgreSQL
-    Analytics --> PostgreSQL
-    
-    Execution --> AlpacaExt
-    Analytics --> Streamlit
-    FastAPI --> Execution
-    FastAPI --> Analytics
-    
-    Prefect --> DataIngestion
-    Prefect --> Analytics
-    
-    style DataIngestion fill:#00A86B
-    style Execution fill:#00A86B
-    style Analytics fill:#00A86B
-    style Strategy fill:#FFA500
-    style Risk fill:#FFA500
-```
+For a detailed visual representation of the system architecture, see the [System Architecture Diagram](development/index.md#system-architecture-diagram) in the Development documentation.
 
 ### **Core Components**
 
