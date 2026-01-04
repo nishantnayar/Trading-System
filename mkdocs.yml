@@ -89,6 +89,11 @@ nav:
     - Prefect Deployment:
       - Deployment Guide: development/prefect-deployment-guide.md
       - Deployment Plan: development/prefect-deployment-plan.md
+      - Overview: development/prefect-deployment-overview.md
+      - Configuration: development/prefect-deployment-configuration.md
+      - Code Patterns: development/prefect-deployment-code-patterns.md
+      - Deployment Workflow: development/prefect-deployment-workflow.md
+      - Advanced Topics: development/prefect-deployment-advanced.md
     - Testing Strategy: development/testing.md
     - CI/CD Pipeline: development/ci-cd.md
     - Session Management Testing: development/session-management-testing.md

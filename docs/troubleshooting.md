@@ -489,6 +489,237 @@ markers =
     slow: Slow tests
 ```
 
+### Strategy Engine Issues
+
+**Error**: `Strategy not found` or `Strategy execution failed`
+
+**Solutions**:
+1. **Verify Strategy Configuration**:
+   ```bash
+   # Check strategy configuration file
+   cat config/strategies.yaml
+   
+   # Validate YAML syntax
+   python -c "import yaml; yaml.safe_load(open('config/strategies.yaml'))"
+   ```
+
+2. **Check Strategy Status**:
+   ```python
+   # Query strategy status from database
+   SELECT * FROM strategy_engine.strategies WHERE name = 'momentum_strategy';
+   ```
+
+3. **Test Strategy Logic**:
+   ```python
+   # Run strategy in test mode
+   from src.services.strategy_engine.backtest import BacktestEngine
+   engine = BacktestEngine()
+   results = engine.run_backtest(
+       strategy="momentum_strategy",
+       symbols=["AAPL"],
+       start_date="2024-01-01",
+       end_date="2024-12-31",
+       test_mode=True
+   )
+   ```
+
+**Error**: `Backtest failed` or `Insufficient data for backtest`
+
+**Solutions**:
+1. **Check Historical Data Availability**:
+   ```sql
+   -- Verify sufficient data for backtest period
+   SELECT symbol, COUNT(*) as data_points,
+          MIN(timestamp) as earliest, MAX(timestamp) as latest
+   FROM data_ingestion.market_data
+   WHERE symbol IN ('AAPL', 'MSFT', 'GOOGL')
+     AND timestamp >= '2024-01-01'
+     AND timestamp <= '2024-12-31'
+   GROUP BY symbol;
+   ```
+
+2. **Validate Backtest Parameters**:
+   ```python
+   # Ensure start_date < end_date
+   # Ensure sufficient initial capital
+   # Check commission and slippage settings
+   ```
+
+3. **Review Backtest Logs**:
+   ```python
+   # Check backtest execution logs
+   SELECT * FROM strategy_engine.backtest_runs
+   WHERE strategy_id = 'momentum_strategy'
+   ORDER BY created_at DESC
+   LIMIT 10;
+   ```
+
+**Error**: `Signal generation timeout` or `Slow signal calculation`
+
+**Solutions**:
+1. **Optimize Indicator Calculations**:
+   ```python
+   # Use pre-calculated indicators from database
+   SELECT * FROM analytics.technical_indicators_latest
+   WHERE symbol = 'AAPL';
+   ```
+
+2. **Reduce Symbol Universe**:
+   ```python
+   # Process fewer symbols at once
+   # Use batch processing for large universes
+   ```
+
+3. **Cache Indicator Results**:
+   ```python
+   # Cache frequently accessed indicators
+   from functools import lru_cache
+   
+   @lru_cache(maxsize=1000)
+   def get_indicator(symbol: str, indicator: str):
+       # Cache indicator calculations
+       pass
+   ```
+
+### Risk Management Issues
+
+**Error**: `Risk limit exceeded` or `Trade rejected by risk management`
+
+**Solutions**:
+1. **Check Current Exposure**:
+   ```sql
+   -- Calculate current portfolio exposure
+   SELECT 
+       SUM(market_value) / (SELECT portfolio_value FROM account) as total_exposure,
+       symbol,
+       market_value
+   FROM positions
+   GROUP BY symbol, market_value;
+   ```
+
+2. **Review Risk Limits**:
+   ```yaml
+   # Check risk limits in config/strategies.yaml
+   risk_limits:
+     max_drawdown: 0.05
+     max_daily_loss: 0.02
+     max_positions: 10
+     max_sector_exposure: 0.3
+   ```
+
+3. **Adjust Position Size**:
+   ```python
+   # Reduce position size if limits are too restrictive
+   # Or adjust risk limits if appropriate
+   ```
+
+**Error**: `Circuit breaker triggered` or `Trading stopped`
+
+**Solutions**:
+1. **Check Circuit Breaker Status**:
+   ```python
+   # Query circuit breaker status
+   SELECT * FROM risk_management.circuit_breakers
+   WHERE triggered = true;
+   ```
+
+2. **Review Trigger Conditions**:
+   ```sql
+   -- Check current drawdown
+   SELECT current_drawdown, max_drawdown_limit
+   FROM risk_management.portfolio_metrics
+   ORDER BY timestamp DESC
+   LIMIT 1;
+   
+   -- Check daily loss
+   SELECT daily_pnl, max_daily_loss_limit
+   FROM risk_management.daily_metrics
+   WHERE date = CURRENT_DATE;
+   ```
+
+3. **Reset Circuit Breaker** (if appropriate):
+   ```python
+   # Only reset if conditions have improved
+   # Review why circuit breaker triggered first
+   # Adjust risk limits if needed
+   ```
+
+**Error**: `Position sizing calculation failed`
+
+**Solutions**:
+1. **Verify Portfolio Value**:
+   ```python
+   # Check current portfolio value
+   account = get_account()
+   portfolio_value = float(account['portfolio_value'])
+   ```
+
+2. **Check Position Sizing Method**:
+   ```python
+   # Verify method is valid
+   valid_methods = ['fixed_fractional', 'volatility', 'kelly', 'risk_parity']
+   assert method in valid_methods
+   ```
+
+3. **Validate Parameters**:
+   ```python
+   # Ensure base_size, max_size, min_size are valid
+   assert 0 < base_size <= 1
+   assert 0 < max_size <= 1
+   assert min_size < base_size
+   ```
+
+### Configuration Validation
+
+**Error**: `Invalid configuration` or `Configuration file not found`
+
+**Solutions**:
+1. **Validate YAML Syntax**:
+   ```bash
+   # Check YAML syntax
+   python -c "import yaml; yaml.safe_load(open('config/strategies.yaml'))"
+   ```
+
+2. **Verify Required Fields**:
+   ```python
+   # Validate configuration structure
+   required_fields = ['name', 'enabled', 'parameters', 'risk_limits']
+   for strategy in config['strategies']:
+       assert all(field in strategy for field in required_fields)
+   ```
+
+3. **Check Environment Variables**:
+   ```bash
+   # Verify all required env vars are set
+   python scripts/validate_config.py
+   ```
+
+**Error**: `API key invalid` or `Authentication failed`
+
+**Solutions**:
+1. **Verify API Keys**:
+   ```bash
+   # Check .env file
+   cat .env | grep API_KEY
+   
+   # Test API connection
+   python scripts/test_alpaca_connection.py
+   ```
+
+2. **Check API Key Permissions**:
+   ```python
+   # Verify API key has required permissions
+   # Paper trading keys should work for paper trading
+   # Live trading keys required for live trading
+   ```
+
+3. **Regenerate API Keys** (if needed):
+   ```bash
+   # Generate new keys from Alpaca dashboard
+   # Update .env file with new keys
+   # Restart services
+   ```
+
 ### Performance Problems
 
 **Issue**: Slow database queries
