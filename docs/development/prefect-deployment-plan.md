@@ -7,11 +7,11 @@ This document provides an index to the Prefect 3.4.14 deployment documentation. 
 
 ## Prefect Deployment Sub-documents
 
-- [**Prefect Deployment Overview**](prefect-deployment-overview.md): Overview, project structure, and implementation approach.
-- [**Prefect Configuration**](prefect-deployment-configuration.md): YAML configurations, environment variables, settings classes, and work pool configuration.
-- [**Code Patterns**](prefect-deployment-code-patterns.md): Code structure, task patterns, flow patterns, and deployment definitions.
-- [**Deployment Workflow**](prefect-deployment-workflow.md): Deployment scripts, workflow steps, monitoring, and testing.
-- [**Advanced Topics**](prefect-deployment-advanced.md): Design decisions, days_back parameter, and migration strategy.
+- [**Prefect Deployment Overview**](development/prefect-deployment-overview.md): Overview, project structure, and implementation approach.
+- [**Prefect Configuration**](development/prefect-deployment-configuration.md): YAML configurations, environment variables, settings classes, and work pool configuration.
+- [**Code Patterns**](development/prefect-deployment-code-patterns.md): Code structure, task patterns, flow patterns, and deployment definitions.
+- [**Deployment Workflow**](development/prefect-deployment-workflow.md): Deployment scripts, workflow steps, monitoring, and testing.
+- [**Advanced Topics**](development/prefect-deployment-advanced.md): Design decisions, days_back parameter, and migration strategy.
 
 ---
 

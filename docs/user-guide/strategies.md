@@ -469,7 +469,7 @@ print(f"Max Drawdown: {performance['max_drawdown']:.2%}")
 
 - [Strategy Engine API](../api/strategy-engine.md) - API reference for strategy engine
 - [Risk Management](risk-management.md) - Risk management features
-- [Configuration Guide](../../README.md#configuration) - System configuration
+- [Configuration Guide](../../Readme.md#configuration) - System configuration
 - [Backtesting Guide](../development/testing.md) - Testing and validation
 
 ---
