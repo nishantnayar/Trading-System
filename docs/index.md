@@ -80,33 +80,33 @@ python main.py
 
 ```mermaid
 graph TB
-    subgraph DataSources["Data Sources"]
-        Polygon[Polygon.io Historical Data]
-        Yahoo[Yahoo Finance Fundamentals]
-        AlpacaExt[Alpaca API Trading Data]
+    subgraph "Data Sources"
+        Polygon[Polygon.io<br/>Historical Data]
+        Yahoo[Yahoo Finance<br/>Fundamentals]
+        AlpacaExt[Alpaca API<br/>Trading Data]
     end
     
-    subgraph DataIngestionGroup["Data Ingestion"]
+    subgraph "Data Ingestion"
         DataIngestion[Data Ingestion Service]
     end
     
-    subgraph CoreServices["Core Services"]
-        Strategy[Strategy Engine v1.1.0]
-        Risk[Risk Management v1.1.0]
-        Execution[Execution Service v1.0.0]
-        Analytics[Analytics Service v1.0.0]
+    subgraph "Core Services"
+        Strategy[Strategy Engine<br/>v1.1.0]
+        Risk[Risk Management<br/>v1.1.0]
+        Execution[Execution Service<br/>v1.0.0]
+        Analytics[Analytics Service<br/>v1.0.0]
     end
     
-    subgraph Storage["Storage"]
-        PostgreSQL[(PostgreSQL Data and Logs)]
-        Redis[(Redis Cache)]
+    subgraph "Storage"
+        PostgreSQL[(PostgreSQL<br/>Data and Logs)]
+        Redis[(Redis<br/>Cache)]
     end
     
-    subgraph Orchestration["Orchestration"]
-        Prefect[Prefect Workflows]
+    subgraph "Orchestration"
+        Prefect[Prefect<br/>Workflows]
     end
     
-    subgraph Frontend["Frontend"]
+    subgraph "Frontend"
         Streamlit[Streamlit UI]
         FastAPI[FastAPI API]
     end
