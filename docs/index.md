@@ -83,34 +83,34 @@ python main.py
 ```mermaid
 graph TB
     subgraph "Data Sources"
-        Polygon["Polygon.io<br/>Historical Data"]
-        Yahoo["Yahoo Finance<br/>Fundamentals"]
-        AlpacaExt["Alpaca API<br/>Trading Data"]
+        Polygon[Polygon.io<br/>Historical Data]
+        Yahoo[Yahoo Finance<br/>Fundamentals]
+        AlpacaExt[Alpaca API<br/>Trading Data]
     end
     
     subgraph "Data Ingestion"
-        DataIngestion["Data Ingestion Service"]
+        DataIngestion[Data Ingestion Service]
     end
     
     subgraph "Core Services"
-        Strategy["Strategy Engine<br/>v1.1.0"]
-        Risk["Risk Management<br/>v1.1.0"]
-        Execution["Execution Service<br/>v1.0.0"]
-        Analytics["Analytics Service<br/>v1.0.0"]
+        Strategy[Strategy Engine<br/>v1.1.0]
+        Risk[Risk Management<br/>v1.1.0]
+        Execution[Execution Service<br/>v1.0.0]
+        Analytics[Analytics Service<br/>v1.0.0]
     end
     
     subgraph "Storage"
-        PostgreSQL[("PostgreSQL<br/>Data and Logs")]
-        Redis[("Redis<br/>Cache")]
+        PostgreSQL[(PostgreSQL<br/>Data and Logs)]
+        Redis[(Redis<br/>Cache)]
     end
     
     subgraph "Orchestration"
-        Prefect["Prefect<br/>Workflows"]
+        Prefect[Prefect<br/>Workflows]
     end
     
     subgraph "Frontend"
-        Streamlit["Streamlit UI"]
-        FastAPI["FastAPI API"]
+        Streamlit[Streamlit UI]
+        FastAPI[FastAPI API]
     end
     
     Polygon --> DataIngestion
