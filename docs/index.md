@@ -78,7 +78,24 @@ python main.py
 
 ## 🏗️ **System Architecture**
 
-For a detailed visual representation of the system architecture, see the [System Architecture Diagram](development/index.md#system-architecture-diagram) in the Development documentation.
+The Trading System follows a modular, service-oriented architecture:
+
+**Data Flow:**
+- **Data Sources** → Polygon.io, Yahoo Finance, Alpaca API
+- **Data Ingestion Service** → Processes and stores market data
+- **Core Services** → Strategy Engine, Risk Management, Execution, Analytics
+- **Storage** → PostgreSQL (data persistence) and Redis (caching)
+- **Orchestration** → Prefect workflows for scheduled tasks
+- **Frontend** → Streamlit UI and FastAPI REST API
+
+**Service Interactions:**
+- Data Ingestion feeds data to Core Services
+- Strategy Engine → Risk Management → Execution pipeline
+- All services store data in PostgreSQL
+- Analytics service provides metrics to the UI
+- Prefect orchestrates scheduled data ingestion and analytics workflows
+
+For detailed architecture documentation, see [System Architecture](development/architecture.md).
 
 ### **Core Components**
 
