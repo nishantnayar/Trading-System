@@ -102,7 +102,7 @@ async def get_technical_indicators(symbol: str):
     """Get technical indicators for a symbol"""
 ```
 
-See [API Reference Documentation](../api/) for complete endpoint documentation.
+See [API Reference Documentation](../api/index.md) for complete endpoint documentation.
 
 ---
 
