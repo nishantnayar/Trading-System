@@ -39,12 +39,8 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
-  - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
 
 # Page tree
 nav:
@@ -79,7 +75,6 @@ nav:
     - Testing Strategy: development/testing.md
     - CI/CD Pipeline: development/ci-cd.md
     - Session Management Testing: development/session-management-testing.md
-    - Status Indicators: STATUS_INDICATORS.md
   - Contributing: ../CONTRIBUTING.md
   - Changelog: ../CHANGELOG.md
 
@@ -87,20 +82,13 @@ nav:
 plugins:
   - search:
       lang: en
-  - mermaid2:
-      arguments:
-        theme: default
-        config:
-          themeVariables:
-            primaryColor: "#009688"
-            primaryTextColor: "#fff"
-            primaryBorderColor: "#00796B"
-            lineColor: "#009688"
-            secondaryColor: "#00A86B"
-            tertiaryColor: "#e8f5e9"
 
 # Extra configuration
 extra:
   version: 1.0.0
   last_updated: December 2025
   status: ✅ Core Features Complete | 🚧 Enhanced Features In Progress
+
+# JavaScript for Mermaid diagrams
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js

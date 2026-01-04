@@ -468,7 +468,6 @@ global_settings:
 | **Troubleshooting** | Common issues and solutions | [docs/troubleshooting.md](docs/troubleshooting.md) |
 | **Contributing** | Contribution guidelines | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | **Changelog** | Version history and changes | [CHANGELOG.md](CHANGELOG.md) |
-| **Status Indicators** | Documentation status guide | [docs/STATUS_INDICATORS.md](docs/STATUS_INDICATORS.md) |
 
 ### Technical Documentation
 

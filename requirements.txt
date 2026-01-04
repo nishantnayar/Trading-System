@@ -42,6 +42,7 @@ prefect-sqlalchemy>=0.4.0
 # Documentation
 mkdocs>=1.5.0
 mkdocs-material>=9.0.0
+pymdown-extensions>=10.0
 
 # Streamlit UI
 streamlit>=1.28.0
