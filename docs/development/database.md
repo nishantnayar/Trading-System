@@ -5,8 +5,46 @@
 This document provides a comprehensive review and detailed analysis of the database architecture for the trading system, including schema design, performance considerations, data flow patterns, and implementation strategies.
 
 **Last Updated**: December 2025  
-**Status**: Design Phase  
+**Status**: ✅ Core Architecture Implemented (v1.0.0)  
 **Author**: Nishant Nayar
+
+## Database Architecture Diagram
+
+```mermaid
+graph TB
+    subgraph "PostgreSQL Instance"
+        TradingDB[(trading_system<br/>Database)]
+        PrefectDB[(prefect<br/>Database)]
+    end
+    
+    subgraph "Trading System Schemas"
+        DataIngestion[data_ingestion<br/>Schema]
+        Strategy[strategy_engine<br/>Schema]
+        Execution[execution<br/>Schema]
+        Risk[risk_management<br/>Schema]
+        Analytics[analytics<br/>Schema]
+        Logging[logging<br/>Schema]
+    end
+    
+    subgraph "Prefect Schema"
+        PrefectSchema[public<br/>Schema]
+    end
+    
+    TradingDB --> DataIngestion
+    TradingDB --> Strategy
+    TradingDB --> Execution
+    TradingDB --> Risk
+    TradingDB --> Analytics
+    TradingDB --> Logging
+    
+    PrefectDB --> PrefectSchema
+    
+    style TradingDB fill:#00A86B
+    style PrefectDB fill:#009688
+    style DataIngestion fill:#e8f5e9
+    style Analytics fill:#e8f5e9
+    style Logging fill:#e8f5e9
+```
 
 ## Database Architecture Design
 

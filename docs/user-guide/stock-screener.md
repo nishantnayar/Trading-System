@@ -2,6 +2,38 @@
 
 The Stock Screener is an AI-powered tool that helps you find stocks matching specific criteria using natural language queries or traditional filters. It integrates with local LLM (Ollama) to provide intelligent query interpretation and analysis.
 
+## Screening Process Flow
+
+```mermaid
+graph TB
+    Start[User Query] --> Type{Query Type?}
+    
+    Type -->|Natural Language| NLP[Ollama LLM<br/>Query Processing]
+    Type -->|Traditional| Filters[Filter Builder]
+    
+    NLP --> Parse[Parse Query<br/>Extract Criteria]
+    Filters --> Parse
+    
+    Parse --> Load[Load Symbols<br/>from Database]
+    Load --> Fetch[Fetch Market Data<br/>& Indicators]
+    
+    Fetch --> Calc{Indicators<br/>Available?}
+    Calc -->|Yes| UseDB[Use Database<br/>Indicators ✅]
+    Calc -->|No| Calculate[Calculate<br/>On-the-fly]
+    
+    UseDB --> Filter[Apply Filters]
+    Calculate --> Filter
+    
+    Filter --> Results[Display Results]
+    Results --> Export[Export CSV<br/>Optional]
+    Results --> AI[AI Analysis<br/>Optional]
+    
+    style NLP fill:#e1f5ff
+    style UseDB fill:#e8f5e9
+    style Calculate fill:#fff4e1
+    style Results fill:#f3e5f5
+```
+
 ## Overview
 
 The Stock Screener allows you to:

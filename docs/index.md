@@ -82,23 +82,68 @@ python main.py
 
 ```mermaid
 graph TB
-    A[Data Ingestion] --> B[Strategy Engine]
-    B --> C[Risk Management]
-    C --> D[Execution Engine]
-    D --> E[Analytics]
+    subgraph "Data Sources"
+        Polygon[Polygon.io<br/>Historical Data]
+        Yahoo[Yahoo Finance<br/>Fundamentals]
+        AlpacaExt[Alpaca API<br/>Trading Data]
+    end
     
-    F[PostgreSQL] --> A
-    F --> B
-    F --> C
-    F --> D
-    F --> E
+    subgraph "Data Ingestion ✅"
+        DataIngestion[Data Ingestion Service]
+    end
     
-    G[Redis] --> A
-    G --> B
-    G --> C
-    G --> D
-    G --> E
+    subgraph "Core Services"
+        Strategy[Strategy Engine<br/>🚧 v1.1.0]
+        Risk[Risk Management<br/>🚧 v1.1.0]
+        Execution[Execution Service ✅]
+        Analytics[Analytics Service ✅]
+    end
     
+    subgraph "Storage"
+        PostgreSQL[(PostgreSQL<br/>Data & Logs)]
+        Redis[(Redis<br/>Cache)]
+    end
+    
+    subgraph "Orchestration"
+        Prefect[Prefect<br/>Workflows ✅]
+    end
+    
+    subgraph "Frontend"
+        Streamlit[Streamlit UI ✅]
+        FastAPI[FastAPI API ✅]
+    end
+    
+    Polygon --> DataIngestion
+    Yahoo --> DataIngestion
+    AlpacaExt --> DataIngestion
+    
+    DataIngestion --> PostgreSQL
+    DataIngestion --> Redis
+    DataIngestion --> Prefect
+    
+    DataIngestion --> Strategy
+    Strategy --> Risk
+    Risk --> Execution
+    Execution --> Analytics
+    
+    Strategy --> PostgreSQL
+    Risk --> PostgreSQL
+    Execution --> PostgreSQL
+    Analytics --> PostgreSQL
+    
+    Execution --> AlpacaExt
+    Analytics --> Streamlit
+    FastAPI --> Execution
+    FastAPI --> Analytics
+    
+    Prefect --> DataIngestion
+    Prefect --> Analytics
+    
+    style DataIngestion fill:#00A86B
+    style Execution fill:#00A86B
+    style Analytics fill:#00A86B
+    style Strategy fill:#FFA500
+    style Risk fill:#FFA500
 ```
 
 </div>

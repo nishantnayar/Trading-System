@@ -466,6 +466,9 @@ global_settings:
 | **User Guide** | Complete user documentation | [MkDocs](https://nishantnayar.github.io/Trading-System/) |
 | **API Reference** | REST API documentation | [docs/api/](docs/api/) |
 | **Troubleshooting** | Common issues and solutions | [docs/troubleshooting.md](docs/troubleshooting.md) |
+| **Contributing** | Contribution guidelines | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| **Changelog** | Version history and changes | [CHANGELOG.md](CHANGELOG.md) |
+| **Status Indicators** | Documentation status guide | [docs/STATUS_INDICATORS.md](docs/STATUS_INDICATORS.md) |
 
 ### Technical Documentation
 

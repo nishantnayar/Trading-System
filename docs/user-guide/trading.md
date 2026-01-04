@@ -5,6 +5,34 @@
 
 This guide covers trading operations through the Alpaca API integration.
 
+## Trading Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI
+    participant API
+    participant Alpaca
+    participant DB
+    
+    User->>UI: View Account/Positions
+    UI->>API: GET /api/alpaca/account
+    API->>Alpaca: Fetch Account Info
+    Alpaca-->>API: Account Data
+    API->>DB: Store/Update
+    API-->>UI: Return Data
+    UI-->>User: Display Portfolio
+    
+    Note over User,DB: Order Placement (v1.1.0)
+    User->>UI: Place Order
+    UI->>API: POST /api/alpaca/orders
+    API->>Alpaca: Submit Order
+    Alpaca-->>API: Order Confirmation
+    API->>DB: Log Order
+    API-->>UI: Order Status
+    UI-->>User: Confirm Order
+```
+
 ## Overview
 
 The trading system integrates with Alpaca Markets for paper and live trading. The current implementation provides core trading functionality with plans for enhanced features.

@@ -28,11 +28,6 @@ theme:
   show_sourcelink: false
   show_prev_next: false
 
-# Plugins
-plugins:
-  - search:
-      lang: en
-
 # Extensions
 markdown_extensions:
   - toc:
@@ -40,6 +35,16 @@ markdown_extensions:
       title: On this page
   - codehilite
   - fenced_code
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
 
 # Page tree
 nav:
@@ -52,23 +57,50 @@ nav:
     - Strategy Management: user-guide/strategies.md
     - Risk Management: user-guide/risk-management.md
   - API Reference:
+    - Overview: api/index.md
     - Data Ingestion: api/data-ingestion.md
     - Strategy Engine: api/strategy-engine.md
     - Execution Engine: api/execution.md
     - Risk Management: api/risk-management.md
     - Analytics: api/analytics.md
+  - Data Sources:
+    - Overview: data-ingestion/data-sources.md
+    - Yahoo Finance Attributes: data-ingestion/yahoo-finance-attributes.md
   - Troubleshooting: troubleshooting.md
   - Development:
+    - Overview: development/index.md
     - System Architecture: development/architecture.md
     - Stock Screener Architecture: development/stock-screener-architecture.md
     - Database Architecture: development/database.md
-    - Session Management Testing: development/session-management-testing.md
     - Logging Architecture: development/logging.md
+    - Prefect Deployment:
+      - Deployment Guide: development/prefect-deployment-guide.md
+      - Deployment Plan: development/prefect-deployment-plan.md
     - Testing Strategy: development/testing.md
     - CI/CD Pipeline: development/ci-cd.md
+    - Session Management Testing: development/session-management-testing.md
+    - Status Indicators: STATUS_INDICATORS.md
+  - Contributing: ../CONTRIBUTING.md
+  - Changelog: ../CHANGELOG.md
+
+# Plugins
+plugins:
+  - search:
+      lang: en
+  - mermaid2:
+      arguments:
+        theme: default
+        config:
+          themeVariables:
+            primaryColor: "#009688"
+            primaryTextColor: "#fff"
+            primaryBorderColor: "#00796B"
+            lineColor: "#009688"
+            secondaryColor: "#00A86B"
+            tertiaryColor: "#e8f5e9"
 
 # Extra configuration
 extra:
   version: 1.0.0
-  last_updated: November 2025
-  status: Active Development - Core Features Complete
+  last_updated: December 2025
+  status: ✅ Core Features Complete | 🚧 Enhanced Features In Progress

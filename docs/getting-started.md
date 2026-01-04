@@ -2,6 +2,26 @@
 
 This comprehensive guide will help you install, configure, and run the Trading System for the first time.
 
+## Installation Flow
+
+```mermaid
+graph LR
+    A[Clone<br/>Repository] --> B[Create<br/>Environment]
+    B --> C[Install<br/>Dependencies]
+    C --> D[Configure<br/>.env File]
+    D --> E[Setup<br/>Databases]
+    E --> F[Start<br/>Services]
+    F --> G[Access<br/>Dashboard]
+    
+    style A fill:#e1f5ff
+    style B fill:#e1f5ff
+    style C fill:#fff4e1
+    style D fill:#fff4e1
+    style E fill:#e8f5e9
+    style F fill:#e8f5e9
+    style G fill:#f3e5f5
+```
+
 ## Prerequisites
 
 ### System Requirements

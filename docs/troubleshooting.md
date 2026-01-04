@@ -89,6 +89,220 @@ A: No, Ollama is optional. You can use traditional filters without it. Natural l
 
 ## Common Issues
 
+### Prefect Workflow Issues
+
+**Error**: `Prefect server not accessible` or `Connection refused`
+
+**Solutions**:
+1. **Check Prefect Server Status**:
+   ```bash
+   # Check if Prefect server is running
+   curl http://localhost:4200/api/health
+   
+   # If not running, start it
+   prefect server start
+   ```
+
+2. **Verify Database Connection**:
+   ```bash
+   # Check Prefect database connection
+   prefect config get PREFECT_API_DATABASE_CONNECTION_URL
+   
+   # Test connection
+   psql -h localhost -U postgres -d prefect -c "SELECT 1;"
+   ```
+
+3. **Check Worker Status**:
+   ```bash
+   # List workers
+   prefect worker ls
+   
+   # Start worker if needed
+   prefect worker start --pool default-agent-pool
+   ```
+
+**Error**: `Flow deployment failed` or `Deployment not found`
+
+**Solutions**:
+1. **Verify Flow Code**:
+   ```bash
+   # Check flow syntax
+   python -m py_compile src/shared/prefect/flows/data_ingestion/yahoo_flows.py
+   ```
+
+2. **Redeploy Flows**:
+   ```bash
+   # Redeploy all flows
+   python src/shared/prefect/flows/data_ingestion/yahoo_flows.py
+   ```
+
+3. **Check Deployment Status**:
+   ```bash
+   # List deployments
+   prefect deployment ls
+   
+   # Inspect specific deployment
+   prefect deployment inspect "Daily Market Data Update/Daily Market Data Update"
+   ```
+
+**Error**: `Flow run failed` or `Task execution error`
+
+**Solutions**:
+1. **Check Flow Run Logs**:
+   ```bash
+   # List recent flow runs
+   prefect flow-run ls --limit 10
+   
+   # View logs for specific run
+   prefect flow-run logs <flow-run-id>
+   ```
+
+2. **Check Database Logs**:
+   ```sql
+   -- Query system logs for errors
+   SELECT * FROM logging.system_logs 
+   WHERE level = 'ERROR' 
+   ORDER BY timestamp DESC 
+   LIMIT 20;
+   ```
+
+3. **Verify Data Availability**:
+   ```bash
+   # Check if required data exists
+   python -c "from src.shared.database.connection import get_db; db = next(get_db()); print(db.execute('SELECT COUNT(*) FROM market_data').scalar())"
+   ```
+
+### Data Ingestion Issues
+
+**Error**: `Yahoo Finance API rate limit exceeded` or `429 Too Many Requests`
+
+**Solutions**:
+1. **Add Rate Limiting**:
+   ```python
+   import time
+   time.sleep(1)  # Wait 1 second between requests
+   ```
+
+2. **Use Batch Processing**:
+   ```python
+   # Process symbols in smaller batches
+   batch_size = 10
+   for i in range(0, len(symbols), batch_size):
+       batch = symbols[i:i+batch_size]
+       process_batch(batch)
+       time.sleep(5)  # Wait between batches
+   ```
+
+3. **Check Load Runs Table**:
+   ```sql
+   -- Verify what data has been loaded
+   SELECT symbol, MAX(date) as last_load_date 
+   FROM data_ingestion.load_runs 
+   GROUP BY symbol 
+   ORDER BY last_load_date DESC;
+   ```
+
+**Error**: `Symbol not found` or `Invalid symbol`
+
+**Solutions**:
+1. **Verify Symbol in Database**:
+   ```sql
+   -- Check if symbol exists
+   SELECT * FROM data_ingestion.symbols WHERE symbol = 'AAPL';
+   ```
+
+2. **Check Symbol Status**:
+   ```sql
+   -- Check for delisted symbols
+   SELECT * FROM data_ingestion.symbols WHERE status = 'delisted';
+   ```
+
+3. **Update Symbol List**:
+   ```bash
+   # Reload symbols from company info
+   python scripts/load_yahoo_data.py --data-type company_info --symbols AAPL,GOOGL
+   ```
+
+**Error**: `Data quality validation failed`
+
+**Solutions**:
+1. **Check Data Completeness**:
+   ```sql
+   -- Find missing data
+   SELECT symbol, COUNT(*) as missing_count
+   FROM market_data
+   WHERE close IS NULL OR volume IS NULL
+   GROUP BY symbol;
+   ```
+
+2. **Validate Price Ranges**:
+   ```sql
+   -- Find invalid price data
+   SELECT * FROM market_data
+   WHERE high < low OR open <= 0 OR close <= 0;
+   ```
+
+3. **Check for Duplicates**:
+   ```sql
+   -- Find duplicate entries
+   SELECT symbol, timestamp, COUNT(*) 
+   FROM market_data 
+   GROUP BY symbol, timestamp 
+   HAVING COUNT(*) > 1;
+   ```
+
+### Technical Indicators Issues
+
+**Error**: `Insufficient data for indicator calculation`
+
+**Solutions**:
+1. **Check Historical Data Availability**:
+   ```sql
+   -- Verify sufficient historical data
+   SELECT symbol, COUNT(*) as data_points, 
+          MIN(timestamp) as earliest, MAX(timestamp) as latest
+   FROM market_data
+   WHERE symbol = 'AAPL'
+   GROUP BY symbol;
+   ```
+
+2. **Calculate Required Lookback Period**:
+   ```python
+   # SMA_200 requires 200 days of data
+   # RSI_14 requires 14+ days
+   # Ensure you have enough historical data
+   ```
+
+3. **Backfill Missing Data**:
+   ```bash
+   # Load historical data
+   python scripts/load_historical_data.py --symbols AAPL --start-date 2023-01-01
+   ```
+
+**Error**: `Indicator calculation timeout` or `Slow performance`
+
+**Solutions**:
+1. **Use Database-Backed Indicators**:
+   ```sql
+   -- Query pre-calculated indicators
+   SELECT * FROM analytics.technical_indicators_latest
+   WHERE symbol = 'AAPL';
+   ```
+
+2. **Optimize Calculation**:
+   ```python
+   # Use vectorized operations
+   import pandas as pd
+   df['sma_20'] = df['close'].rolling(window=20).mean()
+   ```
+
+3. **Batch Processing**:
+   ```python
+   # Process multiple symbols in batches
+   for symbol_batch in chunks(symbols, 10):
+       calculate_indicators_batch(symbol_batch)
+   ```
+
 ### Streamlit UI Issues
 
 **Error**: `ModuleNotFoundError: No module named 'streamlit'`
@@ -121,11 +335,71 @@ def initialize_session_state():
 
 **Error**: `Charts not displaying properly`
 
-**Solution**: Check Plotly installation and data format:
-```bash
-pip install plotly
-# Ensure data is in correct format for Plotly charts
-```
+**Solutions**:
+1. **Check Plotly Installation**:
+   ```bash
+   pip install plotly
+   pip install --upgrade plotly
+   ```
+
+2. **Verify Data Format**:
+   ```python
+   # Ensure data has required columns
+   required_cols = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+   assert all(col in df.columns for col in required_cols)
+   ```
+
+3. **Check Browser Console**:
+   - Open browser developer tools (F12)
+   - Check Console tab for JavaScript errors
+   - Verify Plotly.js is loaded
+
+4. **Clear Browser Cache**:
+   ```bash
+   # Hard refresh: Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac)
+   ```
+
+**Error**: `API request failed` or `Connection timeout`
+
+**Solutions**:
+1. **Check FastAPI Server**:
+   ```bash
+   # Verify server is running
+   curl http://localhost:8001/health
+   
+   # Check server logs
+   tail -f logs/errors.log
+   ```
+
+2. **Verify API Endpoint**:
+   ```bash
+   # Test endpoint directly
+   curl http://localhost:8001/api/market-data/stats
+   ```
+
+3. **Check CORS Settings**:
+   ```python
+   # In FastAPI app, ensure CORS is configured
+   from fastapi.middleware.cors import CORSMiddleware
+   app.add_middleware(CORSMiddleware, allow_origins=["*"])
+   ```
+
+**Error**: `Session state reset` or `Data lost on page refresh`
+
+**Solutions**:
+1. **Persist Critical Data**:
+   ```python
+   # Use st.session_state for temporary data
+   # Use database for persistent data
+   if 'portfolio_data' not in st.session_state:
+       st.session_state.portfolio_data = load_from_database()
+   ```
+
+2. **Save User Preferences**:
+   ```python
+   # Store preferences in database or file
+   save_user_preferences(st.session_state.user_preferences)
+   ```
 
 **Error**: `LLM service not available` or `Ollama connection failed`
 
@@ -220,18 +494,111 @@ markers =
 **Issue**: Slow database queries
 
 **Solutions**:
-1. Check database indexes
-2. Monitor connection pool usage
-3. Review query performance logs
-4. Consider database optimization
+1. **Check Database Indexes**:
+   ```sql
+   -- List indexes on market_data table
+   SELECT indexname, indexdef 
+   FROM pg_indexes 
+   WHERE tablename = 'market_data';
+   
+   -- Create missing indexes if needed
+   CREATE INDEX IF NOT EXISTS idx_market_data_symbol_timestamp 
+   ON market_data(symbol, timestamp DESC);
+   ```
+
+2. **Monitor Query Performance**:
+   ```sql
+   -- Enable query logging
+   SET log_min_duration_statement = 1000;  -- Log queries > 1 second
+   
+   -- Check slow queries
+   SELECT query, mean_exec_time, calls 
+   FROM pg_stat_statements 
+   ORDER BY mean_exec_time DESC 
+   LIMIT 10;
+   ```
+
+3. **Optimize Connection Pool**:
+   ```python
+   # Adjust pool size in database.py
+   pool_size=10,
+   max_overflow=20,
+   pool_recycle=3600
+   ```
+
+4. **Use Query Optimization**:
+   ```sql
+   -- Use EXPLAIN ANALYZE to optimize queries
+   EXPLAIN ANALYZE 
+   SELECT * FROM market_data 
+   WHERE symbol = 'AAPL' 
+   AND timestamp > NOW() - INTERVAL '30 days';
+   ```
 
 **Issue**: High memory usage
 
 **Solutions**:
-1. Check for memory leaks in logs
-2. Monitor service resource usage
-3. Review data processing efficiency
-4. Consider data archiving
+1. **Check Memory Usage**:
+   ```python
+   import psutil
+   process = psutil.Process()
+   print(f"Memory usage: {process.memory_info().rss / 1024 / 1024} MB")
+   ```
+
+2. **Monitor Service Resources**:
+   ```bash
+   # Check system resources
+   top
+   # Or
+   htop
+   ```
+
+3. **Optimize Data Processing**:
+   ```python
+   # Use chunking for large datasets
+   chunk_size = 1000
+   for chunk in pd.read_sql(query, conn, chunksize=chunk_size):
+       process_chunk(chunk)
+   ```
+
+4. **Implement Data Archiving**:
+   ```sql
+   -- Archive old data
+   CREATE TABLE market_data_archive AS 
+   SELECT * FROM market_data 
+   WHERE timestamp < NOW() - INTERVAL '1 year';
+   
+   DELETE FROM market_data 
+   WHERE timestamp < NOW() - INTERVAL '1 year';
+   ```
+
+**Issue**: Slow API responses
+
+**Solutions**:
+1. **Enable Caching**:
+   ```python
+   from functools import lru_cache
+   
+   @lru_cache(maxsize=100)
+   def get_market_data(symbol: str):
+       # Cache frequently accessed data
+       pass
+   ```
+
+2. **Use Async Endpoints**:
+   ```python
+   @router.get("/api/data/{symbol}")
+   async def get_data(symbol: str):
+       # Use async for I/O operations
+       return await fetch_data_async(symbol)
+   ```
+
+3. **Optimize Database Queries**:
+   ```python
+   # Use select_related for joins
+   # Use only() to limit fields
+   # Add pagination for large result sets
+   ```
 
 ## Database Issues
 
