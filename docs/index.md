@@ -105,29 +105,30 @@ graph TB
 
 ### **Core Components**
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Data Ingestion** | Python + pandas | Market data processing (Polygon.io, Yahoo Finance, Alpaca) |
-| **Strategy Engine** | Python + Pydantic | Algorithm execution (v1.1.0) |
-| **Risk Management** | Python + PostgreSQL | Risk controls (v1.1.0) |
-| **Execution Engine** | Python + Alpaca API | Order management |
-| **Analytics** | Python + Plotly | Performance tracking and visualization |
-| **AI Services** | Python + Ollama | Natural language processing for stock screener |
-| **Database** | PostgreSQL | Data persistence |
-| **Cache** | Redis | High-speed access (optional) |
+| Component | Technology | Status | Purpose |
+|-----------|------------|--------|---------|
+| **Data Ingestion** | Python + pandas | ✅ v1.0.0 | Market data processing (Polygon.io, Yahoo Finance, Alpaca) |
+| **Strategy Engine** | Python + Pydantic | 🚧 v1.1.0 | Algorithm execution (planned) |
+| **Risk Management** | Python + PostgreSQL | 🚧 v1.1.0 | Risk controls (planned) |
+| **Execution Engine** | Python + Alpaca API | ✅ v1.0.0 | Order management (account, positions, orders) |
+| **Analytics** | Python + Plotly | ✅ v1.0.0 | Performance tracking and visualization |
+| **AI Services** | Python + Ollama | ✅ v1.0.0 | Natural language processing for stock screener |
+| **Database** | PostgreSQL | ✅ v1.0.0 | Data persistence |
+| **Cache** | Redis | ✅ v1.0.0 | High-speed access (optional) |
 
 ---
 
 ## 🎯 **Key Features**
 
 ### **Trading Capabilities**
-- ✅ **Paper Trading** - Start with Alpaca paper trading
-- ✅ **Historical Data** - Polygon.io and Yahoo Finance integration for backtesting
-- ✅ **AI-Powered Screener** - Natural language stock screening with Ollama LLM
-- ✅ **Strategy Backtesting** - Test before live deployment
-- ✅ **Risk Controls** - Built-in risk management
-- ✅ **Performance Analytics** - Interactive charts and metrics with Plotly
-- ✅ **Order Management** - Complete order lifecycle management
+- ✅ **Paper Trading** - Start with Alpaca paper trading (v1.0.0)
+- ✅ **Historical Data** - Polygon.io and Yahoo Finance integration for backtesting (v1.0.0)
+- ✅ **AI-Powered Screener** - Natural language stock screening with Ollama LLM (v1.0.0)
+- 🚧 **Strategy Backtesting** - Test before live deployment (v1.1.0)
+- 🚧 **Risk Controls** - Built-in risk management (v1.1.0)
+- ✅ **Performance Analytics** - Interactive charts and metrics with Plotly (v1.0.0)
+- ✅ **Order Management** - Account, position, and order viewing/cancellation (v1.0.0)
+- 🚧 **Order Placement** - Place new orders via UI (v1.1.0)
 
 ### **Technical Features**
 - ✅ **Modular Architecture** - Service-oriented design ready for scaling

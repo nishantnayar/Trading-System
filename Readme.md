@@ -26,24 +26,31 @@ A production-grade algorithmic trading platform designed for equities trading wi
 ## Key Features
 
 ### Trading & Execution
-- **Paper Trading Integration**: Safe testing environment via Alpaca paper trading API
-- **Live Trading Support**: Production-ready execution infrastructure
-- **Strategy Framework**: Plugin-based architecture for custom trading strategies
-- **Risk Management**: Built-in position sizing, drawdown limits, and risk controls
-- **Backtesting Engine**: Historical strategy validation and performance analysis
+- **Paper Trading Integration**: ✅ Safe testing environment via Alpaca paper trading API
+- **Account Management**: ✅ View account balance, buying power, and portfolio value
+- **Position Management**: ✅ Track positions, unrealized P&L, and close positions
+- **Order Management**: ✅ View and cancel orders, monitor order status
+- **Live Trading Support**: 🚧 Production-ready execution infrastructure (planned)
+- **Strategy Framework**: 🚧 Plugin-based architecture for custom trading strategies (planned)
+- **Risk Management**: 🚧 Built-in position sizing, drawdown limits, and risk controls (planned)
+- **Backtesting Engine**: 🚧 Historical strategy validation and performance analysis (planned)
 
 ### Data Management
 - **Multi-Source Data Integration**: Polygon.io, Yahoo Finance, and Alpaca market data
+- **Comprehensive Yahoo Finance Data**: 10 data types including market data, fundamentals, financial statements, corporate actions, ownership data, and ESG scores
 - **Automated Data Ingestion**: Prefect-powered scheduled workflows for daily and weekly data updates
 - **Data Quality Assurance**: Automated validation, completeness checks, and quality monitoring
-- **Technical Indicators**: Automated calculation of SMA, EMA, RSI, MACD, Bollinger Bands with proper time-series resampling
+- **Technical Indicators**: Automated calculation and storage of SMA, EMA, RSI, MACD, Bollinger Bands with proper time-series resampling
+- **Database-Backed Indicators**: Pre-calculated indicators for 10-100x faster stock screening
 - **Timezone Management**: UTC storage with configurable display timezone (default: Central Time)
 
 ### Analytics & Monitoring
 - **Real-Time Dashboard**: Streamlit-based web interface with interactive Plotly visualizations
+- **AI-Powered Stock Screener**: Natural language queries with Ollama LLM integration for intelligent stock screening
 - **Performance Analytics**: Comprehensive strategy performance metrics and reporting
 - **Database-First Logging**: Queryable logs stored in PostgreSQL for operational analysis
 - **Workflow Monitoring**: Prefect UI integration for flow execution tracking
+- **Interactive Charts**: Professional financial visualizations with Plotly (candlestick, volume, technical indicators)
 
 ### Architecture & Development
 - **Modular Monolithic Design**: Service-oriented architecture with clear boundaries
@@ -71,10 +78,12 @@ The system employs a **modular monolithic architecture** with the following serv
 | **API Framework** | FastAPI 0.100+ | RESTful API services |
 | **Database** | PostgreSQL 15+ | Primary data storage and logging |
 | **Cache** | Redis 7+ | Caching and message queuing (optional) |
-| **Orchestration** | Prefect 3.4+ | Workflow automation and scheduling |
+| **Orchestration** | Prefect 3.4+ | Workflow automation and scheduling (optional) |
 | **Frontend** | Streamlit | Web dashboard and user interface |
 | **Data Processing** | pandas, NumPy | Market data analysis and manipulation |
 | **Visualization** | Plotly | Interactive charts and analytics |
+| **AI/ML** | Ollama | Local LLM for natural language stock screening (optional) |
+| **Technical Analysis** | pandas-ta | Technical indicator calculations |
 
 ## Prerequisites
 
@@ -83,9 +92,11 @@ The system employs a **modular monolithic architecture** with the following serv
 | Python | 3.11+ | Core runtime environment |
 | PostgreSQL | 15+ | Primary database |
 | Redis | 7+ | Caching layer (optional) |
-| Alpaca API | - | Trading and market data access |
-| Prefect | 3.4+ | Workflow orchestration (optional) |
-| Ollama | Latest | Local LLM for AI features (optional) |
+| Alpaca API | - | Trading and market data access (free paper trading account) |
+| Prefect | 3.4+ | Workflow orchestration (optional, recommended for automation) |
+| Ollama | Latest | Local LLM for AI-powered stock screener (optional) |
+| Polygon.io API | - | Historical market data (free tier: 5 calls/min) |
+| Yahoo Finance | - | Free market data and fundamentals (via yfinance library) |
 
 > **Note**: Alpaca paper trading accounts are free and recommended for initial testing and development.
 
@@ -133,10 +144,14 @@ REDIS_URL=redis://localhost:6379/0
 DEBUG=false
 LOG_LEVEL=INFO
 
-# Prefect Configuration (optional)
+# Prefect Configuration (optional, but recommended for automated workflows)
 PREFECT_API_URL=http://localhost:4200/api
+PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://postgres:password@localhost:5432/prefect
 PREFECT_LOGGING_LEVEL=INFO
 PREFECT_WORK_POOL_NAME=default-agent-pool
+
+# Ollama Configuration (optional, for AI-powered stock screener)
+OLLAMA_BASE_URL=http://localhost:11434
 ```
 
 ### 4. Database Initialization
@@ -146,18 +161,47 @@ PREFECT_WORK_POOL_NAME=default-agent-pool
 python scripts/setup_databases.py
 ```
 
+**Verify Database Setup**:
+```bash
+# Test database connections
+python scripts/test_database_connections.py
+```
+
+Expected output should show successful connections to both `trading_system` and `prefect` databases.
+
 ### 5. Start Services
 
+#### Option A: Start Main Application
 ```bash
-# Start application
+# Start FastAPI server and Streamlit UI
 python main.py
 ```
 
-### 6. Access Interfaces
+#### Option B: Start Components Separately
+```bash
+# Terminal 1: Start FastAPI server
+python -m src.web.main
 
-- **Web Dashboard**: http://localhost:8501
-- **API Documentation**: http://localhost:8001/docs
-- **Prefect UI** (if enabled): http://localhost:4200
+# Terminal 2: Start Streamlit UI
+streamlit run streamlit_ui/streamlit_app.py
+```
+
+### 6. Verify Installation
+
+```bash
+# Check API health
+curl http://localhost:8001/health
+
+# Or open in browser
+# http://localhost:8001/docs - API documentation
+# http://localhost:8501 - Streamlit dashboard
+```
+
+### 7. Access Interfaces
+
+- **Web Dashboard**: http://localhost:8501 (Streamlit UI)
+- **API Documentation**: http://localhost:8001/docs (FastAPI Swagger UI)
+- **Prefect UI** (if enabled): http://localhost:4200 (Prefect Dashboard)
 
 ## Project Structure
 
@@ -238,28 +282,77 @@ The system includes Prefect-powered workflow orchestration for automated data in
 
 ### Prefect Setup
 
-1. **Install Prefect**:
+The system uses Prefect 3.4+ for workflow orchestration. Prefect is **optional** but recommended for automated data ingestion.
+
+#### Quick Start
+
+1. **Install Prefect** (if not already installed):
    ```bash
    pip install prefect>=3.4.0
    ```
 
-2. **Start Prefect Server**:
+2. **Configure Prefect Database**:
+   ```bash
+   # Set Prefect database connection (if using separate database)
+   prefect config set PREFECT_API_DATABASE_CONNECTION_URL="postgresql+asyncpg://postgres:password@localhost:5432/prefect"
+   
+   # Initialize Prefect database schema
+   prefect database upgrade
+   ```
+
+3. **Start Prefect Server**:
    ```bash
    prefect server start
    ```
    Access UI at: http://localhost:4200
 
-3. **Deploy Flows**:
+4. **Deploy Data Ingestion Flows**:
    ```bash
+   # Deploy Yahoo Finance flows (daily and weekly schedules)
    python src/shared/prefect/flows/data_ingestion/yahoo_flows.py
    ```
 
-4. **Start Worker**:
+5. **Start Worker** (in a separate terminal):
    ```bash
    prefect worker start --pool default-agent-pool
    ```
 
-For detailed deployment instructions, see [Prefect Deployment Plan](docs/development/prefect-deployment-plan.md).
+6. **Verify Deployment**:
+   ```bash
+   # List all deployments
+   prefect deployment ls
+   
+   # Check flow runs
+   prefect flow-run ls --limit 10
+   ```
+
+#### Available Prefect Flows
+
+**✅ Implemented:**
+- **Daily Market Data Update**: Runs daily at 22:15 UTC (Mon-Fri) - Fetches hourly market data from Yahoo Finance
+- **Weekly Company Information Update**: Runs Sunday at 02:00 UTC
+- **Weekly Key Statistics Update**: Runs Sunday at 03:00 UTC
+- **Weekly Company Data Update**: Combined flow running Sunday at 02:00 UTC
+
+**📋 Planned:**
+- Technical indicators calculation flows
+- Data validation and quality monitoring flows
+- Maintenance and cleanup flows
+
+#### Prefect Configuration
+
+Add to your `.env` file:
+```bash
+# Prefect Configuration
+PREFECT_API_URL=http://localhost:4200/api
+PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://postgres:password@localhost:5432/prefect
+PREFECT_LOGGING_LEVEL=INFO
+PREFECT_WORK_POOL_NAME=default-agent-pool
+```
+
+For detailed deployment instructions, see:
+- [Prefect Deployment Guide](docs/development/prefect-deployment-guide.md) - Step-by-step setup
+- [Prefect Deployment Plan](docs/development/prefect-deployment-plan.md) - Architecture and implementation plan
 
 ## Development
 
@@ -339,15 +432,22 @@ strategies:
 
 ### Risk Management
 
-Configure in `config/risk_limits.yaml`:
+Risk management settings are configured per-strategy in `config/strategies.yaml`:
 
 ```yaml
-risk_management:
-  portfolio:
-    max_total_exposure: 0.8
-    max_drawdown: 0.10
-    max_daily_loss: 0.05
+strategies:
+  - name: "momentum_strategy"
+    risk_limits:
+      max_drawdown: 0.05
+      max_daily_loss: 0.02
+      max_positions: 10
+      max_sector_exposure: 0.3
+
+global_settings:
+  max_total_exposure: 0.8
 ```
+
+> **Note**: Risk management module implementation is planned for v1.1.0. Currently, risk limits are defined in strategy configuration files.
 
 ## Security
 
@@ -358,23 +458,59 @@ risk_management:
 
 ## Documentation
 
+### Quick Links
+
 | Resource | Description | Link |
 |----------|-------------|------|
-| Architecture | Detailed system architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| Database | Database schema and management | [docs/development/database.md](docs/development/database.md) |
-| Logging | Logging architecture and configuration | [docs/development/logging.md](docs/development/logging.md) |
-| Prefect | Workflow orchestration guide | [docs/development/prefect-deployment-plan.md](docs/development/prefect-deployment-plan.md) |
-| Testing | Testing strategy and guidelines | [docs/development/testing.md](docs/development/testing.md) |
-| User Guide | Complete user documentation | [MkDocs](https://nishantnayar.github.io/Trading-System/) |
+| **Getting Started** | Complete setup and installation guide | [docs/getting-started.md](docs/getting-started.md) |
+| **User Guide** | Complete user documentation | [MkDocs](https://nishantnayar.github.io/Trading-System/) |
+| **API Reference** | REST API documentation | [docs/api/](docs/api/) |
+| **Troubleshooting** | Common issues and solutions | [docs/troubleshooting.md](docs/troubleshooting.md) |
+
+### Technical Documentation
+
+| Resource | Description | Link |
+|----------|-------------|------|
+| **Architecture** | Detailed system architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| **Database** | Database schema and management | [docs/development/database.md](docs/development/database.md) |
+| **Logging** | Logging architecture and configuration | [docs/development/logging.md](docs/development/logging.md) |
+| **Prefect** | Workflow orchestration guide | [docs/development/prefect-deployment-guide.md](docs/development/prefect-deployment-guide.md) |
+| **Data Sources** | Market data integration guide | [docs/data-ingestion/data-sources.md](docs/data-ingestion/data-sources.md) |
+| **Testing** | Testing strategy and guidelines | [docs/development/testing.md](docs/development/testing.md) |
 
 ## Roadmap
 
 | Version | Status | Key Features |
 |---------|--------|--------------|
-| v1.0.0 | Current | Paper trading, market data integration, web dashboard, Prefect orchestration |
-| v1.1.0 | Planned | Strategy engine implementation, backtesting framework, risk management |
-| v1.2.0 | Planned | Advanced Prefect workflows, analytics flows, data validation |
-| v1.3.0 | Future | Microservices architecture, cloud deployment, distributed execution |
+| v1.0.0 | ✅ Current | Paper trading, market data integration (Polygon.io, Yahoo Finance), Streamlit dashboard, Prefect orchestration, database-first logging, technical indicators |
+| v1.1.0 | 🚧 Planned | Strategy engine implementation, backtesting framework, risk management module, order placement UI |
+| v1.2.0 | 📋 Planned | Advanced Prefect workflows, analytics flows, data validation automation, enhanced monitoring |
+| v1.3.0 | 🔮 Future | Microservices architecture, cloud deployment, distributed execution, multi-asset support |
+
+### Implementation Status
+
+**✅ Completed (v1.0.0):**
+- Paper trading integration with Alpaca
+- Multi-source data ingestion (Polygon.io, Yahoo Finance)
+- Comprehensive Yahoo Finance data (10 data types: market data, company info, key statistics, dividends, splits, institutional holders, financial statements, company officers, analyst recommendations, ESG scores)
+- Streamlit web dashboard with Plotly charts
+- Database-first logging system
+- Technical indicators calculation and storage
+- Prefect workflow orchestration (Yahoo Finance flows)
+- Timezone management (UTC storage, Central Time display)
+- AI-powered stock screener (with Ollama integration)
+
+**🚧 In Progress (v1.1.0):**
+- Strategy engine framework
+- Backtesting infrastructure
+- Risk management service
+- Enhanced order management UI
+
+**📋 Planned:**
+- Advanced analytics and reporting
+- Automated data quality monitoring
+- Email/SMS notifications
+- Real-time data streaming
 
 ## Contributing
 
@@ -400,10 +536,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- **Alpaca Markets** - Trading API infrastructure
+- **Alpaca Markets** - Trading API infrastructure and paper trading platform
 - **FastAPI** - Modern web framework
 - **Polygon.io** - Market data services
+- **Yahoo Finance** - Free market data and fundamentals
 - **Prefect** - Workflow orchestration platform
+- **Streamlit** - Interactive web dashboard framework
+- **Ollama** - Local LLM for AI features
 - **Python Community** - Open-source ecosystem
 
 ---

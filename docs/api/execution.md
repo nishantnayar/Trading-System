@@ -1,15 +1,19 @@
 # Execution Engine API
 
+> **📋 Implementation Status**: ✅ Core Features Implemented (v1.0.0)  
+> **Current Status**: Account management, position tracking, order viewing/cancellation, market clock available
+
 This guide covers the execution engine API endpoints for order management, trade execution, and position tracking through the Alpaca trading API.
 
 ## Overview
 
 The execution engine provides REST API endpoints for:
-- Account management and monitoring
-- Position tracking and management
-- Order placement and management
-- Trade execution and monitoring
-- Market status and clock information
+- ✅ Account management and monitoring
+- ✅ Position tracking and management
+- ✅ Order viewing and cancellation
+- ✅ Market status and clock information
+- 🚧 Order placement (planned for v1.1.0)
+- 🚧 Advanced order types (planned for v1.1.0)
 
 ## Base URL
 

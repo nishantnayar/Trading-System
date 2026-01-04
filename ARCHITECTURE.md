@@ -4,8 +4,8 @@
 
 A production-grade algorithmic trading system designed for local deployment, focusing on equities trading through Alpaca with paper trading capabilities. The system uses a modular monolithic architecture with clear service boundaries, Python-based components, and a modern web interface.
 
-**Current Architecture**: Modular monolith with service-oriented design  
-**Future Plans**: Microservices architecture with Prefect orchestration (v1.3.0+)
+**Current Architecture**: ✅ Modular monolith with service-oriented design (v1.0.0)  
+**Future Plans**: 🔮 Microservices architecture with Prefect orchestration (v1.3.0+)
 
 **Author**: Nishant Nayar  
 **Email**: nishant.nayar@hotmail.com  
@@ -78,7 +78,8 @@ The system is implemented as a **modular monolith** with clear service boundarie
 - Timezone conversion for display (UTC to Central Time)
 
 **Implementation Status**: ✅ Core functionality implemented  
-**Future Enhancements**: Prefect workflows for automated data collection (v1.2.0)
+**Features**: Multi-source data ingestion (Polygon.io, Yahoo Finance), symbol management, data quality checks, Prefect workflows  
+**Future Enhancements**: Additional data sources, real-time WebSocket streaming (v1.2.0)
 
 ### 2. Strategy Engine Module
 **Purpose**: Execute trading strategies and generate signals
@@ -116,7 +117,8 @@ The system is implemented as a **modular monolith** with clear service boundarie
 - Implement order types (market, limit, stop)
 
 **Implementation Status**: ✅ Core Alpaca integration complete  
-**Future Enhancements**: Advanced order types, automated trade reconciliation
+**Features**: Account management, position tracking, order viewing/cancellation, market clock  
+**Future Enhancements**: Order placement UI, advanced order types, automated trade reconciliation (v1.1.0)
 
 ### 4. Risk Management Module
 **Purpose**: Monitor and control trading risks
@@ -158,7 +160,8 @@ The system is implemented as a **modular monolith** with clear service boundarie
 - Natural language query interpretation
 
 **Implementation Status**: ✅ Market data visualization and AI screener complete  
-**Future Enhancements**: Strategy performance metrics, backtesting framework
+**Features**: Interactive Plotly charts, technical indicators display, AI-powered stock screener (Ollama), database-backed indicators  
+**Future Enhancements**: Strategy performance metrics, backtesting framework, advanced analytics (v1.1.0)
 
 ### 6. Notification Module
 **Purpose**: Handle alerts and communications

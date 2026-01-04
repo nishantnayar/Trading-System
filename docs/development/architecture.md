@@ -9,7 +9,7 @@ A production-grade algorithmic trading system designed for local deployment, foc
 **Repository**: https://github.com/nishantnayar/trading-system  
 **Documentation**: https://nishantnayar.github.io/trading-system  
 **Last Updated**: December 2025  
-**Status**: Design Phase
+**Status**: ✅ Core Features Implemented (v1.0.0) | 🚧 Enhanced Features In Progress (v1.1.0)
 
 ## System Requirements
 
@@ -33,9 +33,9 @@ A production-grade algorithmic trading system designed for local deployment, foc
 
 ### Frontend
 - **Backend**: FastAPI
-- **Frontend**: HTMX + Plotly + Tailwind CSS
-- **Charts**: Plotly.js for financial visualizations
-- **Updates**: Periodic refresh (every 5-10 minutes)
+- **Frontend**: Streamlit + Plotly + Custom CSS
+- **Charts**: Plotly for interactive financial visualizations
+- **Updates**: Real-time updates via Streamlit's reactive framework
 
 ### Development & Quality
 - **Linting**: Flake8 + Black + isort
@@ -417,180 +417,104 @@ class DataSyncEventBus:
 ### Design Philosophy
 
 #### Core Principles
-1. **Log-Driven Interface**: UI components are powered by structured log data from PostgreSQL
+1. **Interactive Dashboard**: Streamlit-based multipage interface with session state management
 2. **Analysis-Focused**: Emphasis on monitoring, analysis, and configuration rather than trading execution
-3. **No Real-time Requirements**: Periodic updates (5-10 minutes) align with hourly data ingestion
-4. **No Trading Interface**: Automated trading decisions handled by strategy engine
-5. **Simple & Maintainable**: HTMX + Plotly + Tailwind CSS for lightweight, responsive interface
+3. **Real-time Updates**: Streamlit's reactive framework provides live updates
+4. **Trading Interface**: ✅ Account management, position tracking, and order management (paper trading)
+5. **Simple & Maintainable**: Streamlit + Plotly + Custom CSS for professional, responsive interface
 
 #### Technology Stack
 - **Backend**: FastAPI (Python web framework)
-- **Frontend**: HTMX + Plotly + Tailwind CSS
-- **Charts**: Plotly.js for financial visualizations
+- **Frontend**: Streamlit (multipage application framework)
+- **Charts**: Plotly for interactive financial visualizations
+- **Styling**: Custom CSS for professional appearance
 - **Database**: PostgreSQL (structured logs, trading data, system state)
-- **Updates**: Periodic refresh (every 5-10 minutes)
+- **AI Integration**: Ollama LLM for natural language stock screening
 
 ### UI Components
 
-#### 1. System Health Dashboard
-```html
-<!-- System Status from Logs -->
-<div class="system-status" 
-     hx-get="/api/logs/system-health" 
-     hx-trigger="every 5m">
-    <div class="status-grid">
-        <div class="service-status">
-            <h4>Data Ingestion</h4>
-            <span class="status-indicator" data-service="data_ingestion">
-                Loading...
-            </span>
-        </div>
-        <div class="service-status">
-            <h4>Strategy Engine</h4>
-            <span class="status-indicator" data-service="strategy_engine">
-                Loading...
-            </span>
-        </div>
-        <div class="service-status">
-            <h4>Execution Service</h4>
-            <span class="status-indicator" data-service="execution">
-                Loading...
-            </span>
-        </div>
-    </div>
-</div>
-```
+The Streamlit UI provides a multipage interface with the following pages:
 
-#### 2. Portfolio Analysis Interface
-```html
-<!-- Portfolio Dashboard -->
-<div class="portfolio-dashboard">
-    <div class="portfolio-summary">
-        <h3>Portfolio Performance</h3>
-        <div class="summary-metrics">
-            <div class="metric">
-                <span class="label">Total Value:</span>
-                <span class="value" id="total-value">Loading...</span>
-            </div>
-            <div class="metric">
-                <span class="label">Today's P&L:</span>
-                <span class="value" id="daily-pnl">Loading...</span>
-            </div>
-            <div class="metric">
-                <span class="label">Sharpe Ratio:</span>
-                <span class="value" id="sharpe-ratio">Loading...</span>
-            </div>
-        </div>
-    </div>
-    
-    <div class="portfolio-chart">
-        <div id="portfolio-performance-chart" 
-             hx-get="/api/portfolio/performance-chart" 
-             hx-trigger="load, every 15m">
-            Loading portfolio chart...
-        </div>
-    </div>
-</div>
-```
+#### 1. Portfolio Page ✅ Implemented
+- Real-time portfolio tracking and performance metrics
+- Portfolio value, daily change, and performance indicators
+- Interactive charts showing portfolio performance over time
+- Asset allocation visualization
+- Recent trades and transactions
+- Risk metrics and exposure
 
-#### 3. Log Analysis Interface
-```html
-<!-- Log Viewer -->
-<div class="log-viewer">
-    <div class="log-controls">
-        <div class="filter-group">
-            <label>Service:</label>
-            <select name="service" hx-get="/api/logs/filtered" hx-target="#log-content">
-                <option value="">All Services</option>
-                <option value="data_ingestion">Data Ingestion</option>
-                <option value="strategy_engine">Strategy Engine</option>
-                <option value="execution">Execution</option>
-                <option value="risk_management">Risk Management</option>
-                <option value="analytics">Analytics</option>
-                <option value="notification">Notification</option>
-            </select>
-        </div>
-        
-        <div class="filter-group">
-            <label>Log Level:</label>
-            <select name="level">
-                <option value="">All Levels</option>
-                <option value="ERROR">ERROR</option>
-                <option value="WARNING">WARNING</option>
-                <option value="INFO">INFO</option>
-                <option value="DEBUG">DEBUG</option>
-            </select>
-        </div>
-        
-        <div class="filter-group">
-            <label>Time Range:</label>
-            <select name="time_range">
-                <option value="1h">Last Hour</option>
-                <option value="24h">Last 24 Hours</option>
-                <option value="7d">Last 7 Days</option>
-            </select>
-        </div>
-    </div>
-    
-    <div id="log-content" 
-         hx-get="/api/logs/recent" 
-         hx-trigger="load, every 30s">
-        Loading logs...
-    </div>
-</div>
-```
+#### 2. Analysis Page ✅ Implemented
+- Symbol selection with session state persistence
+- Interactive Plotly charts with candlesticks and volume
+- Technical indicators display (SMA, EMA, RSI, MACD, Bollinger Bands)
+- Volume analysis visualization
+- Timeframe selection (1D, 1W, 1M, 3M, 6M, 1Y)
+
+#### 3. Stock Screener Page ✅ Implemented
+- AI-powered natural language queries (with Ollama integration)
+- Traditional filters (sector, price, volume, RSI, market cap)
+- Technical indicators filtering
+- Interactive results table with sorting and filtering
+- CSV export functionality
+- AI analysis of screening results
+
+#### 4. Author Page ✅ Implemented
+- System information and team details
+- Technology stack overview
+- Architecture information
+- Session state debugging information
+
+#### 5. Settings Page ✅ Implemented
+- User preferences and interface settings
+- Portfolio configuration options
+- Session state management (reset, clear, export)
+- System configuration display
 
 ### Backend API Architecture
 
-#### Log-Driven API Endpoints
+The FastAPI backend provides REST API endpoints that power the Streamlit frontend:
+
+#### Market Data Endpoints ✅ Implemented
 ```python
-# src/web/api/logs.py
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from src.shared.database.connection import get_db
-
-router = APIRouter(prefix="/api/logs", tags=["logs"])
-
-@router.get("/health/{service}")
-async def get_service_health(service: str, db: Session = Depends(get_db)):
-    """Get health status for a specific service from logs"""
-    # Query system_logs for recent service activity
-    # Return health indicators based on log patterns
+# src/web/api/market_data.py
+@router.get("/api/market-data/stats")
+async def get_market_data_stats():
+    """Get market data statistics"""
     
-@router.get("/performance/{service}")
-async def get_service_performance(service: str, db: Session = Depends(get_db)):
-    """Get performance metrics for a service from performance_logs"""
-    # Query performance_logs table
-    # Return execution times, memory usage, etc.
+@router.get("/api/market-data/symbols")
+async def get_symbols():
+    """Get available symbols"""
     
-@router.get("/errors/summary")
-async def get_error_summary(db: Session = Depends(get_db)):
-    """Get error summary from system_logs"""
-    # Query system_logs for ERROR level entries
-    # Return error counts, trends, etc.
+@router.get("/api/market-data/data/{symbol}")
+async def get_market_data(symbol: str, start_date: str = None, end_date: str = None):
+    """Get historical market data"""
 ```
 
-#### Trading Data Endpoints
+#### Trading Endpoints ✅ Implemented
 ```python
-# src/web/api/trading.py
-@router.get("/portfolio/summary")
-async def get_portfolio_summary(db: Session = Depends(get_db)):
-    """Get portfolio summary from positions and trades tables"""
-    # Query positions table for current holdings
-    # Calculate total value, P&L, etc.
+# src/web/api/alpaca.py
+@router.get("/api/alpaca/account")
+async def get_account():
+    """Get Alpaca account information"""
     
-@router.get("/strategies/list")
-async def get_strategies_list(db: Session = Depends(get_db)):
-    """Get list of strategies from strategies table"""
-    # Query strategies table
-    # Return active/inactive strategies
+@router.get("/api/alpaca/positions")
+async def get_positions():
+    """Get all positions"""
     
-@router.get("/trading/activity")
-async def get_trading_activity(db: Session = Depends(get_db)):
-    """Get recent trading activity from trades table"""
-    # Query trades table for recent activity
-    # Return trade history, performance metrics
+@router.get("/api/alpaca/orders")
+async def get_orders():
+    """Get orders"""
 ```
+
+#### Analytics Endpoints ✅ Implemented
+```python
+# src/web/api/analytics.py
+@router.get("/api/analytics/indicators/{symbol}")
+async def get_technical_indicators(symbol: str):
+    """Get technical indicators for a symbol"""
+```
+
+See [API Reference Documentation](../api/) for complete endpoint documentation.
 
 ## Logging Architecture
 
@@ -1988,7 +1912,7 @@ The trading system is designed for local deployment on Windows 10, providing a c
 ├─────────────────────────────────────────────────────────┤
 │  Web Layer                                              │
 │  ├── FastAPI Web Server (Port 8000)                    │
-│  └── Frontend (HTMX + Plotly + Tailwind CSS)          │
+│  └── Frontend (Streamlit + Plotly + Custom CSS)       │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -2064,9 +1988,10 @@ web_layer:
     endpoints: [api, health, metrics, logs]
   
   frontend:
-    technology: [htmx, plotly, tailwind_css]
-    static_files: [css, js, images]
+    technology: [streamlit, plotly, custom_css]
+    pages: [portfolio, analysis, screener, author, settings]
     api_integration: fastapi_server
+    session_state: enabled
 ```
 
 ### Deployment Phases
