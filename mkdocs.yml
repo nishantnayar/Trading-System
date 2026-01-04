@@ -65,9 +65,21 @@ nav:
   - Troubleshooting: troubleshooting.md
   - Development:
     - Overview: development/index.md
-    - System Architecture: development/architecture.md
+    - Architecture:
+      - Overview: development/architecture.md
+      - System Overview: development/architecture-overview.md
+      - Services: development/architecture-services.md
+      - Database: development/architecture-database.md
+      - UI: development/architecture-ui.md
+      - Prefect: development/architecture-prefect.md
+      - Deployment: development/architecture-deployment.md
+      - Timezone: development/architecture-timezone.md
     - Stock Screener Architecture: development/stock-screener-architecture.md
-    - Database Architecture: development/database.md
+    - Database Architecture:
+      - Overview: development/database.md
+      - Database Overview: development/database-overview.md
+      - Database Schema: development/database-schema.md
+      - Database Optimization: development/database-optimization.md
     - Logging Architecture: development/logging.md
     - Prefect Deployment:
       - Deployment Guide: development/prefect-deployment-guide.md
