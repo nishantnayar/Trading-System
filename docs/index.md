@@ -78,37 +78,35 @@ python main.py
 
 ## 🏗️ **System Architecture**
 
-<div align="center">
-
 ```mermaid
 graph TB
-    subgraph "Data Sources"
-        Polygon[Polygon.io<br/>Historical Data]
-        Yahoo[Yahoo Finance<br/>Fundamentals]
-        AlpacaExt[Alpaca API<br/>Trading Data]
+    subgraph DataSources["Data Sources"]
+        Polygon[Polygon.io Historical Data]
+        Yahoo[Yahoo Finance Fundamentals]
+        AlpacaExt[Alpaca API Trading Data]
     end
     
-    subgraph "Data Ingestion"
+    subgraph DataIngestionGroup["Data Ingestion"]
         DataIngestion[Data Ingestion Service]
     end
     
-    subgraph "Core Services"
-        Strategy[Strategy Engine<br/>v1.1.0]
-        Risk[Risk Management<br/>v1.1.0]
-        Execution[Execution Service<br/>v1.0.0]
-        Analytics[Analytics Service<br/>v1.0.0]
+    subgraph CoreServices["Core Services"]
+        Strategy[Strategy Engine v1.1.0]
+        Risk[Risk Management v1.1.0]
+        Execution[Execution Service v1.0.0]
+        Analytics[Analytics Service v1.0.0]
     end
     
-    subgraph "Storage"
-        PostgreSQL[(PostgreSQL<br/>Data and Logs)]
-        Redis[(Redis<br/>Cache)]
+    subgraph Storage["Storage"]
+        PostgreSQL[(PostgreSQL Data and Logs)]
+        Redis[(Redis Cache)]
     end
     
-    subgraph "Orchestration"
-        Prefect[Prefect<br/>Workflows]
+    subgraph Orchestration["Orchestration"]
+        Prefect[Prefect Workflows]
     end
     
-    subgraph "Frontend"
+    subgraph Frontend["Frontend"]
         Streamlit[Streamlit UI]
         FastAPI[FastAPI API]
     end
@@ -145,8 +143,6 @@ graph TB
     style Strategy fill:#FFA500
     style Risk fill:#FFA500
 ```
-
-</div>
 
 ### **Core Components**
 
