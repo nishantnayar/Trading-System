@@ -66,8 +66,15 @@ nav:
     - Analytics: api/analytics.md
   - Data Sources:
     - Overview: data-ingestion/data-sources.md
+    - Data Sources Overview: data-ingestion/data-sources-overview.md
+    - Polygon.io Integration: data-ingestion/data-sources-polygon.md
+    - Yahoo Finance Integration: data-ingestion/data-sources-yahoo.md
+    - Data Source Comparison: data-ingestion/data-sources-comparison.md
+    - Implementation Plan: data-ingestion/data-sources-implementation.md
     - Yahoo Finance Attributes: data-ingestion/yahoo-finance-attributes.md
   - Troubleshooting: troubleshooting.md
+  - Security: SECURITY.md
+  - Performance: PERFORMANCE.md
   - Development:
     - Overview: development/index.md
     - Architecture:

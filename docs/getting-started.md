@@ -1,3 +1,12 @@
+---
+title: "Getting Started"
+description: "Complete setup and configuration guide for the Trading System"
+last_updated: "2025-12"
+version: "1.0.0"
+status: "✅ Complete"
+author: "Trading System Team"
+---
+
 # Getting Started
 
 This comprehensive guide will help you install, configure, and run the Trading System for the first time.

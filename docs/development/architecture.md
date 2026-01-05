@@ -1,3 +1,12 @@
+---
+title: "Trading System Architecture"
+description: "System architecture overview and index to architecture documentation"
+last_updated: "2025-12"
+version: "1.0.0"
+status: "✅ Core Features Implemented (v1.0.0) | 🚧 Enhanced Features In Progress (v1.1.0)"
+author: "Trading System Team"
+---
+
 # Trading System Architecture
 
 > **Status**: ✅ Core Features Implemented (v1.0.0) | 🚧 Enhanced Features In Progress (v1.1.0)

@@ -1,3 +1,13 @@
+---
+title: "Prefect 3.4.14 Deployment Plan"
+description: "Prefect deployment overview and index to deployment documentation"
+last_updated: "2025-12"
+version: "1.0.0"
+status: "🚧 In Progress"
+prefect_version: "3.4.14"
+author: "Trading System Team"
+---
+
 # Prefect 3.4.14 Deployment Plan
 
 > **📋 Implementation Status**: 🚧 In Progress  

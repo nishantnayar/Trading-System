@@ -1,3 +1,11 @@
+---
+title: "Trading System Documentation"
+description: "Production-grade algorithmic trading system documentation"
+last_updated: "2025-12"
+version: "1.0.0"
+author: "Trading System Team"
+---
+
 # Trading System Documentation
 
 

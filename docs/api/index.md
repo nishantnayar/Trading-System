@@ -1,3 +1,13 @@
+---
+title: "API Reference"
+description: "Comprehensive REST API documentation for the Trading System"
+last_updated: "2025-12"
+version: "1.0.0"
+status: "✅ Core APIs Implemented"
+base_url: "http://localhost:8001/api"
+author: "Trading System Team"
+---
+
 # API Reference
 
 > **📋 Implementation Status**: ✅ Core APIs Implemented (v1.0.0)  
