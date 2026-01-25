@@ -443,23 +443,9 @@ async def deploy_all_flows() -> None:
         ignore_warnings=True,
     )
 
-    # Deploy key statistics flow (weekly)
-    key_stats_deployment = await _resolve_deployment(
-        yahoo_key_statistics_flow.from_source(
-            source=source_path,
-            entrypoint=f"{flow_file}:yahoo_key_statistics_flow",
-        )
-    )
-    await key_stats_deployment.deploy(
-        name="Weekly Key Statistics Update",
-        work_pool_name=PrefectConfig.get_work_pool_name(),
-        cron="0 3 * * 0",  # 3 AM Sunday (weekly) - UTC
-        tags=["data-ingestion", "yahoo", "key-statistics", "scheduled"],
-        description="Weekly key statistics update from Yahoo Finance",
-        ignore_warnings=True,
-    )
-
     # Deploy combined company info -> key statistics flow (weekly)
+    # Note: This combined flow includes both company info and key statistics.
+    # The standalone key statistics flow is not deployed separately to avoid duplicate runs.
     combined_deployment = await _resolve_deployment(
         yahoo_company_info_then_key_statistics_flow.from_source(
             source=source_path,

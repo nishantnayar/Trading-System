@@ -46,8 +46,18 @@ async def load_yahoo_market_data_task(
 
     try:
         # Calculate date range
-        to_date = date.today()
+        today = date.today()
+        to_date = today
         from_date = to_date - timedelta(days=days_back)
+
+        # yfinance's end parameter is exclusive, so add 1 day to include today's data
+        # Only do this if to_date is today (to get latest data)
+        if to_date == today:
+            to_date = to_date + timedelta(days=1)
+            logger.debug(
+                f"Adjusted end_date to {to_date} to include today's data "
+                f"(yfinance end is exclusive)"
+            )
 
         # Load market data
         records_count = await loader.load_market_data(
