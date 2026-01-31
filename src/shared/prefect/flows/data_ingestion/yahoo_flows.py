@@ -491,12 +491,12 @@ async def deploy_indicator_flow() -> None:
     await indicators_deployment.deploy(
         name="Daily Technical Indicators Calculation",
         work_pool_name=PrefectConfig.get_work_pool_name(),
-        cron="30 22 * * 1-5",  # 22:30 UTC Mon–Fri (15 min after data ingestion)
+        cron="30 22 * * 1-5",  # 22:30 UTC Mon–Fri (trading days only, 15 min after data ingestion)
         parameters={
             "days_back": 300,  # Need enough history from DB to calculate indicators (SMA_200 needs 200 days)
         },
         tags=["analytics", "indicators", "scheduled"],
-        description="Daily technical indicators calculation (can also run automatically after data ingestion)",
+        description="Daily technical indicators calculation on trading days (Mon-Fri). Can also run automatically after data ingestion.",
         ignore_warnings=True,
     )
     

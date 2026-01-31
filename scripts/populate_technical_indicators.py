@@ -74,6 +74,14 @@ async def populate_indicators(
     if calculation_date is None:
         calculation_date = date.today()
     
+    # Warn if calculating for a weekend (no market data on weekends)
+    weekday = calculation_date.weekday()
+    if weekday >= 5:  # Saturday or Sunday
+        logger.warning(
+            f"Warning: {calculation_date} is a {'Saturday' if weekday == 5 else 'Sunday'}. "
+            f"No market data available on weekends. Indicators will use the last trading day's data."
+        )
+    
     # Check if tables exist
     if not await check_tables_exist():
         logger.error("Cannot proceed - tables do not exist")
@@ -158,12 +166,23 @@ async def backfill_historical(
         f"from {start_date} to {end_date}"
     )
     
-    # Process each date
+    # Process each date (skip weekends - only process trading days)
     current_date = start_date
     total_days = (end_date - start_date).days + 1
+    processed_days = 0
+    skipped_weekends = 0
     
     while current_date <= end_date:
-        logger.info(f"\nProcessing date: {current_date} ({total_days - (end_date - current_date).days}/{total_days} days)")
+        # Skip weekends (Saturday=5, Sunday=6)
+        weekday = current_date.weekday()
+        if weekday >= 5:  # Saturday or Sunday
+            skipped_weekends += 1
+            logger.debug(f"Skipping weekend date: {current_date} ({'Saturday' if weekday == 5 else 'Sunday'})")
+            current_date += timedelta(days=1)
+            continue
+        
+        processed_days += 1
+        logger.info(f"\nProcessing date: {current_date} ({processed_days} trading days processed, {skipped_weekends} weekends skipped)")
         
         results = await service.batch_calculate_and_store(
             symbols=symbols_to_process,
@@ -178,6 +197,8 @@ async def backfill_historical(
         
         # Small delay to avoid overwhelming the database
         await asyncio.sleep(0.1)
+    
+    logger.info(f"\nBackfill complete: Processed {processed_days} trading days, skipped {skipped_weekends} weekend days")
 
 
 @click.command()
