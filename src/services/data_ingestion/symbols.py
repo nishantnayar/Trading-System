@@ -21,16 +21,22 @@ class SymbolService:
         self._polygon_client: Optional[PolygonClient] = None  # Lazy initialization - only create when needed
 
     async def get_active_symbols(self) -> List[Symbol]:
-        """Get all active symbols"""
+        """Get all active symbols, sorted alphabetically by symbol."""
         with db_transaction() as session:
-            stmt = select(Symbol).where(Symbol.status == "active")
+            stmt = (
+                select(Symbol).where(Symbol.status == "active").order_by(Symbol.symbol)
+            )
             result = session.execute(stmt)
             return list(result.scalars().all())
 
     async def get_active_symbol_strings(self) -> List[str]:
-        """Get list of active symbol strings"""
+        """Get list of active symbol strings, sorted alphabetically."""
         with db_transaction() as session:
-            stmt = select(Symbol.symbol).where(Symbol.status == "active")
+            stmt = (
+                select(Symbol.symbol)
+                .where(Symbol.status == "active")
+                .order_by(Symbol.symbol)
+            )
             result = session.execute(stmt)
             return [row[0] for row in result.fetchall()]
 

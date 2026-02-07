@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """
-Backpopulate Yahoo adjusted prices (data_source='yahoo_adjusted') for all stocks.
+Backpopulate Yahoo market data (adjusted and/or unadjusted) for all stocks.
 
-Loads only split/dividend-adjusted OHLCV; does not touch unadjusted data.
-Use to backfill adjusted series after enabling dual load or for a date range.
+By default loads adjusted prices (data_source='yahoo_adjusted'). Use --unadjusted
+to load raw prices (data_source='yahoo') only.
 
 Usage:
-    # Hourly adjusted (default; matches scheduled flow)
+    # Adjusted (default; matches scheduled flow)
     python scripts/backpopulate_yahoo_adjusted.py --all-symbols --days 365
-    python scripts/backpopulate_yahoo_adjusted.py --all-symbols \\
-        --from-date 2020-01-01 --to-date 2024-12-31
-    # Daily adjusted
+    python scripts/backpopulate_yahoo_adjusted.py --all-symbols --from-date 2020-01-01 --to-date 2024-12-31
+    # Unadjusted only (raw OHLCV)
+    python scripts/backpopulate_yahoo_adjusted.py --all-symbols --days 365 --unadjusted
+    # Daily
     python scripts/backpopulate_yahoo_adjusted.py --all-symbols --days 365 --interval 1d
 """
 
@@ -67,6 +68,11 @@ from src.shared.logging import setup_logging  # noqa: E402
     type=int,
     help="Limit number of symbols (e.g. for testing).",
 )
+@click.option(
+    "--unadjusted",
+    is_flag=True,
+    help="Load raw (unadjusted) prices only (data_source='yahoo'). Default is adjusted.",
+)
 def main(
     symbol: Optional[str],
     all_symbols: bool,
@@ -76,6 +82,7 @@ def main(
     interval: str,
     delay: float,
     max_symbols: Optional[int],
+    unadjusted: bool,
 ) -> int:
     if not symbol and not all_symbols:
         logger.error("Specify --symbol or --all-symbols")
@@ -93,8 +100,8 @@ def main(
     if to_date_obj == date.today():
         to_date_obj = to_date_obj + timedelta(days=1)
     logger.info(
-        f"Backpopulating adjusted prices: {from_date_obj} to {to_date_obj}, "
-        f"interval={interval}"
+        f"Backpopulating {'unadjusted' if unadjusted else 'adjusted'} prices: "
+        f"{from_date_obj} to {to_date_obj}, interval={interval}"
     )
 
     return asyncio.run(
@@ -106,6 +113,7 @@ def main(
             interval=interval,
             delay=delay,
             max_symbols=max_symbols,
+            unadjusted=unadjusted,
         )
     )
 
@@ -118,8 +126,10 @@ async def _run(
     interval: str,
     delay: float,
     max_symbols: Optional[int],
+    unadjusted: bool = False,
 ) -> int:
     loader = YahooDataLoader(batch_size=100, delay_between_requests=delay)
+    auto_adjust = not unadjusted
 
     if symbol:
         symbols = [symbol.upper().strip()]
@@ -127,7 +137,7 @@ async def _run(
         symbols = await loader._get_active_symbols()
         if max_symbols:
             symbols = symbols[:max_symbols]
-    logger.info(f"Processing {len(symbols)} symbol(s)")
+    logger.info(f"Processing {len(symbols)} symbol(s) (auto_adjust={auto_adjust})")
 
     total = 0
     failed = 0
@@ -138,17 +148,19 @@ async def _run(
                 start_date=from_date,
                 end_date=to_date,
                 interval=interval,
-                auto_adjust=True,
+                auto_adjust=auto_adjust,
             )
             total += count
-            logger.info(f"[{i}/{len(symbols)}] {sym}: {count} adjusted bars")
+            kind = "unadjusted" if unadjusted else "adjusted"
+            logger.info(f"[{i}/{len(symbols)}] {sym}: {count} {kind} bars")
         except Exception as e:
             failed += 1
             logger.warning(f"[{i}/{len(symbols)}] {sym}: failed - {e!s}")
         if i < len(symbols):
             await asyncio.sleep(delay)
 
-    logger.info(f"Done. Total adjusted bars: {total}, failed symbols: {failed}")
+    kind = "unadjusted" if unadjusted else "adjusted"
+    logger.info(f"Done. Total {kind} bars: {total}, failed symbols: {failed}")
     return 0 if failed == 0 else 1
 
 

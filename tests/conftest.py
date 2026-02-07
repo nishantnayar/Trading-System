@@ -1,8 +1,14 @@
 """
-Pytest configuration and fixtures for database testing
+Pytest configuration and fixtures for database testing.
+
+SAFETY: Fixtures that drop tables (e.g. setup_test_tables) will ONLY drop when:
+  - Database name looks like a test DB (ends with _test), AND
+  - data_ingestion.market_data has no more than MAX_MARKET_DATA_ROWS_BEFORE_REFUSE_DROP rows.
+Never run pytest against your main/dev database without a separate test DB.
 """
 
 from pathlib import Path
+import sys
 
 import pytest
 from dotenv import load_dotenv
@@ -12,17 +18,53 @@ from sqlalchemy.orm import sessionmaker
 load_dotenv()
 
 # Add src to path
-import sys  # noqa: E402
-
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from src.config.database import get_database_config  # noqa: E402
+
+# --- Safety constants: prevent accidental drop of production/dev data ---
+PRODUCTION_LIKE_DB_NAMES = ("trading_system",)  # Never drop tables in these
+TEST_DB_NAME_SUFFIX = "_test"  # Only allow table drops when DB name ends with this
+MAX_MARKET_DATA_ROWS_BEFORE_REFUSE_DROP = 1000  # Refuse to DROP if market_data has more rows
 
 
 @pytest.fixture(scope="session")
 def db_config():
     """Database configuration fixture"""
     return get_database_config()
+
+
+def _is_safe_test_db(db_name: str) -> bool:
+    """True only if database name indicates a dedicated test DB (not production/dev)."""
+    if not db_name:
+        return False
+    d = db_name.lower()
+    if d in (x.lower() for x in PRODUCTION_LIKE_DB_NAMES):
+        return False
+    return d.endswith(TEST_DB_NAME_SUFFIX)
+
+
+def _warn_if_using_production_db():
+    """Emit a critical warning at pytest load if TRADING_DB_NAME looks like production."""
+    try:
+        cfg = get_database_config()
+        db_name = (cfg.trading_db_name or "").strip()
+        if db_name.lower() in (x.lower() for x in PRODUCTION_LIKE_DB_NAMES):
+            msg = (
+                "\n"
+                "*** CRITICAL: pytest is using the PRODUCTION/DEV database '%s'. ***\n"
+                "    Table-dropping fixtures will NOT drop (to protect your data).\n"
+                "    To run DB tests safely, use a separate test database, e.g.:\n"
+                "    TRADING_DB_NAME=trading_system_test pytest tests/\n"
+                "***\n"
+            ) % db_name
+            sys.stderr.write(msg)
+    except Exception:
+        pass
+
+
+# Run once when conftest is loaded
+_warn_if_using_production_db()
 
 
 @pytest.fixture(scope="session")
@@ -175,8 +217,38 @@ def setup_test_tables(trading_engine):
 
     yield
 
-    # Cleanup - drop the tables after test
+    # --- SAFETY: Only drop tables when DB is clearly a test DB and market_data is small ---
+    db_name = (trading_engine.url.database or "").strip()
+
+    if not _is_safe_test_db(db_name):
+        import warnings
+        warnings.warn(
+            f"setup_test_tables: Skipping DROP of market_data etc. (db={db_name}). "
+            f"Use a test database whose name ends with '{TEST_DB_NAME_SUFFIX}' (e.g. trading_system_test).",
+            UserWarning,
+            stacklevel=2,
+        )
+        return
+
     with trading_engine.connect() as conn:
+        # Refuse to drop if market_data has many rows (catastrophic data loss guard)
+        try:
+            result = conn.execute(
+                text("SELECT COUNT(*) FROM data_ingestion.market_data")
+            )
+            (row_count,) = result.fetchone()
+            if row_count > MAX_MARKET_DATA_ROWS_BEFORE_REFUSE_DROP:
+                raise RuntimeError(
+                    f"REFUSING to DROP data_ingestion.market_data: table has {row_count} rows "
+                    f"(max allowed for drop is {MAX_MARKET_DATA_ROWS_BEFORE_REFUSE_DROP}). "
+                    "Use a dedicated test database with little or no production data."
+                )
+        except Exception as e:
+            if "does not exist" in str(e).lower() or "relation" in str(e).lower():
+                pass  # Table missing, safe to continue (drops are IF EXISTS)
+            else:
+                raise
+
         conn.execute(text("DROP TABLE IF EXISTS data_ingestion.load_runs CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS data_ingestion.market_data CASCADE"))
         conn.execute(text("DROP TABLE IF EXISTS data_ingestion.symbols CASCADE"))

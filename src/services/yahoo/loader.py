@@ -1023,9 +1023,13 @@ class YahooDataLoader:
         return await self._get_active_symbols()
 
     async def _get_active_symbols(self) -> List[str]:
-        """Get list of active symbols from database"""
+        """Get list of active symbols from database, sorted alphabetically."""
         with db_transaction() as session:
-            stmt = select(Symbol.symbol).where(Symbol.status == "active")
+            stmt = (
+                select(Symbol.symbol)
+                .where(Symbol.status == "active")
+                .order_by(Symbol.symbol)
+            )
             result = session.execute(stmt)
             return [row[0] for row in result.fetchall()]
 
