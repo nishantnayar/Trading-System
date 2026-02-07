@@ -7,8 +7,8 @@ SAFETY: Fixtures that drop tables (e.g. setup_test_tables) will ONLY drop when:
 Never run pytest against your main/dev database without a separate test DB.
 """
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pytest
 from dotenv import load_dotenv
