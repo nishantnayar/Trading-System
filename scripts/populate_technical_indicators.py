@@ -87,7 +87,7 @@ async def populate_indicators(
         logger.error("Cannot proceed - tables do not exist")
         return
     
-    service = IndicatorService(data_source="yahoo")
+    service = IndicatorService(data_source="yahoo_adjusted")
     symbol_service = SymbolService()
     
     # Get symbols to process
@@ -151,7 +151,7 @@ async def backfill_historical(
         end_date: End date (inclusive)
         all_symbols: If True, process all active symbols
     """
-    service = IndicatorService(data_source="yahoo")
+    service = IndicatorService(data_source="yahoo_adjusted")
     symbol_service = SymbolService()
     
     # Get symbols to process

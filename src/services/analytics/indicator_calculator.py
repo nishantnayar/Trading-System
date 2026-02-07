@@ -2,7 +2,9 @@
 Technical Indicator Calculation Service
 
 Calculates technical indicators from market data and stores them in the database.
-Uses only Yahoo Finance data (data_source = 'yahoo') for calculations.
+Uses Yahoo Finance adjusted prices by default (data_source = 'yahoo_adjusted') so
+that all indicators (SMA, EMA, RSI, MACD, Bollinger, etc.) are computed on
+split/dividend-adjusted OHLC for consistency with the target series.
 """
 
 import sys
@@ -40,18 +42,21 @@ from utils.technical_indicators import (
 
 class IndicatorCalculationService:
     """
-    Service for calculating and storing technical indicators
-    
+    Service for calculating and storing technical indicators.
+
     Calculates indicators from Yahoo Finance market data and stores
-    results in both latest and time-series tables.
+    results in both latest and time-series tables. By default uses
+    adjusted prices (yahoo_adjusted) so indicators are consistent with
+    split/dividend-adjusted OHLC.
     """
 
-    def __init__(self, data_source: str = "yahoo"):
+    def __init__(self, data_source: str = "yahoo_adjusted"):
         """
-        Initialize the indicator calculation service
-        
+        Initialize the indicator calculation service.
+
         Args:
-            data_source: Data source to use for calculations (default: 'yahoo')
+            data_source: Data source for OHLC; use 'yahoo_adjusted' (default)
+                so indicators are calculated on adjusted prices.
         """
         self.data_source = data_source
 
@@ -166,13 +171,16 @@ class IndicatorCalculationService:
         days_back: int = 300,
     ) -> List[Dict]:
         """
-        Fetch market data for a symbol (Yahoo Finance only)
-        
+        Fetch market data for a symbol (Yahoo Finance).
+
+        Uses the service's data_source (default yahoo_adjusted) so that
+        indicator calculations use split/dividend-adjusted OHLC.
+
         Args:
             symbol: Stock symbol
             end_date: End date for data (default: today)
             days_back: Number of days to fetch (default: 300 for sufficient history)
-            
+
         Returns:
             List of dictionaries with market data, sorted by timestamp (oldest first)
         """
@@ -225,11 +233,13 @@ class IndicatorCalculationService:
         calculation_date: Optional[date] = None,
     ) -> Optional[Dict]:
         """
-        Calculate all technical indicators from market data
-        
-        Technical indicators are calculated on daily bars. If hourly data is provided,
-        it will be automatically resampled to daily bars before calculation.
-        
+        Calculate all technical indicators from market data.
+
+        Indicators are calculated on daily bars from the OHLCV in market_data.
+        Callers should pass adjusted OHLC (e.g. from yahoo_adjusted) so that
+        indicators are consistent with adjusted prices. If hourly data is provided,
+        it is resampled to daily bars before calculation.
+
         Args:
             market_data: List of market data dictionaries (must be sorted by timestamp)
             calculation_date: Date for which to calculate indicators (default: latest date)

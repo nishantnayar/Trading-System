@@ -21,12 +21,13 @@ class IndicatorService:
     Combines calculation and storage functionality.
     """
 
-    def __init__(self, data_source: str = "yahoo"):
+    def __init__(self, data_source: str = "yahoo_adjusted"):
         """
-        Initialize the indicator service
-        
+        Initialize the indicator service.
+
         Args:
-            data_source: Data source to use for calculations (default: 'yahoo')
+            data_source: Data source for OHLC; use 'yahoo_adjusted' (default)
+                so indicators are calculated on adjusted prices.
         """
         self.calculator = IndicatorCalculationService(data_source=data_source)
         self.storage = IndicatorStorageService()

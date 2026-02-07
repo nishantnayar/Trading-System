@@ -80,7 +80,7 @@ async def calculate_daily_indicators(
         logger.info(f"Limited to {max_symbols} symbols for testing")
     
     # Initialize indicator service
-    indicator_service = IndicatorService(data_source="yahoo")
+    indicator_service = IndicatorService(data_source="yahoo_adjusted")
     
     successful = []
     failed = []
