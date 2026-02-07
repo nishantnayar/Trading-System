@@ -92,6 +92,23 @@ class TestYahooClientHistoricalData:
 
     @pytest.mark.asyncio
     @patch("src.services.yahoo.client.yf.Ticker")
+    async def test_get_historical_data_auto_adjust_true(
+        self, mock_ticker_class, client, mock_history_data
+    ):
+        """Test getting historical data with auto_adjust=True (adjusted prices)"""
+        mock_ticker = Mock()
+        mock_ticker.history.return_value = mock_history_data
+        mock_ticker_class.return_value = mock_ticker
+
+        bars = await client.get_historical_data("AAPL", auto_adjust=True)
+
+        assert len(bars) == 3
+        mock_ticker.history.assert_called_once_with(
+            period="1mo", interval="1d", auto_adjust=True
+        )
+
+    @pytest.mark.asyncio
+    @patch("src.services.yahoo.client.yf.Ticker")
     async def test_get_historical_data_empty(self, mock_ticker_class, client):
         """Test handling empty historical data"""
         mock_ticker = Mock()

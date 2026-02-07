@@ -36,8 +36,8 @@ For detailed integration guides, see:
 ### Design Principles
 
 1. **Independent Services**: Each data source has its own service module
-2. **Unified Storage**: All market data stored in `data_ingestion.market_data` with `data_source` field
-3. **Source Tracking**: Track which provider supplied each data point
+2. **Unified Storage**: All market data stored in `data_ingestion.market_data` with `data_source` field (e.g. `yahoo`, `yahoo_adjusted`, `polygon`, `alpaca`)
+3. **Source Tracking**: Track which provider supplied each data point; Yahoo stores both unadjusted (`yahoo`) and adjusted (`yahoo_adjusted`) OHLCV
 4. **Separate Loaders**: Each source has dedicated loader class
 5. **Consistent Interface**: Similar API patterns across sources
 

@@ -28,8 +28,8 @@ This section contains comprehensive technical documentation for developers worki
 - [Logging Architecture](logging.md) - Structured logging with PostgreSQL
 
 ### Workflow Orchestration
-- [Prefect Deployment Guide](prefect-deployment-guide.md) - Step-by-step Prefect setup
-- [Prefect Deployment Plan](prefect-deployment-plan.md) - Implementation plan and architecture
+- [Prefect Deployment](prefect-deployment.md) - Overview and implementation
+- [Prefect Deployment Operations](prefect-deployment-operations.md) - Step-by-step runbook
 
 ## Development Workflow
 
@@ -123,7 +123,7 @@ graph TB
 1. Read [System Architecture](architecture.md) for overview
 2. Review [Database Architecture](database.md) for data structure
 3. Check [Testing Strategy](testing.md) for testing guidelines
-4. Follow [Prefect Deployment Guide](prefect-deployment-guide.md) for workflow setup
+4. Follow [Prefect Deployment Operations](prefect-deployment-operations.md) for workflow setup
 
 ### Code Quality
 - **Formatting**: Black (88 char line length)

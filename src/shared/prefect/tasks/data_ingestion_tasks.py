@@ -59,18 +59,30 @@ async def load_yahoo_market_data_task(
                 f"(yfinance end is exclusive)"
             )
 
-        # Load market data
+        # Load both unadjusted and adjusted market data
         records_count = await loader.load_market_data(
             symbol=symbol,
             start_date=from_date,
             end_date=to_date,
             interval=interval,
+            auto_adjust=False,
+        )
+        records_count_adjusted = await loader.load_market_data(
+            symbol=symbol,
+            start_date=from_date,
+            end_date=to_date,
+            interval=interval,
+            auto_adjust=True,
         )
 
-        logger.info(f"Loaded {records_count} market data records for {symbol}")
+        logger.info(
+            f"Loaded {records_count} unadjusted + {records_count_adjusted} adjusted "
+            f"market data records for {symbol}"
+        )
         return {
             "symbol": symbol,
             "records_count": records_count,
+            "records_count_adjusted": records_count_adjusted,
             "status": "success",
         }
     except YahooDataError as e:
@@ -80,6 +92,7 @@ async def load_yahoo_market_data_task(
         return {
             "symbol": symbol,
             "records_count": 0,
+            "records_count_adjusted": 0,
             "status": "no_data",
         }
     except Exception as e:

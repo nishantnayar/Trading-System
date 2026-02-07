@@ -1,4 +1,4 @@
-﻿# Trading System Prefect Architecture
+# Trading System Prefect Architecture
 
 > **Status**: ✅ Phase 1 Complete (v1.0.0) | 🚧 Additional Phases In Progress (v1.1.0)
 
@@ -1344,4 +1344,4 @@ mypy .
 - [Services Architecture](architecture-services.md) - Service-specific flow details
 - [Database Architecture](architecture-database.md) - Prefect database configuration
 - [Deployment Architecture](architecture-deployment.md) - Prefect deployment strategy
-- [Prefect Deployment Guide](prefect-deployment-guide.md) - Detailed deployment instructions
+- [Prefect Deployment Operations](prefect-deployment-operations.md) - Deployment runbook

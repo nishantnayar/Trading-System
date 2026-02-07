@@ -145,6 +145,16 @@ A: No, Ollama is optional. You can use traditional filters without it. Natural l
    prefect deployment inspect "Daily Market Data Update/Daily Market Data Update"
    ```
 
+**Error**: `duplicate key value violates unique constraint "unique_symbol_timestamp"` when loading Yahoo adjusted data
+
+**Cause**: The `market_data` table still has the old unique constraint on `(symbol, timestamp)` only, so adjusted and unadjusted rows conflict.
+
+**Solution**: Run the migration to switch to `(symbol, timestamp, data_source)` and allow `yahoo_adjusted`:
+```bash
+psql -h <host> -U <user> -d <database> -f scripts/20_market_data_allow_yahoo_adjusted.sql
+```
+See [Data Sources: Yahoo](data-ingestion/data-sources-yahoo.md) and `scripts/20_market_data_allow_yahoo_adjusted.sql`.
+
 **Error**: `Flow run failed` or `Task execution error`
 
 **Solutions**:

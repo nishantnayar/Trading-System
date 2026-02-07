@@ -329,10 +329,12 @@ The system uses Prefect 3.4+ for workflow orchestration. Prefect is **optional**
 #### Available Prefect Flows
 
 **✅ Implemented:**
-- **Daily Market Data Update**: Runs daily at 22:15 UTC (Mon-Fri) - Fetches hourly market data from Yahoo Finance
+- **Daily Market Data Update**: Runs daily at 22:15 UTC (Mon-Fri) — Fetches hourly market data from Yahoo (unadjusted and adjusted, `data_source='yahoo'` and `data_source='yahoo_adjusted'`)
 - **Weekly Company Information Update**: Runs Sunday at 02:00 UTC
 - **Weekly Key Statistics Update**: Runs Sunday at 03:00 UTC
 - **Weekly Company Data Update**: Combined flow running Sunday at 02:00 UTC
+
+**Scripts:** To backfill adjusted prices historically, run `python scripts/backpopulate_yahoo_adjusted.py --all-symbols --days 365` (see [Data Sources: Yahoo](docs/data-ingestion/data-sources-yahoo.md)).
 
 **📋 Planned:**
 - Technical indicators calculation flows
@@ -351,8 +353,8 @@ PREFECT_WORK_POOL_NAME=default-agent-pool
 ```
 
 For detailed deployment instructions, see:
-- [Prefect Deployment Guide](docs/development/prefect-deployment-guide.md) - Step-by-step setup
-- [Prefect Deployment Plan](docs/development/prefect-deployment-plan.md) - Architecture and implementation plan
+- [Prefect Deployment](docs/development/prefect-deployment.md) - Overview and index
+- [Prefect Deployment Operations](docs/development/prefect-deployment-operations.md) - Step-by-step runbook
 
 ## Development
 
@@ -476,7 +478,7 @@ global_settings:
 | **Architecture** | Detailed system architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | **Database** | Database schema and management | [docs/development/database.md](docs/development/database.md) |
 | **Logging** | Logging architecture and configuration | [docs/development/logging.md](docs/development/logging.md) |
-| **Prefect** | Workflow orchestration guide | [docs/development/prefect-deployment-guide.md](docs/development/prefect-deployment-guide.md) |
+| **Prefect** | Workflow orchestration | [docs/development/prefect-deployment.md](docs/development/prefect-deployment.md) |
 | **Data Sources** | Market data integration guide | [docs/data-ingestion/data-sources.md](docs/data-ingestion/data-sources.md) |
 | **Testing** | Testing strategy and guidelines | [docs/development/testing.md](docs/development/testing.md) |
 

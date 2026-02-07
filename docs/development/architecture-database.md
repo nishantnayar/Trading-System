@@ -59,10 +59,11 @@ CREATE TABLE market_data (
     volume BIGINT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
-    -- Constraints
-    CONSTRAINT unique_symbol_timestamp UNIQUE (symbol, timestamp),
-    CONSTRAINT positive_prices CHECK (open > 0 AND high > 0 AND low > 0 AND close > 0)
-) PARTITION BY RANGE (timestamp);
+    data_source VARCHAR(20) NOT NULL DEFAULT 'polygon',  -- yahoo, yahoo_adjusted, alpaca, etc.
+    -- Constraints: (symbol, timestamp, data_source) for multi-source and yahoo vs yahoo_adjusted
+    CONSTRAINT unique_symbol_timestamp_source UNIQUE (symbol, timestamp, data_source),
+    CONSTRAINT valid_data_source CHECK (data_source IN ('polygon', 'yahoo', 'yahoo_adjusted', 'alpaca', ...))
+);
 
 -- Trading Operations (Enhanced Design)
 CREATE TYPE order_side AS ENUM ('buy', 'sell');

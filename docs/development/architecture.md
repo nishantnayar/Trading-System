@@ -76,8 +76,8 @@ The Trading System is a production-grade algorithmic trading system designed for
 - [Database Architecture Detailed Review](database.md) - Comprehensive database documentation
 - [Logging Architecture](logging.md) - Logging strategy and implementation
 - [Stock Screener Architecture](stock-screener-architecture.md) - Stock screener implementation
-- [Prefect Deployment Guide](prefect-deployment-guide.md) - Detailed Prefect deployment instructions
-- [Prefect Deployment Plan](prefect-deployment-plan.md) - Prefect implementation roadmap
+- [Prefect Deployment](prefect-deployment.md) - Prefect overview and index
+- [Prefect Deployment Operations](prefect-deployment-operations.md) - Deployment runbook
 
 ---
 

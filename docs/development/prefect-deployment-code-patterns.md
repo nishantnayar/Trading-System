@@ -138,7 +138,7 @@ async def load_yahoo_market_data_task(
         interval: Data interval (1h, 1d, etc.)
         
     Returns:
-        Dictionary with load results
+        Dictionary with load results (includes records_count and records_count_adjusted for unadjusted and adjusted series)
     """
     logger.info(f"Loading Yahoo market data for {symbol}")
     
@@ -548,10 +548,10 @@ if __name__ == "__main__":
 
 ## Related Documentation
 
-- [Prefect Deployment Overview](prefect-deployment-overview.md) - Overview and project structure
-- [Prefect Configuration](prefect-deployment-configuration.md) - YAML configs, environment variables, settings
-- [Deployment Workflow](prefect-deployment-workflow.md) - Deployment scripts, workflow steps, monitoring, testing
-- [Advanced Topics](prefect-deployment-advanced.md) - Design decisions, days_back parameter, migration strategy
+- [Prefect Deployment](prefect-deployment.md) — Overview and index
+- [Configuration](prefect-deployment-configuration.md) — YAML configs, environment variables, settings
+- [Operations](prefect-deployment-operations.md) — Runbook, monitoring, testing
+- [Advanced Topics](prefect-deployment-advanced.md) — Design decisions
 
 ---
 

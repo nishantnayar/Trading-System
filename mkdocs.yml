@@ -93,13 +93,11 @@ nav:
       - Database Schema: development/database-schema.md
       - Database Optimization: development/database-optimization.md
     - Logging Architecture: development/logging.md
-    - Prefect Deployment:
-      - Deployment Guide: development/prefect-deployment-guide.md
-      - Deployment Plan: development/prefect-deployment-plan.md
-      - Overview: development/prefect-deployment-overview.md
+    -     Prefect Deployment:
+      - Prefect Deployment: development/prefect-deployment.md
+      - Operations: development/prefect-deployment-operations.md
       - Configuration: development/prefect-deployment-configuration.md
       - Code Patterns: development/prefect-deployment-code-patterns.md
-      - Deployment Workflow: development/prefect-deployment-workflow.md
       - Advanced Topics: development/prefect-deployment-advanced.md
     - Testing Strategy: development/testing.md
     - CI/CD Pipeline: development/ci-cd.md

@@ -44,6 +44,7 @@ class YahooClient:
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
         interval: str = "1d",
+        auto_adjust: bool = False,
     ) -> List[YahooBar]:
         """
         Get historical OHLCV data
@@ -53,6 +54,7 @@ class YahooClient:
             start_date: Start date for data
             end_date: End date for data
             interval: Data interval ('1m', '5m', '15m', '30m', '1h', '1d', '1wk', '1mo')
+            auto_adjust: If True, adjust OHLC for splits/dividends; if False, raw prices
 
         Returns:
             List of OHLCV bars
@@ -63,12 +65,15 @@ class YahooClient:
             # Fetch history
             if start_date and end_date:
                 hist = ticker.history(
-                    start=start_date, end=end_date, interval=interval, auto_adjust=False
+                    start=start_date,
+                    end=end_date,
+                    interval=interval,
+                    auto_adjust=auto_adjust,
                 )
             else:
                 # Default to 1 month if no dates provided
                 hist = ticker.history(
-                    period="1mo", interval=interval, auto_adjust=False
+                    period="1mo", interval=interval, auto_adjust=auto_adjust
                 )
 
             if hist.empty:

@@ -187,10 +187,28 @@ class YahooDataLoader:
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
         interval: str = "1d",
+        auto_adjust: bool = False,
     ) -> int:
-        """Load OHLCV market data for a symbol"""
+        """
+        Load OHLCV market data for a symbol.
+
+        Args:
+            symbol: Stock symbol
+            start_date: Start date
+            end_date: End date
+            interval: Data interval (1d, 1h, etc.)
+            auto_adjust: If True, load split/dividend-adjusted prices (stored as
+                data_source 'yahoo_adjusted'); if False, raw prices (data_source 'yahoo').
+
+        Returns:
+            Number of records inserted/updated
+        """
         symbol = self._normalize_symbol(symbol)
-        logger.info(f"Loading market data for {symbol} from Yahoo Finance")
+        data_source = "yahoo_adjusted" if auto_adjust else self.data_source
+        logger.info(
+            f"Loading market data for {symbol} from Yahoo Finance "
+            f"(auto_adjust={auto_adjust}, data_source={data_source})"
+        )
 
         try:
             bars = await self.client.get_historical_data(
@@ -198,6 +216,7 @@ class YahooDataLoader:
                 start_date=start_date,
                 end_date=end_date,
                 interval=interval,
+                auto_adjust=auto_adjust,
             )
 
             if not bars:
@@ -208,7 +227,7 @@ class YahooDataLoader:
                 {
                     "symbol": symbol,
                     "timestamp": bar.timestamp,
-                    "data_source": self.data_source,
+                    "data_source": data_source,
                     "open": bar.open,
                     "high": bar.high,
                     "low": bar.low,
@@ -230,7 +249,10 @@ class YahooDataLoader:
                 )
                 inserted_count += len(batch)
 
-            logger.info(f"Loaded {inserted_count} market data records for {symbol}")
+            logger.info(
+                f"Loaded {inserted_count} market data records for {symbol} "
+                f"(data_source={data_source})"
+            )
             return inserted_count
 
         except YahooAPIError as e:
@@ -831,6 +853,7 @@ class YahooDataLoader:
 
         results = {
             "market_data": 0,
+            "market_data_adjusted": 0,
             "company_info": 0,
             "key_statistics": 0,
             "institutional_holders": 0,
@@ -847,6 +870,13 @@ class YahooDataLoader:
                 symbol=symbol,
                 start_date=start_date,
                 end_date=end_date,
+                auto_adjust=False,
+            )
+            results["market_data_adjusted"] = await self.load_market_data(
+                symbol=symbol,
+                start_date=start_date,
+                end_date=end_date,
+                auto_adjust=True,
             )
 
             # Load optional data types
@@ -939,8 +969,17 @@ class YahooDataLoader:
                     start_date=start_date,
                     end_date=end_date,
                     interval=interval,
+                    auto_adjust=False,
                 )
                 stats["total_records"] += records_count
+                records_count_adj = await self.load_market_data(
+                    symbol=symbol,
+                    start_date=start_date,
+                    end_date=end_date,
+                    interval=interval,
+                    auto_adjust=True,
+                )
+                stats["total_records"] += records_count_adj
 
                 # Load optional data types
                 if include_fundamentals:

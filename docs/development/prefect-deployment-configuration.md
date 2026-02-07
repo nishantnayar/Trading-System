@@ -304,10 +304,10 @@ class Settings(BaseSettings):
 
 ## Related Documentation
 
-- [Prefect Deployment Overview](prefect-deployment-overview.md) - Overview and project structure
-- [Code Patterns](prefect-deployment-code-patterns.md) - Task patterns, flow patterns, deployment definitions
-- [Deployment Workflow](prefect-deployment-workflow.md) - Deployment scripts, workflow steps, monitoring, testing
-- [Advanced Topics](prefect-deployment-advanced.md) - Design decisions, days_back parameter, migration strategy
+- [Prefect Deployment](prefect-deployment.md) — Overview and index
+- [Operations](prefect-deployment-operations.md) — Runbook, monitoring, troubleshooting
+- [Code Patterns](prefect-deployment-code-patterns.md) — Task/flow patterns, deployment definitions
+- [Advanced Topics](prefect-deployment-advanced.md) — Design decisions
 
 ---
 

@@ -18,6 +18,12 @@ Yahoo Finance provides comprehensive company fundamentals, financial statements,
 - **Institutional Holdings**: Major institutional investors and holdings
 - **Company Officers**: Executive compensation and leadership information
 
+### Market Data (OHLCV)
+
+- **Dual series**: The loader stores both unadjusted (`data_source='yahoo'`) and adjusted (`data_source='yahoo_adjusted'`) OHLCV. Adjusted prices are corrected for splits and dividends (suitable for backtesting total return).
+- **Prefect task**: `load_yahoo_market_data_task` loads both and returns `records_count` and `records_count_adjusted`.
+- **Backpopulate**: For historical backfill of adjusted only, run `python scripts/backpopulate_yahoo_adjusted.py --all-symbols --days 365` (default interval 1h to match scheduled flow).
+
 ### Integration Details
 
 Yahoo Finance data is used for:
@@ -25,8 +31,13 @@ Yahoo Finance data is used for:
 - Fundamental analysis
 - Company research
 - Institutional ownership tracking
+- Backtesting with adjusted or unadjusted prices
 
-All Yahoo Finance data is stored in the `data_ingestion` schema with `data_source='yahoo'` tag.
+Yahoo Finance data is stored in the `data_ingestion` schema. Market data uses two source values:
+- **Unadjusted prices**: `data_source='yahoo'`
+- **Adjusted prices (splits/dividends)**: `data_source='yahoo_adjusted'`
+
+Other Yahoo data types use `data_source='yahoo'`. The scheduled Prefect flow and `load_all_data()` load both market data series; use `scripts/backpopulate_yahoo_adjusted.py` to backfill adjusted prices.
 
 ## Institutional Holders API
 

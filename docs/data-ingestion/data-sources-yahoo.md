@@ -30,13 +30,13 @@ All Yahoo Finance data types have been fully implemented:
 | 10 | **ESG Scores** | `get_esg_scores()` | `load_esg_scores()` | `ESGScore` | ✅ | `--esg-scores` | ✅ Complete |
 
 **What's Working:**
-- ✅ All core market data and fundamentals
+- ✅ All core market data and fundamentals (unadjusted and adjusted OHLCV)
 - ✅ All financial statements and metrics
 - ✅ Corporate actions (dividends, splits)
 - ✅ Ownership data (institutional holders, officers)
 - ✅ Analyst recommendations
 - ✅ ESG scores
-- ✅ Complete CLI integration
+- ✅ Complete CLI integration; backpopulate script for adjusted prices
 - ✅ Comprehensive test coverage
 
 **Note:** HTTP 404 errors when loading ESG scores are expected and normal - not all symbols have ESG data available. These are handled silently by the system.
@@ -48,7 +48,9 @@ All Yahoo Finance data types have been fully implemented:
 ### Market Data
 
 - ✅ Historical OHLCV (daily, hourly, minute)
-- ✅ Adjusted close prices
+- ✅ **Dual price series**: unadjusted (raw) and adjusted (splits/dividends)
+  - Unadjusted: `data_source='yahoo'`
+  - Adjusted: `data_source='yahoo_adjusted'`
 - ✅ Volume data
 - ✅ Intraday data (up to 60 days history)
 - ⚠️ 15-minute delayed real-time data
@@ -84,7 +86,7 @@ All Yahoo Finance data types have been fully implemented:
 class YahooClient:
     """Yahoo Finance API client using yfinance library"""
     
-    async def get_historical_data(symbol, start_date, end_date, interval)
+    async def get_historical_data(symbol, start_date, end_date, interval, auto_adjust=False)
     async def get_company_info(symbol)
     async def get_financials(symbol)
     async def get_dividends(symbol, start_date, end_date)
@@ -96,7 +98,7 @@ class YahooClient:
 class YahooDataLoader:
     """Load data from Yahoo Finance into database"""
     
-    async def load_market_data(symbol, start_date, end_date)
+    async def load_market_data(symbol, start_date, end_date, interval, auto_adjust=False)
     async def load_company_info(symbol)
     async def load_financials(symbol)
     async def load_dividends(symbol, start_date, end_date)
@@ -187,14 +189,23 @@ class FinancialStatement(BaseModel):
 
 ## Database Schema
 
-### Existing Table Updates
+### Market Data Table (data_ingestion.market_data)
+
+Yahoo stores two price series in the same table, distinguished by `data_source`:
+
+- **Unadjusted (raw)**: `data_source='yahoo'` — prices as reported by Yahoo
+- **Adjusted (splits/dividends)**: `data_source='yahoo_adjusted'` — OHLC adjusted for corporate actions
+
+Unique constraint is `(symbol, timestamp, data_source)` so both series coexist. Run migration `scripts/20_market_data_allow_yahoo_adjusted.sql` if you see duplicate-key errors when loading adjusted data.
 
 ```sql
--- market_data table already has data_source column (added in migration 07)
--- No changes needed - Yahoo data will use data_source='yahoo'
-
-SELECT * FROM data_ingestion.market_data 
+-- Unadjusted prices
+SELECT * FROM data_ingestion.market_data
 WHERE data_source = 'yahoo' AND symbol = 'AAPL';
+
+-- Adjusted prices (for backtesting / total return)
+SELECT * FROM data_ingestion.market_data
+WHERE data_source = 'yahoo_adjusted' AND symbol = 'AAPL';
 ```
 
 ### New Tables Required
@@ -223,12 +234,22 @@ from src.services.yahoo.loader import YahooDataLoader
 
 loader = YahooDataLoader(batch_size=100)
 
-# Load OHLCV data
+# Load unadjusted OHLCV (data_source='yahoo')
 await loader.load_market_data(
     symbol="AAPL",
     start_date=date(2023, 1, 1),
     end_date=date(2024, 1, 1),
-    interval="1d"  # '1m', '5m', '1h', '1d', '1wk', '1mo'
+    interval="1d",
+    auto_adjust=False,
+)
+
+# Load adjusted OHLCV (data_source='yahoo_adjusted')
+await loader.load_market_data(
+    symbol="AAPL",
+    start_date=date(2023, 1, 1),
+    end_date=date(2024, 1, 1),
+    interval="1d",
+    auto_adjust=True,
 )
 ```
 
@@ -332,6 +353,12 @@ python scripts/load_yahoo_data.py --symbol AAPL --days 30 \
     --key-statistics \
     --institutional-holders
 
+# Backpopulate adjusted prices only (hourly by default; matches scheduled flow)
+python scripts/backpopulate_yahoo_adjusted.py --all-symbols --days 365
+python scripts/backpopulate_yahoo_adjusted.py --symbol AAPL --days 30 --interval 1h
+# Daily adjusted
+python scripts/backpopulate_yahoo_adjusted.py --all-symbols --days 365 --interval 1d
+
 # Load analyst recommendations only
 python scripts/load_yahoo_data.py --symbol AAPL --analyst-recommendations
 
@@ -399,6 +426,6 @@ python scripts/load_yahoo_data.py --all-symbols --esg-scores
 
 ---
 
-**Last Updated**: December 2025  
-**Status**: ✅ Complete (10/10 data types implemented - 100%)
+**Last Updated**: February 2026  
+**Status**: ✅ Complete (10/10 data types; dual market data series: yahoo + yahoo_adjusted)
 

@@ -4,8 +4,8 @@
 
 This document provides detailed schema definitions for all database tables in the trading system. For architecture overview and setup, see [Database Overview](database-overview.md). For performance optimization and ORM patterns, see [Database Optimization](database-optimization.md).
 
-**Last Updated**: December 2025  
-**Status**: ✅ Core Schema Implemented (v1.0.0)  
+**Last Updated**: February 2026  
+**Status**: ✅ Core Schema Implemented (v1.0.0); market_data supports yahoo + yahoo_adjusted  
 **Author**: Nishant Nayar
 
 ## Core Trading Tables
@@ -13,34 +13,37 @@ This document provides detailed schema definitions for all database tables in th
 ### Market Data Table
 
 ```sql
-CREATE TABLE market_data (
+CREATE TABLE data_ingestion.market_data (
     id BIGSERIAL,
     symbol VARCHAR(20) NOT NULL,
     timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-    open DECIMAL(15,4),  -- Increased precision
+    data_source VARCHAR(20) NOT NULL DEFAULT 'polygon',  -- 'yahoo', 'yahoo_adjusted', 'alpaca', etc.
+    open DECIMAL(15,4),
     high DECIMAL(15,4),
     low DECIMAL(15,4),
     close DECIMAL(15,4),
     volume BIGINT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
-    -- Constraints
-    CONSTRAINT unique_symbol_timestamp UNIQUE (symbol, timestamp),
-    CONSTRAINT positive_prices CHECK (open > 0 AND high > 0 AND low > 0 AND close > 0),
-    CONSTRAINT valid_ohlc CHECK (high >= GREATEST(open, close) AND low <= LEAST(open, close))
-) PARTITION BY RANGE (timestamp);
+    -- Constraints: (symbol, timestamp, data_source) allows multiple series per symbol/timestamp
+    CONSTRAINT unique_symbol_timestamp_source UNIQUE (symbol, timestamp, data_source),
+    CONSTRAINT valid_data_source CHECK (data_source IN (
+        'polygon', 'yahoo', 'yahoo_adjusted', 'alpaca', 'alpha_vantage', 'iex', 'quandl'
+    ))
+);
 
 -- Indexes for performance
-CREATE INDEX idx_market_data_symbol_timestamp ON market_data(symbol, timestamp DESC);
-CREATE INDEX idx_market_data_timestamp ON market_data(timestamp DESC);
+CREATE INDEX idx_market_data_symbol_timestamp ON data_ingestion.market_data(symbol, timestamp DESC);
+CREATE INDEX idx_market_data_data_source ON data_ingestion.market_data(data_source);
+CREATE INDEX idx_market_data_symbol_source_timestamp ON data_ingestion.market_data(symbol, data_source, timestamp DESC);
 ```
 
 **Design Features:**
 
-1. **Enhanced Constraints**: Unique constraint on (symbol, timestamp)
-2. **Increased Precision**: DECIMAL(15,4) for high-priced stocks
-3. **Comprehensive Indexing**: Composite indexes for time-series queries
-4. **Time-Based Partitioning**: Optimized for large datasets
+1. **Multi-source**: `data_source` identifies provider; Yahoo stores both `yahoo` (unadjusted) and `yahoo_adjusted` (split/dividend-adjusted) for the same symbol/timestamp.
+2. **Unique constraint**: `(symbol, timestamp, data_source)` — run `scripts/20_market_data_allow_yahoo_adjusted.sql` if upgrading from the old `(symbol, timestamp)` constraint.
+3. **Increased Precision**: DECIMAL(15,4) for high-priced stocks.
+4. **Comprehensive Indexing**: Composite indexes for time-series and source-filtered queries.
 
 ### Key Statistics Table
 

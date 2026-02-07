@@ -13,7 +13,8 @@ This document outlines the implementation plan for Yahoo Finance integration and
 
 - [x] Add `data_source` column to `market_data` table
 - [x] Update unique constraint to `(symbol, timestamp, data_source)`
-- [x] Update Python models and loaders
+- [x] Allow `yahoo_adjusted` in `valid_data_source` CHECK (migration `scripts/20_market_data_allow_yahoo_adjusted.sql`)
+- [x] Update Python models and loaders (client/loader support `auto_adjust`; dual series)
 - [x] Update tests
 
 ### Phase 2: Yahoo Client & Models
@@ -153,6 +154,6 @@ This document outlines the implementation plan for Yahoo Finance integration and
 
 ---
 
-**Last Updated**: December 2025  
-**Status**: 🚧 In Progress
+**Last Updated**: February 2026  
+**Status**: 🚧 In Progress (Phase 1 complete; Yahoo dual series and migration 20 in place)
 
