@@ -93,7 +93,7 @@ nav:
       - Database Schema: development/database-schema.md
       - Database Optimization: development/database-optimization.md
     - Logging Architecture: development/logging.md
-    -     Prefect Deployment:
+    - Prefect Deployment:
       - Prefect Deployment: development/prefect-deployment.md
       - Operations: development/prefect-deployment-operations.md
       - Configuration: development/prefect-deployment-configuration.md

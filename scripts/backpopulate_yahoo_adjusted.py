@@ -26,6 +26,7 @@ project_root = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, project_root)
 
 from loguru import logger  # noqa: E402
+
 from src.services.yahoo.loader import YahooDataLoader  # noqa: E402
 from src.shared.logging import setup_logging  # noqa: E402
 
