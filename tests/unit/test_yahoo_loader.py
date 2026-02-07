@@ -831,12 +831,13 @@ class TestYahooDataLoader:
 
             result = await loader.load_all_symbols_data()
 
-            # The method returns a statistics dictionary, not a dictionary with symbol keys
+            # The method returns a statistics dictionary, not a dictionary with symbol keys.
+            # load_market_data is called twice per symbol (auto_adjust=False and True).
             assert result["total_symbols"] == 2
             assert result["successful"] == 2
             assert result["failed"] == 0
-            assert result["total_records"] == 20  # 2 symbols × 10 records each
-            assert mock_market_data.call_count == 2
+            assert result["total_records"] == 40  # 2 symbols × (10 + 10) unadjusted + adjusted
+            assert mock_market_data.call_count == 4  # 2 calls per symbol
 
     @pytest.mark.asyncio
     async def test_load_all_symbols_data_with_options(self, loader, setup_test_tables):
@@ -863,12 +864,12 @@ class TestYahooDataLoader:
                 include_dividends=True,
             )
 
-            # The method returns a statistics dictionary, not a dictionary with symbol keys
+            # The method returns a statistics dictionary. load_market_data called twice per symbol.
             assert result["total_symbols"] == 1
             assert result["successful"] == 1
             assert result["failed"] == 0
-            assert result["total_records"] == 15  # 1 symbol × 15 records
-            assert mock_market_data.call_count == 1
+            assert result["total_records"] == 30  # 1 symbol × (15 + 15) unadjusted + adjusted
+            assert mock_market_data.call_count == 2
             assert mock_key_stats.call_count == 1
             assert mock_holders.call_count == 1
             assert mock_dividends.call_count == 1
