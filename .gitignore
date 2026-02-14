@@ -190,3 +190,4 @@ simple_symbol_loader.py
 notebooks/lstm_price_prediction.ipynb
 docs/DOCUMENTATION_REVIEW.md
 /notebooks/lightning_logs
+/notebooks

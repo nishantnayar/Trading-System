@@ -529,13 +529,18 @@ async def deploy_backup_flow() -> None:
 
 
 async def deploy_all_flows_with_indicators() -> None:
-    """Deploy all flows including the standalone indicators and backup flows."""
+    """
+    Deploy all flows including backup.
+
+    Indicators are NOT deployed as a standalone cron - they run automatically
+    as a sub-flow after market data ingestion completes. This avoids race
+    conditions when Prefect restarts (both jobs would otherwise kick off
+    simultaneously). Use deploy_indicator_flow() for manual/backfill deployment.
+    """
     await deploy_all_flows()
-    await deploy_indicator_flow()
     await deploy_backup_flow()
-    logger.info("✅ All flows (including indicators and backup) deployed successfully!")
+    logger.info("✅ All flows (including backup) deployed successfully!")
 
 
 if __name__ == "__main__":
-    # Deploy all flows including standalone indicators deployment
     asyncio.run(deploy_all_flows_with_indicators())

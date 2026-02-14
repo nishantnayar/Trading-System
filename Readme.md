@@ -329,8 +329,7 @@ The system uses Prefect 3.4+ for workflow orchestration. Prefect is **optional**
 #### Available Prefect Flows
 
 **✅ Implemented:**
-- **Daily Market Data Update**: Runs daily at 22:15 UTC (Mon-Fri) — Fetches hourly market data from Yahoo (unadjusted and adjusted, `data_source='yahoo'` and `data_source='yahoo_adjusted'`)
-- **Daily Technical Indicators**: Runs 22:30 UTC Mon–Fri (15 min after market data)
+- **Daily Market Data Update**: Runs daily at 22:15 UTC (Mon-Fri) — Fetches hourly market data from Yahoo (unadjusted and adjusted, `data_source='yahoo'` and `data_source='yahoo_adjusted'`), then triggers **Technical Indicators** as a sub-flow (no standalone cron to avoid race conditions on Prefect restart)
 - **Weekly Company Information Update**: Runs Sunday at 02:00 UTC
 - **Weekly Key Statistics Update**: Runs Sunday at 03:00 UTC
 - **Weekly Company Data Update**: Combined flow running Sunday at 02:00 UTC
