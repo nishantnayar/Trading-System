@@ -699,7 +699,16 @@ def create_prefect_engine():
 
 ### Prefect Backup and Recovery
 
-#### **Database Backup**
+#### **Trading System Database Backup**
+
+The trading database (`data_ingestion`, `analytics` schemas) is backed up weekly via Prefect at 4 AM UTC Sunday, after weekend data ingestion jobs. Backups are written to `backups/trading_backup_YYYYMMDD.dump`.
+
+- **Automated**: Prefect flow `Weekly Database Backup` (scheduled)
+- **Manual**: `python scripts/backup_trading_db.py`
+- **Restore**: `pg_restore -h localhost -U postgres -d trading_system --clean --if-exists backups/trading_backup_YYYYMMDD.dump`
+- **Config**: Uses `.env` for DB connection; set `PGDMP_PATH` if pg_dump is not in PATH (Windows default: `C:\Program Files\PostgreSQL\17\bin\pg_dump.exe`)
+
+#### **Prefect Database Backup**
 ```bash
 #!/bin/bash
 # backup_prefect.sh

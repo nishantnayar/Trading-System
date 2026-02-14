@@ -1011,7 +1011,7 @@ When reporting issues, please include:
 **Data Issues**:
 1. Check database integrity
 2. Review recent changes
-3. Restore from backup if needed
+3. Restore from backup if needed: `pg_restore -h localhost -U postgres -d trading_system --clean --if-exists backups/trading_backup_YYYYMMDD.dump` (see [Prefect Architecture](development/architecture-prefect.md#prefect-backup-and-recovery))
 4. Contact support immediately
 
 ---

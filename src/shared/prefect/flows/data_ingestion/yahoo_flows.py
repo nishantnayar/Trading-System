@@ -503,11 +503,37 @@ async def deploy_indicator_flow() -> None:
     logger.info("Technical Indicators flow deployed successfully!")
 
 
+async def deploy_backup_flow() -> None:
+    """Deploy the weekly database backup flow (runs after weekend jobs)."""
+    from src.shared.prefect.flows.maintenance.backup_flows import backup_trading_db_flow
+
+    project_root = Path(__file__).parent.parent.parent.parent.parent.parent
+    source_path = str(project_root)
+    flow_file = "src/shared/prefect/flows/maintenance/backup_flows.py"
+
+    backup_deployment = await _resolve_deployment(
+        backup_trading_db_flow.from_source(
+            source=source_path,
+            entrypoint=f"{flow_file}:backup_trading_db_flow",
+        )
+    )
+    await backup_deployment.deploy(
+        name="Weekly Database Backup",
+        work_pool_name=PrefectConfig.get_work_pool_name(),
+        cron="0 4 * * 0",  # 4 AM Sunday UTC (after company info 2 AM, key stats 3 AM)
+        tags=["maintenance", "backup", "scheduled"],
+        description="Backup data_ingestion and analytics schemas via pg_dump",
+        ignore_warnings=True,
+    )
+    logger.info("Database backup flow deployed successfully!")
+
+
 async def deploy_all_flows_with_indicators() -> None:
-    """Deploy all flows including the standalone indicators flow."""
+    """Deploy all flows including the standalone indicators and backup flows."""
     await deploy_all_flows()
     await deploy_indicator_flow()
-    logger.info("✅ All flows (including indicators) deployed successfully!")
+    await deploy_backup_flow()
+    logger.info("✅ All flows (including indicators and backup) deployed successfully!")
 
 
 if __name__ == "__main__":

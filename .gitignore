@@ -184,6 +184,7 @@ cython_debug/
 YAHOO_FINANCE_SUMMARY.md
 KEY_STATISTICS_LOADER.md
 /logs
+/backups
 symbols.txt
 simple_symbol_loader.py
 notebooks/lstm_price_prediction.ipynb

@@ -95,6 +95,7 @@ prefect deployment run "Daily Market Data Update/Daily Market Data Update" --par
 - **Weekly Company Information** — 2 AM UTC Sunday.
 - **Weekly Key Statistics** — 3 AM UTC Sunday.
 - **Weekly Company Data Update** — Combined, 2 AM UTC Sunday.
+- **Weekly Database Backup** — 4 AM UTC Sunday; backs up `data_ingestion` and `analytics` schemas to `backups/trading_backup_YYYYMMDD.dump` via pg_dump. Run manually: `python scripts/backup_trading_db.py`.
 
 ## Deployment Scripts (Phase 7)
 

@@ -330,16 +330,16 @@ The system uses Prefect 3.4+ for workflow orchestration. Prefect is **optional**
 
 **✅ Implemented:**
 - **Daily Market Data Update**: Runs daily at 22:15 UTC (Mon-Fri) — Fetches hourly market data from Yahoo (unadjusted and adjusted, `data_source='yahoo'` and `data_source='yahoo_adjusted'`)
+- **Daily Technical Indicators**: Runs 22:30 UTC Mon–Fri (15 min after market data)
 - **Weekly Company Information Update**: Runs Sunday at 02:00 UTC
 - **Weekly Key Statistics Update**: Runs Sunday at 03:00 UTC
 - **Weekly Company Data Update**: Combined flow running Sunday at 02:00 UTC
+- **Weekly Database Backup**: Runs Sunday at 04:00 UTC — Backs up `data_ingestion` and `analytics` schemas to `backups/` via pg_dump
 
-**Scripts:** To backfill adjusted prices historically, run `python scripts/backpopulate_yahoo_adjusted.py --all-symbols --days 365` (see [Data Sources: Yahoo](docs/data-ingestion/data-sources-yahoo.md)).
+**Scripts:** To backfill adjusted prices historically, run `python scripts/backpopulate_yahoo_adjusted.py --all-symbols --days 365` (see [Data Sources: Yahoo](docs/data-ingestion/data-sources-yahoo.md)). For manual backup, run `python scripts/backup_trading_db.py`.
 
 **📋 Planned:**
-- Technical indicators calculation flows
 - Data validation and quality monitoring flows
-- Maintenance and cleanup flows
 
 #### Prefect Configuration
 

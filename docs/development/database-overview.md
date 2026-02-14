@@ -152,6 +152,10 @@ The SQL scripts provide:
 - **Logging**: `system_logs`, `performance_logs`
 - **Shared**: `audit_log`, `system_config`
 
+#### Backup
+
+Key schemas (`data_ingestion`, `analytics`) are backed up weekly via Prefect (4 AM UTC Sunday) and on demand via `python scripts/backup_trading_db.py`. Backups are stored in `backups/`. See [Prefect Architecture](architecture-prefect.md#prefect-backup-and-recovery).
+
 ## Implementation Strategy
 
 ### Phase 1: Database Foundation & Setup
