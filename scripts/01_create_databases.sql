@@ -5,11 +5,11 @@
 CREATE DATABASE trading_system;
 
 -- Create Prefect Database
-CREATE DATABASE "Prefect";
+CREATE DATABASE "prefect";
 
 -- Grant permissions
 GRANT ALL PRIVILEGES ON DATABASE trading_system TO postgres;
-GRANT ALL PRIVILEGES ON DATABASE "Prefect" TO postgres;
+GRANT ALL PRIVILEGES ON DATABASE "prefect" TO postgres;
 
 -- Connect to trading_system database and create schemas
 \c trading_system;
