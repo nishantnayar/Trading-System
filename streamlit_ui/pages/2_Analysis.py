@@ -42,7 +42,6 @@ from utils import (
     format_currency,
     format_number,
     format_percentage,
-    generate_ohlc_data,
     get_date_range,
     get_institutional_holders,
     get_latest_esg_scores,
@@ -280,20 +279,12 @@ def analysis_page():
             data_source=data_source
         )
 
-        # If no real data available, fall back to simulated data
         if not ohlc_data:
-            st.warning("⚠️ No real market data available. Using simulated data.")
-            base_price = 150 if symbol == "AAPL" else 200
-            ohlc_data = generate_ohlc_data(
-                symbol=symbol,
-                days=365,
-                base_price=base_price,
-                volatility=2.0
+            st.warning(
+                f"No market data available for **{symbol}**. "
+                "Ensure the data ingestion pipeline has run for this symbol."
             )
-        else:
-            # Debug: Market data loaded message (commented out, uncomment if needed for debugging)
-            # st.success(f"✅ Loaded {len(ohlc_data)} real market data points from Yahoo Finance")
-            pass
+            return
 
     # Create tabs for different views
     tab1, tab2 = st.tabs(["🏢 Company Info", "📈 Charts & Analysis"])

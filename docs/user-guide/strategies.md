@@ -1,9 +1,9 @@
 # Strategy Management
 
-> **📋 Implementation Status**: 🚧 Planned for v1.1.0  
-> **Current Status**: Strategy configuration files exist, core engine implementation pending
+> **✅ Implementation Status**: Live in v1.1.0 — Pairs Trading active (paper trading)
+> **Active Pair**: QRVO/SWKS — Semiconductor sector, rank score 0.8845
 
-This guide covers strategy creation, configuration, and management for the trading system.
+This guide covers the pairs trading strategy: discovery, backtesting, activation, and live monitoring.
 
 ## Overview
 
@@ -116,84 +116,68 @@ Trades based on oversold/overbought conditions:
 3. Generates sell signal when RSI > overbought threshold
 4. Manages positions based on RSI levels
 
-#### Pairs Trading Strategy
-Statistical arbitrage using correlated stock pairs:
+#### Pairs Trading Strategy ✅ Live (v1.1.0)
 
-```yaml
-- name: "pairs_trading_strategy"
-  enabled: true
-  description: "Statistical arbitrage using correlated stock pairs"
-  parameters:
-    lookback_period: 252       # 1 year of daily data
-    entry_threshold: 2.0       # Z-score threshold for entry
-    exit_threshold: 0.5        # Z-score threshold for exit
-    stop_loss_threshold: 3.0   # Z-score stop loss
-    position_size: 0.05        # 5% of portfolio per pair
-    rebalance_frequency: "daily"
-  risk_limits:
-    max_drawdown: 0.08         # 8% maximum drawdown
-    max_daily_loss: 0.03       # 3% daily loss limit
-    max_positions: 8           # Maximum concurrent pairs
-    max_sector_exposure: 0.4   # 40% max exposure per sector
-  schedule:
-    run_frequency: "hourly"
-    market_hours_only: true
-```
+Statistical arbitrage using cointegrated stock pairs. Pairs are discovered automatically from DB data via `scripts/discover_pairs.py` and stored in `strategy_engine.pair_registry`.
+
+**Active pair**: QRVO/SWKS (Semiconductors)
+
+| Parameter | Value |
+|---|---|
+| Hedge ratio (β) | 0.9231 |
+| Half-life | 18.4 hours |
+| Correlation | 0.8697 |
+| Cointegration p-value | 0.0024 |
+| Z-score window | 40 bars |
+| Entry threshold | ±2.0 σ |
+| Exit threshold | ±0.5 σ |
+| Stop loss | ±3.0 σ |
+| Rank score | 0.8845 |
 
 **How It Works:**
-1. Identifies correlated stock pairs (e.g., AAPL-MSFT, GOOGL-META)
-2. Calculates spread Z-score between pairs
-3. Enters long/short positions when spread deviates significantly
-4. Exits when spread returns to mean
-5. Uses stop loss based on Z-score threshold
+1. Every hour (market hours), the Prefect flow fetches the last 500 hourly bars from Alpaca
+2. Computes `spread = log(P1) − β × log(P2)` and rolling z-score
+3. **LONG_SPREAD** (z < −2.0): buy QRVO, short SWKS — spread expected to rise back to mean
+4. **SHORT_SPREAD** (z > +2.0): short QRVO, buy SWKS
+5. **EXIT** (|z| < 0.5): close both legs, take profit
+6. **STOP_LOSS** (|z| > 3.0) or **EXPIRE** (hold > 3× half-life): force close
 
-**Pairs Configuration:**
-Pairs are defined in `config/pairs.yaml`:
+**Position sizing**: Half-Kelly criterion (bootstrap: 2% fixed for first 20 trades)
 
-```yaml
-pairs:
-  - name: "AAPL_MSFT"
-    symbol1: "AAPL"
-    symbol2: "MSFT"
-    sector: "Technology"
-    correlation: 0.85
-    cointegration_pvalue: 0.001
-    half_life: 12.5  # days
-    description: "Apple vs Microsoft - Large cap tech leaders"
-    enabled: true
-    parameters:
-      entry_threshold: 2.0
-      exit_threshold: 0.5
-      stop_loss: 3.0
-      position_size: 0.05
+---
+
+#### Discovering New Pairs
+
+```bash
+python scripts/discover_pairs.py
 ```
 
-### 3. Backtesting Framework
+Runs Engle-Granger cointegration on all active symbols grouped by sector. Output: ranked table of candidate pairs. Top pairs are automatically upserted into `pair_registry` with `is_active=False`. Activate from the Backtest Review UI.
 
-Comprehensive backtesting capabilities for strategy validation:
+---
+
+### 3. Backtesting Framework ✅ Live (v1.1.0)
+
+Access via **Streamlit → Backtest Review** page (`streamlit_ui/pages/Backtest_Review.py`).
 
 **Features:**
-- Historical data replay with realistic execution
-- Performance metrics calculation (Sharpe ratio, Sortino ratio, max drawdown)
-- Risk-adjusted returns analysis
-- Trade-by-trade analysis and reporting
-- Walk-forward optimization
-- Monte Carlo simulation
+- Pair selector with rank score labels — activate/deactivate directly from UI
+- Run backtest in-process against historical `market_data` DB
+- Fills simulated at next-bar open to avoid look-ahead bias
+- Pass/fail gate: Sharpe > 0.5, win rate > 45%, max drawdown < 15%
+- Equity curve, trade log, run history comparison across parameter sets
+- **Stock Analysis** tabs: Risk Flags (7 checks), Fundamentals, Normalised Price Chart, Rolling Correlation
 
-**Backtesting Workflow:**
-```mermaid
-graph LR
-    A[Load Historical Data] --> B[Apply Strategy Logic]
-    B --> C[Generate Signals]
-    C --> D[Simulate Execution]
-    D --> E[Calculate Performance]
-    E --> F[Generate Report]
-    
-    style A fill:#e8f5e9
-    style B fill:#00A86B
-    style E fill:#009688
-    style F fill:#dc382d
-```
+**Backtest gate thresholds:**
+
+| Metric | Gate |
+|---|---|
+| Sharpe ratio | > 0.5 |
+| Win rate | > 45% |
+| Max drawdown | < 15% |
+
+**QRVO/SWKS backtest result** (180 days to 2026-03-27):
+- Sharpe: 0.516 ✅ | Win rate: 61.5% ✅ | Max drawdown: 8.2% ✅ | Trades: 26
 
 **Example Backtest Configuration:**
 ```python

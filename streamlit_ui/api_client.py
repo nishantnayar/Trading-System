@@ -131,6 +131,60 @@ class TradingSystemAPI:
         """Get symbols filtered by both industry and sector"""
         return self.get_symbols_by_filter(sector=sector, industry=industry)
     
+    # ── Alpaca Trading API (live data — no caching) ───────────────────────────
+
+    def get_market_clock(self) -> Dict[str, Any]:
+        """Get current market clock (open/closed, next open/close times)."""
+        return self._make_request("GET", "/clock")
+
+    def get_alpaca_account(self) -> Dict[str, Any]:
+        """Get Alpaca account information (equity, cash, buying power, etc.)."""
+        return self._make_request("GET", "/account")
+
+    def get_alpaca_positions(self) -> List[Dict[str, Any]]:
+        """Get all open positions."""
+        result = self._make_request("GET", "/positions")
+        return result if isinstance(result, list) else []
+
+    def get_alpaca_orders(self, status: str = "open", limit: int = 50) -> List[Dict[str, Any]]:
+        """Get orders filtered by status ('open', 'closed', 'all')."""
+        result = self._make_request("GET", "/orders", params={"status": status, "limit": limit})
+        return result if isinstance(result, list) else []
+
+    def get_alpaca_trades(self, limit: int = 20) -> List[Dict[str, Any]]:
+        """Get recent filled trades."""
+        result = self._make_request("GET", "/trades", params={"limit": limit})
+        return result if isinstance(result, list) else []
+
+    def place_order(
+        self,
+        symbol: str,
+        qty: int,
+        side: str,
+        order_type: str = "market",
+        time_in_force: str = "day",
+        limit_price: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Place a new order."""
+        params: Dict[str, Any] = {
+            "symbol": symbol,
+            "qty": qty,
+            "side": side,
+            "order_type": order_type,
+            "time_in_force": time_in_force,
+        }
+        if limit_price is not None:
+            params["limit_price"] = limit_price
+        return self._make_request("POST", "/orders", params=params)
+
+    def close_position(self, symbol: str) -> Dict[str, Any]:
+        """Close an open position by symbol."""
+        return self._make_request("POST", f"/positions/{symbol}/close")
+
+    def cancel_order(self, order_id: str) -> Dict[str, Any]:
+        """Cancel an open order by ID."""
+        return self._make_request("DELETE", f"/orders/{order_id}")
+
     # Key Statistics API
     @st.cache_data(ttl=3600)  # Cache for 1 hour
     def get_key_statistics(_self, symbol: str) -> Dict[str, Any]:

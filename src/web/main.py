@@ -34,6 +34,7 @@ from src.web.api.institutional_holders import (  # noqa: E402
 )
 from src.web.api.key_statistics import router as key_statistics_router  # noqa: E402
 from src.web.api.market_data import router as market_data_router  # noqa: E402
+from src.web.api.pairs_trading import router as pairs_trading_router  # noqa: E402
 from src.web.api.routes import router  # noqa: E402
 
 
@@ -86,6 +87,7 @@ app.include_router(company_officers_router)
 app.include_router(financial_statements_router)
 app.include_router(institutional_holders_router)
 app.include_router(key_statistics_router)
+app.include_router(pairs_trading_router)
 
 
 if __name__ == "__main__":

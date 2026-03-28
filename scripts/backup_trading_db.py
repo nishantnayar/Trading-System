@@ -19,8 +19,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 load_dotenv(project_root / ".env")
 
-# Default pg_dump path for Windows (PostgreSQL 17)
-_DEFAULT_PGDMP = r"C:\Program Files\PostgreSQL\17\bin\pg_dump.exe"
+# Default pg_dump path for Windows (PostgreSQL 18)
+_DEFAULT_PGDMP = r"C:\Program Files\PostgreSQL\18\bin\pg_dump.exe"
 PG_DUMP_PATH = os.getenv("PGDMP_PATH", _DEFAULT_PGDMP)
 
 

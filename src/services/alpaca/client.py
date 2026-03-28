@@ -6,8 +6,9 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
 from alpaca_trade_api import REST
-from alpaca_trade_api.rest import APIError
+from alpaca_trade_api.rest import APIError, TimeFrame
 
 from .exceptions import AlpacaAPIError, AlpacaAuthenticationError, AlpacaConnectionError
 
@@ -244,6 +245,36 @@ class AlpacaClient:
             raise AlpacaAPIError(f"Failed to cancel order {order_id}: {str(e)}")
         except Exception as e:
             raise AlpacaConnectionError(f"Connection error: {str(e)}")
+
+    async def get_bars(
+        self,
+        symbol: str,
+        limit: int = 500,
+        adjustment: str = "all",
+    ) -> pd.Series:
+        """
+        Fetch the last `limit` hourly bars for a symbol.
+
+        Returns a pd.Series of close prices indexed by UTC timestamp.
+        Uses Alpaca's market data API — includes today's intraday bars,
+        unlike the DB which is end-of-day only.
+        """
+        try:
+            bars = self.client.get_bars(
+                symbol,
+                TimeFrame.Hour,
+                limit=limit,
+                adjustment=adjustment,
+            )
+            if bars is None or len(bars) == 0:
+                return pd.Series(dtype=float, name=symbol)
+            df = bars.df
+            df.index = pd.to_datetime(df.index, utc=True)
+            return df["close"].rename(symbol)
+        except APIError as e:
+            raise AlpacaAPIError(f"Failed to get bars for {symbol}: {str(e)}")
+        except Exception as e:
+            raise AlpacaConnectionError(f"Connection error fetching bars: {str(e)}")
 
     async def place_order(
         self,

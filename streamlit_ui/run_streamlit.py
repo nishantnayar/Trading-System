@@ -49,8 +49,7 @@ def run_with_custom_config():
         os.makedirs(config_dir, exist_ok=True)
         
         config_file = os.path.join(config_dir, "config.toml")
-        if not os.path.exists(config_file):
-            with open(config_file, "w") as f:
+        with open(config_file, "w") as f:
                 f.write("""
 [server]
 headless = false
@@ -61,10 +60,10 @@ address = "localhost"
 gatherUsageStats = false
 
 [theme]
-primaryColor = "#1f77b4"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f0f2f6"
-textColor = "#262730"
+primaryColor = "#1a1a1a"
+backgroundColor = "#FAFAF8"
+secondaryBackgroundColor = "#F5F4F0"
+textColor = "#1a1a1a"
 font = "sans serif"
 """)
         

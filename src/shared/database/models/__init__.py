@@ -17,6 +17,14 @@ from .logging_models import PerformanceLog, SystemLog
 from .market_data import MarketData
 from .stock_splits import StockSplit
 from .symbols import DelistedSymbol, Symbol, SymbolDataStatus
+from .strategy_models import (
+    BacktestRun,
+    PairPerformance,
+    PairRegistry,
+    PairSignal,
+    PairSpread,
+    PairTrade,
+)
 from .technical_indicators import TechnicalIndicators, TechnicalIndicatorsLatest
 
 __all__ = [
@@ -38,4 +46,10 @@ __all__ = [
     "TechnicalIndicatorsLatest",
     "SystemLog",
     "PerformanceLog",
+    "PairRegistry",
+    "PairSpread",
+    "PairSignal",
+    "PairTrade",
+    "PairPerformance",
+    "BacktestRun",
 ]

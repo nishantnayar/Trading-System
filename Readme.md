@@ -29,11 +29,11 @@ A production-grade algorithmic trading platform designed for equities trading wi
 - **Paper Trading Integration**: ✅ Safe testing environment via Alpaca paper trading API
 - **Account Management**: ✅ View account balance, buying power, and portfolio value
 - **Position Management**: ✅ Track positions, unrealized P&L, and close positions
-- **Order Management**: ✅ View and cancel orders, monitor order status
+- **Order Management**: ✅ View, place, and cancel orders; monitor order status
+- **Pairs Trading Strategy**: ✅ Statistical arbitrage with cointegration-based pair discovery, z-score signals, Kelly criterion sizing, and two-legged Alpaca execution
+- **Backtesting Engine**: ✅ Historical strategy validation with look-ahead-bias-free replay; Sharpe, drawdown, win rate, profit factor metrics
 - **Live Trading Support**: 🚧 Production-ready execution infrastructure (planned)
-- **Strategy Framework**: 🚧 Plugin-based architecture for custom trading strategies (planned)
-- **Risk Management**: 🚧 Built-in position sizing, drawdown limits, and risk controls (planned)
-- **Backtesting Engine**: 🚧 Historical strategy validation and performance analysis (planned)
+- **Risk Management**: 🚧 Portfolio-level drawdown limits and compliance checks (planned)
 
 ### Data Management
 - **Multi-Source Data Integration**: Polygon.io, Yahoo Finance, and Alpaca market data
@@ -239,13 +239,14 @@ trading-system/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/alpaca/account` | Retrieve account information |
-| `GET` | `/api/alpaca/positions` | List all positions |
-| `GET` | `/api/alpaca/orders` | List orders |
-| `GET` | `/api/alpaca/clock` | Get market clock status |
-| `POST` | `/api/alpaca/positions/{symbol}/close` | Close a position |
-| `DELETE` | `/api/alpaca/orders/{order_id}` | Cancel an order |
-| `POST` | `/api/alpaca/orders` | Place new order |
+| `GET` | `/account` | Retrieve Alpaca account information |
+| `GET` | `/positions` | List all open positions |
+| `GET` | `/orders` | List orders (filterable by status) |
+| `GET` | `/trades` | Recent trade history |
+| `GET` | `/clock` | Market open/closed status |
+| `POST` | `/positions/{symbol}/close` | Close a position |
+| `DELETE` | `/orders/{order_id}` | Cancel an order |
+| `POST` | `/orders` | Place a new order |
 
 ### Market Data & Analytics
 
@@ -485,31 +486,29 @@ global_settings:
 
 | Version | Status | Key Features |
 |---------|--------|--------------|
-| v1.0.0 | ✅ Current | Paper trading, market data integration (Polygon.io, Yahoo Finance), Streamlit dashboard, Prefect orchestration, database-first logging, technical indicators |
-| v1.1.0 | 🚧 Planned | Strategy engine implementation, backtesting framework, risk management module, order placement UI |
-| v1.2.0 | 📋 Planned | Advanced Prefect workflows, analytics flows, data validation automation, enhanced monitoring |
+| v1.0.0 | ✅ Released | Paper trading, market data integration (Polygon.io, Yahoo Finance), Streamlit dashboard, Prefect orchestration, database-first logging, technical indicators |
+| v1.1.0 | ✅ Released (2026-03-28) | Pairs trading strategy engine, backtesting framework, Backtest Review UI, Pairs Trading UI, professional UI redesign, order placement, real Alpaca data throughout |
+| v1.2.0 | 📋 Planned | Risk management service, advanced analytics flows, data quality monitoring, enhanced monitoring |
 | v1.3.0 | 🔮 Future | Microservices architecture, cloud deployment, distributed execution, multi-asset support |
 
 ### Implementation Status
 
-**✅ Completed (v1.0.0):**
-- Paper trading integration with Alpaca
-- Multi-source data ingestion (Polygon.io, Yahoo Finance)
-- Comprehensive Yahoo Finance data (10 data types: market data, company info, key statistics, dividends, splits, institutional holders, financial statements, company officers, analyst recommendations, ESG scores)
-- Streamlit web dashboard with Plotly charts
+**✅ Completed (v1.1.0):**
+- Paper trading integration with Alpaca (account, positions, orders, trades)
+- Multi-source data ingestion (Polygon.io, Yahoo Finance — 10 data types)
+- Streamlit dashboard with professional paper/ink design system
+- Pairs trading strategy: cointegration-based pair discovery, z-score signals, Kelly criterion sizing, two-legged Alpaca execution
+- Backtesting engine with look-ahead-bias-free replay and pass/fail gates
+- Backtest Review and Pairs Trading monitoring pages
 - Database-first logging system
 - Technical indicators calculation and storage
-- Prefect workflow orchestration (Yahoo Finance flows)
+- Prefect workflow orchestration (Yahoo Finance daily/weekly flows, pairs trading intraday flow)
 - Timezone management (UTC storage, Central Time display)
 - AI-powered stock screener (with Ollama integration)
+- Order placement UI with market and limit order support
 
-**🚧 In Progress (v1.1.0):**
-- Strategy engine framework
-- Backtesting infrastructure
-- Risk management service
-- Enhanced order management UI
-
-**📋 Planned:**
+**📋 Planned (v1.2.0):**
+- Risk management service (portfolio-level drawdown limits, compliance checks)
 - Advanced analytics and reporting
 - Automated data quality monitoring
 - Email/SMS notifications

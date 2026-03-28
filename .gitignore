@@ -191,3 +191,12 @@ notebooks/lstm_price_prediction.ipynb
 docs/DOCUMENTATION_REVIEW.md
 /notebooks/lightning_logs
 /notebooks
+.claude/settings.local.json
+docs/articles/linkedin_post_tft_xai.md
+docs/articles/medium_article_tft_xai.md
+docs/articles/xai-flight-recorder-volatile-markets-2026-website.md
+docs/articles/xai-flight-recorder-volatile-markets-2026.html
+docs/articles/xai-flight-recorder-volatile-markets-2026.md
+/docs/articles
+scripts/retrofit_economist_tables.py
+scripts/fix_figures_batch2.py

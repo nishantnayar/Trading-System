@@ -55,41 +55,55 @@ def archive_old_data(retention_days: int = 90):
     # Update data retention policies
 ```
 
-#### **2. Strategy Engine Flows**
+#### **2. Strategy Engine Flows** ✅ Implemented (v1.1.0)
+
+**File**: `src/shared/prefect/flows/strategy_engine/pairs_flow.py`
+**Schedule**: `0 14-21 * * 1-5` UTC — hourly, Mon–Fri 9 AM–5 PM ET
+
 ```python
-@flow(name="run_strategy", retries=2, timeout_seconds=300)
-def run_strategy(strategy_id: str, symbols: List[str]):
-    """Execute trading strategy logic"""
-    # Load strategy configuration
-    # Fetch required market data
-    # Calculate technical indicators
-    # Generate trading signals
-    # Update strategy state
+@flow(
+    name="intraday-pairs-trading",
+    log_prints=True,
+    retries=1,
+    retry_delay_seconds=60,
+    timeout_seconds=600,
+)
+async def intraday_pairs_flow(skip_market_check: bool = False) -> dict:
+    """
+    Hourly intraday pairs trading cycle.
+    1. Check market is open (Alpaca clock)
+    2. For each active pair: fetch live bars → compute z-score → generate signal → execute
+    """
+    alpaca = AlpacaClient(is_paper=True)
 
-@flow(name="calculate_indicators", retries=1)
-def calculate_indicators(symbol: str, lookback_period: int):
-    """Technical indicator calculations"""
-    # Fetch historical data
-    # Calculate moving averages
-    # Compute RSI, MACD, etc.
-    # Store indicator values
+    if not skip_market_check:
+        is_open = await check_market_open_task(alpaca)
+        if not is_open:
+            return {"status": "MARKET_CLOSED"}
 
-@flow(name="generate_signals", retries=1)
-def generate_signals(strategy_id: str, symbol: str):
-    """Generate buy/sell signals based on strategy logic"""
-    # Load strategy parameters
-    # Analyze market conditions
-    # Generate signal strength
-    # Store signal in database
-
-@flow(name="backtest_strategy", timeout_seconds=1800)
-def backtest_strategy(strategy_id: str, start_date: datetime, end_date: datetime):
-    """Historical strategy testing"""
-    # Load historical data
-    # Run strategy simulation
-    # Calculate performance metrics
-    # Generate backtest report
+    return await run_pairs_strategy_task(alpaca)
 ```
+
+**Tasks:**
+- `check_market_open_task` — calls `AlpacaClient.get_clock()`, logs next open time if closed
+- `run_pairs_strategy_task` — instantiates `PairsStrategy`, calls `strategy.run_cycle()` across all active pairs
+
+**Deployment (Prefect 3.x `from_source().deploy()` pattern):**
+```bash
+# Dry-run one cycle (market check skipped):
+python src/shared/prefect/flows/strategy_engine/pairs_flow.py
+
+# Register scheduled deployment in Prefect UI:
+python src/shared/prefect/flows/strategy_engine/pairs_flow.py --deploy
+```
+
+**Per-pair cycle** (`PairsStrategy.run_cycle`):
+1. Fetch last 500 hourly bars from **Alpaca** (`get_bars`) — not the end-of-day DB
+2. Compute log-spread z-score → write to `pair_spread`
+3. Evaluate signal → write to `pair_signal`
+4. If entry: `KellySizer` → `PairExecutor.open_pair_trade()` → Alpaca paper order
+5. If exit/stop: `PairExecutor.close_pair_trade()`
+6. Update `pair_performance`
 
 #### **3. Execution Service Flows**
 ```python
@@ -466,13 +480,16 @@ def deploy_trading_flows():
         tags=["data-ingestion", "scheduled"]
     )
     
-    # Strategy Engine Flows
-    run_strategy_deployment = Deployment.build_from_flow(
-        flow=run_strategy,
-        name="run-strategy",
-        schedule=CronSchedule(cron="5 * * * *"),  # 5 minutes after hour
-        work_pool_name="strategy-engine-pool",
-        tags=["strategy", "scheduled"]
+    # Strategy Engine Flows (Prefect 3.x from_source pattern)
+    pairs_deployment = await intraday_pairs_flow.from_source(
+        source=str(project_root),
+        entrypoint="src/shared/prefect/flows/strategy_engine/pairs_flow.py:intraday_pairs_flow",
+    )
+    await pairs_deployment.deploy(
+        name="Intraday Pairs Trading",
+        work_pool_name=PrefectConfig.get_work_pool_name(),
+        cron="0 14-21 * * 1-5",  # hourly 9 AM–5 PM ET Mon–Fri
+        tags=["strategy-engine", "pairs-trading", "scheduled"],
     )
     
     # Execution Flows
@@ -706,7 +723,7 @@ The trading database (`data_ingestion`, `analytics` schemas) is backed up weekly
 - **Automated**: Prefect flow `Weekly Database Backup` (scheduled)
 - **Manual**: `python scripts/backup_trading_db.py`
 - **Restore**: `pg_restore -h localhost -U postgres -d trading_system --clean --if-exists backups/trading_backup_YYYYMMDD.dump`
-- **Config**: Uses `.env` for DB connection; set `PGDMP_PATH` if pg_dump is not in PATH (Windows default: `C:\Program Files\PostgreSQL\17\bin\pg_dump.exe`)
+- **Config**: Uses `.env` for DB connection; set `PGDMP_PATH` if pg_dump is not in PATH (Windows default: `C:\Program Files\PostgreSQL\18\bin\pg_dump.exe`)
 
 #### **Prefect Database Backup**
 ```bash

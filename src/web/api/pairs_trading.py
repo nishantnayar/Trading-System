@@ -1,25 +1,38 @@
 """
 Pairs Trading Strategy API Endpoints
-Handles pairs trading strategy management, monitoring, and configuration
+
+Real implementations backed by the strategy_engine DB schema.
+All endpoints read from PairRegistry, PairTrade, PairPerformance,
+PairSpread, PairSignal, and BacktestRun tables.
 """
 
 import os
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-import numpy as np
-import pandas as pd
 import yaml  # type: ignore
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from ...shared.database.base import db_readonly_session, db_transaction
+from ...shared.database.models.strategy_models import (
+    BacktestRun,
+    PairPerformance,
+    PairRegistry,
+    PairSignal,
+    PairSpread,
+    PairTrade,
+)
 from ...shared.logging import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/strategies/pairs", tags=["pairs-trading"])
 
 
-# Pydantic models for request/response
+# ---------------------------------------------------------------------------
+# Pydantic models (kept compatible with existing Streamlit client)
+# ---------------------------------------------------------------------------
+
 class PairConfig(BaseModel):
     entry_threshold: float = 2.0
     exit_threshold: float = 0.5
@@ -34,10 +47,13 @@ class PairConfig(BaseModel):
 
 
 class BacktestConfig(BaseModel):
+    pair_id: int
     start_date: str
     end_date: str
-    initial_capital: float = 100000
+    initial_capital: float = 100_000
     entry_threshold: float = 2.0
+    exit_threshold: float = 0.5
+    stop_loss_threshold: float = 3.0
 
 
 class PairData(BaseModel):
@@ -46,10 +62,10 @@ class PairData(BaseModel):
     symbol1: str
     symbol2: str
     status: str
-    z_score: float
+    z_score: Optional[float]
     pnl: float
     correlation: float
-    days_held: int
+    days_held: Optional[int]
     entry_price1: Optional[float] = None
     entry_price2: Optional[float] = None
     current_price1: Optional[float] = None
@@ -62,7 +78,7 @@ class PerformanceData(BaseModel):
     max_drawdown: float
     win_rate: float
     active_pairs: int
-    avg_hold_time: int
+    avg_hold_time: float
     performance_history: Optional[List[Dict]] = None
     drawdown_history: Optional[List[Dict]] = None
     monthly_returns: Optional[List[Dict]] = None
@@ -76,64 +92,112 @@ class StrategyStatus(BaseModel):
     total_pnl: float
 
 
-def load_pairs_config() -> Dict[str, Any]:
-    """Load pairs configuration from YAML file"""
-    config_path = os.path.join(os.path.dirname(__file__), "../../../config/pairs.yaml")
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _load_strategy_config() -> Dict[str, Any]:
+    config_path = os.path.join(os.path.dirname(__file__), "../../../config/strategies.yaml")
     try:
-        with open(config_path, "r") as file:
-            return yaml.safe_load(file)  # type: ignore
-    except FileNotFoundError:
-        logger.error(f"Pairs configuration file not found: {config_path}")
-        return {"pairs": [], "global_settings": {}}
-    except Exception as e:
-        logger.error(f"Error loading pairs configuration: {e}")
-        return {"pairs": [], "global_settings": {}}
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f) or {}
+    except Exception:
+        return {}
 
 
-def load_strategy_config() -> Dict[str, Any]:
-    """Load strategy configuration from YAML file"""
-    config_path = os.path.join(
-        os.path.dirname(__file__), "../../../config/strategies.yaml"
-    )
-    try:
-        with open(config_path, "r") as file:
-            return yaml.safe_load(file)  # type: ignore
-    except FileNotFoundError:
-        logger.error(f"Strategy configuration file not found: {config_path}")
-        return {"strategies": [], "global_settings": {}}
-    except Exception as e:
-        logger.error(f"Error loading strategy configuration: {e}")
-        return {"strategies": [], "global_settings": {}}
+def _latest_z_score(pair_id: int) -> Optional[float]:
+    """Return the most recent z-score for a pair."""
+    with db_readonly_session() as session:
+        row = (
+            session.query(PairSpread.z_score)
+            .filter(PairSpread.pair_id == pair_id)
+            .order_by(PairSpread.timestamp.desc())
+            .first()
+        )
+    return float(row[0]) if row and row[0] is not None else None
 
+
+def _open_trade(pair_id: int) -> Optional[PairTrade]:
+    with db_readonly_session() as session:
+        trade = (
+            session.query(PairTrade)
+            .filter(PairTrade.pair_id == pair_id, PairTrade.status == "OPEN")
+            .order_by(PairTrade.entry_time.desc())
+            .first()
+        )
+        if trade:
+            session.expunge(trade)
+        return trade
+
+
+def _latest_prices(pair_id: int):
+    """Return (price1, price2) from the most recent PairSpread row."""
+    with db_readonly_session() as session:
+        row = (
+            session.query(PairSpread.price1, PairSpread.price2)
+            .filter(PairSpread.pair_id == pair_id)
+            .order_by(PairSpread.timestamp.desc())
+            .first()
+        )
+    if row:
+        return (
+            float(row[0]) if row[0] is not None else None,
+            float(row[1]) if row[1] is not None else None,
+        )
+    return None, None
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
 
 @router.get("/active", response_model=Dict[str, List[PairData]])
 async def get_active_pairs() -> Dict[str, List[PairData]]:
-    """Get currently active trading pairs"""
+    """Return active pairs with latest z-score and open trade info."""
     try:
-        pairs_config = load_pairs_config()
-        active_pairs = []
+        with db_readonly_session() as session:
+            pairs = (
+                session.query(PairRegistry)
+                .filter(PairRegistry.is_active.is_(True))
+                .all()
+            )
+            for p in pairs:
+                session.expunge(p)
 
-        for pair in pairs_config.get("pairs", []):
-            if pair.get("enabled", False):
-                # Simulate pair data - in real implementation, this would come from database
-                pair_data = PairData(
-                    id=pair["name"],
-                    name=pair["name"],
-                    symbol1=pair["symbol1"],
-                    symbol2=pair["symbol2"],
-                    status="active",
-                    z_score=np.random.normal(0, 1),  # Simulated Z-score
-                    pnl=np.random.normal(0, 100),  # Simulated P&L
-                    correlation=pair["correlation"],
-                    days_held=np.random.randint(1, 30),  # Simulated days held
-                    entry_price1=100.0 + np.random.normal(0, 10),
-                    entry_price2=100.0 + np.random.normal(0, 10),
-                    current_price1=100.0 + np.random.normal(0, 10),
-                    current_price2=100.0 + np.random.normal(0, 10),
-                )
-                active_pairs.append(pair_data)
+        result = []
+        for pair in pairs:
+            z = _latest_z_score(pair.id)
+            trade = _open_trade(pair.id)
+            p1, p2 = _latest_prices(pair.id)
 
-        return {"pairs": active_pairs}
+            days_held = None
+            entry_p1 = entry_p2 = None
+            pnl = 0.0
+
+            if trade:
+                if trade.entry_time:
+                    days_held = (datetime.utcnow() - trade.entry_time).days
+                entry_p1 = float(trade.entry_price1) if trade.entry_price1 else None
+                entry_p2 = float(trade.entry_price2) if trade.entry_price2 else None
+                pnl = float(trade.pnl) if trade.pnl else 0.0
+
+            result.append(PairData(
+                id=str(pair.id),
+                name=f"{pair.symbol1}/{pair.symbol2}",
+                symbol1=pair.symbol1,
+                symbol2=pair.symbol2,
+                status="in_trade" if trade else "watching",
+                z_score=z,
+                pnl=pnl,
+                correlation=float(pair.correlation) if pair.correlation else 0.0,
+                days_held=days_held,
+                entry_price1=entry_p1,
+                entry_price2=entry_p2,
+                current_price1=p1,
+                current_price2=p2,
+            ))
+
+        return {"pairs": result}
 
     except Exception as e:
         logger.error(f"Error getting active pairs: {e}")
@@ -142,60 +206,113 @@ async def get_active_pairs() -> Dict[str, List[PairData]]:
 
 @router.get("/performance", response_model=PerformanceData)
 async def get_performance_data() -> PerformanceData:
-    """Get strategy performance metrics"""
+    """Aggregate performance across all pairs from PairPerformance table."""
     try:
-        # Simulate performance data - in real implementation, this would come from database
-        performance = PerformanceData(
-            total_pnl=np.random.normal(500, 200),
-            sharpe_ratio=np.random.uniform(0.5, 2.0),
-            max_drawdown=np.random.uniform(0.02, 0.08),
-            win_rate=np.random.uniform(0.4, 0.7),
-            active_pairs=np.random.randint(2, 6),
-            avg_hold_time=np.random.randint(5, 20),
-        )
+        today = date.today()
 
-        return performance
+        with db_readonly_session() as session:
+            perf_rows = (
+                session.query(PairPerformance)
+                .filter(PairPerformance.date == today)
+                .all()
+            )
+            for r in perf_rows:
+                session.expunge(r)
+
+            # Count active pairs
+            active_count = (
+                session.query(PairRegistry)
+                .filter(PairRegistry.is_active.is_(True))
+                .count()
+            )
+
+        if not perf_rows:
+            return PerformanceData(
+                total_pnl=0.0, sharpe_ratio=0.0, max_drawdown=0.0,
+                win_rate=0.0, active_pairs=active_count, avg_hold_time=0.0,
+            )
+
+        total_pnl = sum(float(r.total_pnl or 0) for r in perf_rows)
+        avg_sharpe = sum(float(r.sharpe or 0) for r in perf_rows) / len(perf_rows)
+        avg_dd = sum(float(r.max_drawdown or 0) for r in perf_rows) / len(perf_rows)
+        win_rates = [float(r.win_rate or 0) for r in perf_rows if r.win_rate]
+        avg_win_rate = sum(win_rates) / len(win_rates) if win_rates else 0.0
+        hold_times = [float(r.avg_hold_hours or 0) for r in perf_rows if r.avg_hold_hours]
+        avg_hold = sum(hold_times) / len(hold_times) if hold_times else 0.0
+
+        return PerformanceData(
+            total_pnl=total_pnl,
+            sharpe_ratio=avg_sharpe,
+            max_drawdown=avg_dd,
+            win_rate=avg_win_rate,
+            active_pairs=active_count,
+            avg_hold_time=avg_hold,
+        )
 
     except Exception as e:
         logger.error(f"Error getting performance data: {e}")
         raise HTTPException(status_code=500, detail="Failed to get performance data")
 
 
+@router.get("/status", response_model=StrategyStatus)
+async def get_strategy_status() -> StrategyStatus:
+    """Return strategy status from PairRegistry."""
+    try:
+        with db_readonly_session() as session:
+            total = session.query(PairRegistry).count()
+            active = (
+                session.query(PairRegistry)
+                .filter(PairRegistry.is_active.is_(True))
+                .count()
+            )
+            perf = (
+                session.query(PairPerformance)
+                .filter(PairPerformance.date == date.today())
+                .all()
+            )
+
+        total_pnl = sum(float(r.total_pnl or 0) for r in perf)
+        last_update = datetime.utcnow()
+
+        return StrategyStatus(
+            is_active=active > 0,
+            last_update=last_update,
+            total_pairs=total,
+            active_pairs=active,
+            total_pnl=total_pnl,
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting strategy status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get strategy status")
+
+
 @router.get("/config", response_model=PairConfig)
 async def get_configuration() -> PairConfig:
-    """Get current strategy configuration"""
+    """Return strategy config from YAML (unchanged from original)."""
     try:
-        strategy_config = load_strategy_config()
-
-        # Find pairs trading strategy configuration
-        pairs_strategy = None
-        for strategy in strategy_config.get("strategies", []):
-            if strategy.get("name") == "pairs_trading_strategy":
-                pairs_strategy = strategy
-                break
-
+        cfg = _load_strategy_config()
+        pairs_strategy = next(
+            (s for s in cfg.get("strategies", []) if s.get("name") == "pairs_trading_strategy"),
+            None,
+        )
         if not pairs_strategy:
-            # Return default configuration
             return PairConfig()
 
         params = pairs_strategy.get("parameters", {})
-        risk_limits = pairs_strategy.get("risk_limits", {})
-
-        config = PairConfig(
+        risk = pairs_strategy.get("risk_limits", {})
+        return PairConfig(
             entry_threshold=params.get("entry_threshold", 2.0),
             exit_threshold=params.get("exit_threshold", 0.5),
             stop_loss_threshold=params.get("stop_loss_threshold", 3.0),
             position_size=params.get("position_size", 0.05),
             lookback_period=params.get("lookback_period", 252),
-            max_active_pairs=risk_limits.get("max_positions", 6),
-            max_drawdown_limit=risk_limits.get("max_drawdown", 0.08),
-            max_daily_loss=risk_limits.get("max_daily_loss", 0.03),
-            max_sector_exposure=risk_limits.get("max_sector_exposure", 0.4),
+            max_active_pairs=risk.get("max_positions", 6),
+            max_drawdown_limit=risk.get("max_drawdown", 0.08),
+            max_daily_loss=risk.get("max_daily_loss", 0.03),
+            max_sector_exposure=risk.get("max_sector_exposure", 0.4),
             rebalance_frequency=params.get("rebalance_frequency", "daily"),
         )
-
-        return config
-
     except Exception as e:
         logger.error(f"Error getting configuration: {e}")
         raise HTTPException(status_code=500, detail="Failed to get configuration")
@@ -203,43 +320,32 @@ async def get_configuration() -> PairConfig:
 
 @router.post("/config")
 async def save_configuration(config: PairConfig) -> Dict[str, str]:
-    """Save strategy configuration"""
+    """Save strategy configuration to YAML (unchanged from original)."""
     try:
-        strategy_config = load_strategy_config()
-
-        # Find and update pairs trading strategy configuration
-        for strategy in strategy_config.get("strategies", []):
+        cfg = _load_strategy_config()
+        for strategy in cfg.get("strategies", []):
             if strategy.get("name") == "pairs_trading_strategy":
-                strategy["parameters"].update(
-                    {
-                        "entry_threshold": config.entry_threshold,
-                        "exit_threshold": config.exit_threshold,
-                        "stop_loss_threshold": config.stop_loss_threshold,
-                        "position_size": config.position_size,
-                        "lookback_period": config.lookback_period,
-                        "rebalance_frequency": config.rebalance_frequency,
-                    }
-                )
-                strategy["risk_limits"].update(
-                    {
-                        "max_positions": config.max_active_pairs,
-                        "max_drawdown": config.max_drawdown_limit,
-                        "max_daily_loss": config.max_daily_loss,
-                        "max_sector_exposure": config.max_sector_exposure,
-                    }
-                )
+                strategy.setdefault("parameters", {}).update({
+                    "entry_threshold": config.entry_threshold,
+                    "exit_threshold": config.exit_threshold,
+                    "stop_loss_threshold": config.stop_loss_threshold,
+                    "position_size": config.position_size,
+                    "lookback_period": config.lookback_period,
+                    "rebalance_frequency": config.rebalance_frequency,
+                })
+                strategy.setdefault("risk_limits", {}).update({
+                    "max_positions": config.max_active_pairs,
+                    "max_drawdown": config.max_drawdown_limit,
+                    "max_daily_loss": config.max_daily_loss,
+                    "max_sector_exposure": config.max_sector_exposure,
+                })
                 break
 
-        # Save updated configuration
-        config_path = os.path.join(
-            os.path.dirname(__file__), "../../../config/strategies.yaml"
-        )
-        with open(config_path, "w") as file:
-            yaml.dump(strategy_config, file, default_flow_style=False)
+        config_path = os.path.join(os.path.dirname(__file__), "../../../config/strategies.yaml")
+        with open(config_path, "w") as f:
+            yaml.dump(cfg, f, default_flow_style=False)
 
-        logger.info("Pairs trading configuration updated successfully")
         return {"message": "Configuration saved successfully"}
-
     except Exception as e:
         logger.error(f"Error saving configuration: {e}")
         raise HTTPException(status_code=500, detail="Failed to save configuration")
@@ -247,12 +353,12 @@ async def save_configuration(config: PairConfig) -> Dict[str, str]:
 
 @router.post("/start")
 async def start_strategy() -> Dict[str, str]:
-    """Start the pairs trading strategy"""
+    """Mark all registered pairs as active."""
     try:
-        # In real implementation, this would start the strategy engine
-        logger.info("Pairs trading strategy started")
+        with db_transaction() as session:
+            session.query(PairRegistry).update({"is_active": True})
+        logger.info("Pairs trading strategy activated")
         return {"message": "Strategy started successfully", "status": "active"}
-
     except Exception as e:
         logger.error(f"Error starting strategy: {e}")
         raise HTTPException(status_code=500, detail="Failed to start strategy")
@@ -260,12 +366,12 @@ async def start_strategy() -> Dict[str, str]:
 
 @router.post("/stop")
 async def stop_strategy() -> Dict[str, str]:
-    """Stop the pairs trading strategy"""
+    """Mark all pairs as inactive."""
     try:
-        # In real implementation, this would stop the strategy engine
-        logger.info("Pairs trading strategy stopped")
+        with db_transaction() as session:
+            session.query(PairRegistry).update({"is_active": False})
+        logger.info("Pairs trading strategy deactivated")
         return {"message": "Strategy stopped successfully", "status": "inactive"}
-
     except Exception as e:
         logger.error(f"Error stopping strategy: {e}")
         raise HTTPException(status_code=500, detail="Failed to stop strategy")
@@ -273,10 +379,31 @@ async def stop_strategy() -> Dict[str, str]:
 
 @router.post("/emergency-stop")
 async def emergency_stop() -> Dict[str, str]:
-    """Emergency stop all positions"""
+    """Close all open trades via Alpaca and mark pairs inactive."""
     try:
-        # In real implementation, this would immediately close all positions
-        logger.warning("Emergency stop executed for all pairs positions")
+        from src.services.alpaca.client import AlpacaClient
+        from src.services.strategy_engine.pairs.pair_executor import PairExecutor
+
+        alpaca = AlpacaClient(is_paper=True)
+
+        with db_readonly_session() as session:
+            pairs = (
+                session.query(PairRegistry)
+                .filter(PairRegistry.is_active.is_(True))
+                .all()
+            )
+            for p in pairs:
+                session.expunge(p)
+
+        import asyncio
+        for pair in pairs:
+            executor = PairExecutor(pair, alpaca)
+            await executor.emergency_stop()
+
+        with db_transaction() as session:
+            session.query(PairRegistry).update({"is_active": False})
+
+        logger.warning("Emergency stop executed for all pairs")
         return {"message": "Emergency stop executed successfully"}
 
     except Exception as e:
@@ -285,83 +412,99 @@ async def emergency_stop() -> Dict[str, str]:
 
 
 @router.get("/{pair_id}/history")
-async def get_pair_history(pair_id: str, days: int = 30) -> Dict[str, Any]:
-    """Get historical data for a specific pair"""
+async def get_pair_history(pair_id: int, days: int = 30) -> Dict[str, Any]:
+    """Return PairSpread rows for the requested date range."""
     try:
-        # Simulate historical data - in real implementation, this would come from database
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days)
+        cutoff = datetime.utcnow() - timedelta(days=days)
 
-        dates = pd.date_range(start=start_date, end=end_date, freq="D")
-        history = []
+        with db_readonly_session() as session:
+            pair = session.query(PairRegistry).filter_by(id=pair_id).first()
+            if pair is None:
+                raise HTTPException(status_code=404, detail="Pair not found")
 
-        for i, date in enumerate(dates):
-            # Simulate spread and Z-score data
-            spread = np.random.normal(0, 1)
-            z_score = np.random.normal(0, 1)
-
-            history.append(
-                {
-                    "timestamp": int(date.timestamp() * 1000),
-                    "spread": spread,
-                    "z_score": z_score,
-                    "price1": 100 + np.random.normal(0, 5),
-                    "price2": 100 + np.random.normal(0, 5),
-                }
+            rows = (
+                session.query(PairSpread)
+                .filter(
+                    PairSpread.pair_id == pair_id,
+                    PairSpread.timestamp >= cutoff,
+                )
+                .order_by(PairSpread.timestamp)
+                .all()
             )
+            entry_thr = float(pair.entry_threshold)
+            exit_thr = float(pair.exit_threshold)
+
+        history = [
+            {
+                "timestamp": int(r.timestamp.timestamp() * 1000),
+                "spread": float(r.spread) if r.spread is not None else None,
+                "z_score": float(r.z_score) if r.z_score is not None else None,
+                "price1": float(r.price1) if r.price1 is not None else None,
+                "price2": float(r.price2) if r.price2 is not None else None,
+            }
+            for r in rows
+        ]
 
         return {
             "pair_id": pair_id,
             "history": history,
-            "entry_threshold": 2.0,
-            "exit_threshold": 0.5,
+            "entry_threshold": entry_thr,
+            "exit_threshold": exit_thr,
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting pair history for {pair_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to get pair history")
 
 
 @router.get("/{pair_id}/details")
-async def get_pair_details(pair_id: str) -> Dict[str, Any]:
-    """Get detailed information for a specific pair"""
+async def get_pair_details(pair_id: int) -> Dict[str, Any]:
+    """Return PairRegistry + latest signal for a pair."""
     try:
-        pairs_config = load_pairs_config()
+        with db_readonly_session() as session:
+            pair = session.query(PairRegistry).filter_by(id=pair_id).first()
+            if pair is None:
+                raise HTTPException(status_code=404, detail="Pair not found")
+            session.expunge(pair)
 
-        # Find the specific pair
-        pair_info = None
-        for pair in pairs_config.get("pairs", []):
-            if pair["name"] == pair_id:
-                pair_info = pair
-                break
+            latest_sig = (
+                session.query(PairSignal)
+                .filter(PairSignal.pair_id == pair_id)
+                .order_by(PairSignal.timestamp.desc())
+                .first()
+            )
+            if latest_sig:
+                session.expunge(latest_sig)
 
-        if not pair_info:
-            raise HTTPException(status_code=404, detail="Pair not found")
+        trade = _open_trade(pair_id)
+        z = _latest_z_score(pair_id)
 
-        # Simulate detailed data
-        details = {
-            "id": pair_id,
-            "name": pair_info["name"],
-            "symbol1": pair_info["symbol1"],
-            "symbol2": pair_info["symbol2"],
-            "sector": pair_info["sector"],
-            "correlation": pair_info["correlation"],
-            "cointegration_pvalue": pair_info["cointegration_pvalue"],
-            "half_life": pair_info["half_life"],
-            "description": pair_info["description"],
-            "enabled": pair_info["enabled"],
-            "current_z_score": np.random.normal(0, 1),
-            "current_pnl": np.random.normal(0, 100),
-            "days_held": np.random.randint(1, 30),
-            "entry_date": (
-                datetime.now() - timedelta(days=np.random.randint(1, 30))
-            ).isoformat(),
-            "last_signal": "entry_long" if np.random.random() > 0.5 else "entry_short",
-            "volatility": np.random.uniform(0.1, 0.3),
-            "volume_ratio": np.random.uniform(0.5, 2.0),
+        return {
+            "id": pair.id,
+            "symbol1": pair.symbol1,
+            "symbol2": pair.symbol2,
+            "sector": pair.sector,
+            "correlation": float(pair.correlation) if pair.correlation else None,
+            "cointegration_pvalue": float(pair.coint_pvalue) if pair.coint_pvalue else None,
+            "half_life": float(pair.half_life_hours) if pair.half_life_hours else None,
+            "hedge_ratio": float(pair.hedge_ratio),
+            "z_score_window": pair.z_score_window,
+            "entry_threshold": float(pair.entry_threshold),
+            "exit_threshold": float(pair.exit_threshold),
+            "stop_loss_threshold": float(pair.stop_loss_threshold),
+            "is_active": pair.is_active,
+            "last_validated": pair.last_validated.isoformat() if pair.last_validated else None,
+            "current_z_score": z,
+            "open_trade": trade.to_dict() if trade else None,
+            "last_signal": {
+                "type": latest_sig.signal_type,
+                "z_score": float(latest_sig.z_score) if latest_sig.z_score else None,
+                "timestamp": latest_sig.timestamp.isoformat(),
+                "reason": latest_sig.reason,
+            } if latest_sig else None,
         }
-
-        return details
 
     except HTTPException:
         raise
@@ -370,39 +513,31 @@ async def get_pair_details(pair_id: str) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail="Failed to get pair details")
 
 
-@router.get("/{pair_id}/config")
-async def get_pair_config(pair_id: str) -> Dict[str, Any]:
-    """Get configuration for a specific pair"""
+@router.post("/{pair_id}/close")
+async def close_pair(pair_id: int) -> Dict[str, str]:
+    """Manually close an open trade for a pair."""
     try:
-        pairs_config = load_pairs_config()
+        trade = _open_trade(pair_id)
+        if trade is None:
+            return {"message": f"No open trade for pair {pair_id}"}
 
-        # Find the specific pair
-        pair_info = None
-        for pair in pairs_config.get("pairs", []):
-            if pair["name"] == pair_id:
-                pair_info = pair
-                break
+        from src.services.alpaca.client import AlpacaClient
+        from src.services.strategy_engine.pairs.pair_executor import PairExecutor
 
-        if not pair_info:
-            raise HTTPException(status_code=404, detail="Pair not found")
+        with db_readonly_session() as session:
+            pair = session.query(PairRegistry).filter_by(id=pair_id).first()
+            if pair is None:
+                raise HTTPException(status_code=404, detail="Pair not found")
+            session.expunge(pair)
 
-        return pair_info.get("parameters", {})  # type: ignore
+        alpaca = AlpacaClient(is_paper=True)
+        executor = PairExecutor(pair, alpaca)
+        await executor.close_pair_trade(trade, exit_reason="MANUAL_CLOSE")
+
+        return {"message": f"Pair {pair_id} closed successfully"}
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error getting pair config for {pair_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get pair configuration")
-
-
-@router.post("/{pair_id}/close")
-async def close_pair(pair_id: str) -> Dict[str, str]:
-    """Close a specific pair position"""
-    try:
-        # In real implementation, this would close the position via trading API
-        logger.info(f"Closing position for pair {pair_id}")
-        return {"message": f"Pair {pair_id} closed successfully"}
-
     except Exception as e:
         logger.error(f"Error closing pair {pair_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to close pair")
@@ -410,71 +545,73 @@ async def close_pair(pair_id: str) -> Dict[str, str]:
 
 @router.post("/backtest")
 async def run_backtest(config: BacktestConfig) -> Dict[str, Any]:
-    """Run backtest for the pairs trading strategy"""
+    """Run BacktestEngine and return metrics + equity curve."""
     try:
-        # Simulate backtest results - in real implementation, this would run actual backtest
-        logger.info(f"Running backtest from {config.start_date} to {config.end_date}")
+        from datetime import date as date_type
 
-        # Generate simulated backtest results
-        start_date = datetime.strptime(config.start_date, "%Y-%m-%d")
-        end_date = datetime.strptime(config.end_date, "%Y-%m-%d")
+        from src.services.strategy_engine.backtesting.engine import BacktestEngine
+        from src.services.strategy_engine.backtesting.metrics import MetricsCalculator
+        from src.services.strategy_engine.backtesting.report import BacktestReport
 
-        dates = pd.date_range(start=start_date, end=end_date, freq="D")
-        returns = np.random.normal(0.001, 0.02, len(dates))  # Simulated daily returns
+        with db_readonly_session() as session:
+            pair = session.query(PairRegistry).filter_by(id=config.pair_id).first()
+            if pair is None:
+                raise HTTPException(status_code=404, detail="Pair not found")
+            # Override thresholds with request values
+            pair.entry_threshold = config.entry_threshold
+            pair.exit_threshold = config.exit_threshold
+            pair.stop_loss_threshold = config.stop_loss_threshold
+            session.expunge(pair)
 
-        cumulative_returns = np.cumprod(1 + returns) - 1
-        portfolio_value = config.initial_capital * (1 + cumulative_returns)
+        start = datetime.strptime(config.start_date, "%Y-%m-%d").date()
+        end = datetime.strptime(config.end_date, "%Y-%m-%d").date()
 
-        # Calculate metrics
-        total_return = (portfolio_value[-1] / config.initial_capital) - 1
-        sharpe_ratio = np.mean(returns) / np.std(returns) * np.sqrt(252)
-        max_drawdown = np.min(
-            cumulative_returns - np.maximum.accumulate(cumulative_returns)
+        engine = BacktestEngine(
+            pair=pair,
+            start_date=start,
+            end_date=end,
+            initial_capital=config.initial_capital,
         )
+        result = engine.run()
+        metrics = MetricsCalculator().compute(result)
+        run_id = BacktestReport().save(result, metrics)
 
-        # Generate chart data
-        chart_data = []
-        for i, (date, value) in enumerate(zip(dates, portfolio_value)):
-            chart_data.append(
-                {"date": date.isoformat(), "value": value, "return": returns[i]}
-            )
-
-        results = {
-            "total_return": total_return,
-            "sharpe_ratio": sharpe_ratio,
-            "max_drawdown": max_drawdown,
-            "total_trades": np.random.randint(50, 200),
-            "win_rate": np.random.uniform(0.4, 0.7),
-            "avg_hold_time": np.random.randint(5, 20),
-            "chart_data": chart_data,
+        return {
+            "run_id": run_id,
+            "passed_gate": metrics.passed_gate,
+            **metrics.to_dict(),
+            "equity_curve": result.equity_curve,
+            "trade_log": [
+                {
+                    "side": t.side,
+                    "entry_time": t.entry_time.isoformat() if t.entry_time else None,
+                    "exit_time": t.exit_time.isoformat() if t.exit_time else None,
+                    "pnl": t.pnl,
+                    "pnl_pct": t.pnl_pct,
+                    "hold_hours": t.hold_hours,
+                    "exit_reason": t.exit_reason,
+                }
+                for t in result.trades
+            ],
         }
 
-        return results
-
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error running backtest: {e}")
-        raise HTTPException(status_code=500, detail="Failed to run backtest")
+        raise HTTPException(status_code=500, detail=f"Backtest failed: {e}")
 
 
-@router.get("/status", response_model=StrategyStatus)
-async def get_strategy_status() -> StrategyStatus:
-    """Get current strategy status"""
+@router.get("/backtest/history")
+async def get_backtest_history(pair_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Return list of BacktestRun records."""
     try:
-        pairs_config = load_pairs_config()
-        active_pairs = sum(
-            1 for pair in pairs_config.get("pairs", []) if pair.get("enabled", False)
-        )
-
-        status = StrategyStatus(
-            is_active=True,  # This would be determined by the actual strategy engine
-            last_update=datetime.now(),
-            total_pairs=len(pairs_config.get("pairs", [])),
-            active_pairs=active_pairs,
-            total_pnl=np.random.normal(500, 200),  # Simulated
-        )
-
-        return status
-
+        with db_readonly_session() as session:
+            q = session.query(BacktestRun)
+            if pair_id is not None:
+                q = q.filter(BacktestRun.pair_id == pair_id)
+            runs = q.order_by(BacktestRun.run_date.desc()).limit(50).all()
+            return [r.to_dict() for r in runs]
     except Exception as e:
-        logger.error(f"Error getting strategy status: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get strategy status")
+        logger.error(f"Error getting backtest history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get backtest history")

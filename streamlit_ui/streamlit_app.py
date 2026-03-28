@@ -1,6 +1,6 @@
 """
-Main Streamlit application for Trading System
-Handles session state initialization and global configuration
+Trading System — Home Dashboard
+Real-time account overview, market status, and positions summary.
 """
 
 import os
@@ -8,115 +8,299 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# Add project root to path for imports
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-import streamlit as st
-from utils import initialize_session_state, load_custom_css  # noqa: E402
+import streamlit as st  # noqa: E402
 
 from src.shared.logging import setup_logging  # noqa: E402
 
-# Setup logging for Streamlit UI
 setup_logging(service_name="streamlit_ui")
 
-# Configure Streamlit page
 st.set_page_config(
     page_title="Trading System",
     page_icon="📈",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 
-def load_custom_css():
-    """Load custom CSS from file and configuration"""
+# ── CSS ───────────────────────────────────────────────────────────────────────
+
+def load_css() -> None:
     css_file = os.path.join(os.path.dirname(__file__), "styles.css")
     try:
-        with open(css_file, "r") as f:
-            css_content = f.read()
-
-        # Add CSS variables from configuration
+        with open(css_file) as f:
+            css = f.read()
         from css_config import generate_css_variables, get_theme_css
-        css_variables = generate_css_variables()
-        theme_css = get_theme_css()
-
-        # Combine all CSS
-        full_css = css_variables + css_content + theme_css
-        st.markdown(f"<style>{full_css}</style>", unsafe_allow_html=True)
-
-    except FileNotFoundError:
-        st.warning("Custom CSS file not found. Using default styling.")
-    except Exception as e:
-        st.error(f"Error loading custom CSS: {e}")
+        st.markdown(
+            f"<style>{generate_css_variables()}{css}{get_theme_css()}</style>",
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        pass
 
 
-# Session state initialization is now handled by the utility function
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-def create_sidebar():
-    """Create sidebar with system status and navigation info"""
-    st.sidebar.title("📈 Trading System")
-    st.sidebar.markdown("---")
+def _fmt_dollar(v) -> str:
+    try:
+        v = float(v)
+        return f"${v:,.2f}"
+    except Exception:
+        return "—"
 
-    # System status
-    st.sidebar.subheader("System Status")
-    st.sidebar.metric("Status", "🟢 Online")
-    st.sidebar.metric("Last Update", st.session_state.trading_data['last_update'].strftime("%H:%M:%S"))
 
-    # Portfolio summary
-    st.sidebar.subheader("Portfolio Summary")
-    st.sidebar.metric("Value", f"${st.session_state.portfolio_value:,.0f}")
-    st.sidebar.metric("Return", f"{st.session_state.total_return:.1f}%")
-    st.sidebar.metric("Positions", st.session_state.active_positions)
+def _fmt_pct(v) -> str:
+    try:
+        v = float(v)
+        sign = "+" if v >= 0 else ""
+        return f"{sign}{v:.2f}%"
+    except Exception:
+        return "—"
 
-    st.sidebar.markdown("---")
 
-    # User preferences
-    st.sidebar.subheader("Preferences")
-    st.session_state.user_preferences['notifications'] = st.sidebar.checkbox(
-        "Notifications",
-        value=st.session_state.user_preferences['notifications']
+def _pnl_color(v) -> str:
+    try:
+        return "#2A7A4B" if float(v) >= 0 else "#C0392B"
+    except Exception:
+        return "#6b6b6b"
+
+
+def _parse_dt(s: str) -> "datetime | None":
+    if not s:
+        return None
+    for fmt in (
+        "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"
+    ):
+        try:
+            ts = s.replace("Z", "+00:00") if s.endswith("Z") else s
+            return datetime.strptime(ts, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+# ── Market clock banner ───────────────────────────────────────────────────────
+
+def render_market_banner(clock: dict) -> None:
+    is_open: bool = clock.get("is_open", False)
+    next_open = _parse_dt(clock.get("next_open", ""))
+    next_close = _parse_dt(clock.get("next_close", ""))
+
+    if is_open:
+        css_class = "market-open-banner"
+        dot = "●"
+        status = "Market Open"
+        if next_close:
+            try:
+                closes = next_close.strftime("%I:%M %p ET")
+            except Exception:
+                closes = str(next_close)
+            detail = f'<span class="market-time">Closes {closes}</span>'
+        else:
+            detail = ""
+    else:
+        css_class = "market-closed-banner"
+        dot = "○"
+        status = "Market Closed"
+        if next_open:
+            try:
+                opens = next_open.strftime("%I:%M %p ET")
+            except Exception:
+                opens = str(next_open)
+            detail = f'<span class="market-time">Opens {opens}</span>'
+        else:
+            detail = ""
+
+    st.markdown(
+        f'<div class="market-banner {css_class}">'
+        f'{dot}&nbsp;&nbsp;<strong>{status}</strong>&nbsp;&nbsp;{detail}'
+        f'</div>',
+        unsafe_allow_html=True,
     )
-    st.session_state.user_preferences['auto_refresh'] = st.sidebar.checkbox(
-        "Auto Refresh",
-        value=st.session_state.user_preferences['auto_refresh']
+
+
+# ── Sidebar ───────────────────────────────────────────────────────────────────
+
+def render_sidebar(account: dict, positions: list) -> None:
+    st.sidebar.markdown(
+        "<h2 style='font-family:\"Playfair Display\",Georgia,serif;"
+        "font-size:1.15rem;font-weight:500;color:#1a1a1a;"
+        "border-bottom:1px solid rgba(26,26,26,0.1);padding-bottom:0.4rem;"
+        "margin-bottom:0.8rem;'>Trading System</h2>",
+        unsafe_allow_html=True,
+    )
+
+    if "error" not in account:
+        equity = float(account.get("equity", 0))
+        last_equity = float(account.get("last_equity", equity))
+        day_pnl = equity - last_equity
+        day_pct = (day_pnl / last_equity * 100) if last_equity else 0
+
+        st.sidebar.metric("Portfolio Value", _fmt_dollar(equity))
+        color = _pnl_color(day_pnl)
+        sign = "+" if day_pnl >= 0 else ""
+        st.sidebar.markdown(
+            f"<div style='font-family:\"DM Mono\",monospace;font-size:0.85rem;"
+            f"color:{color};margin:-0.4rem 0 0.6rem 0;'>"
+            f"{sign}{_fmt_dollar(abs(day_pnl))} ({sign}{day_pct:.2f}%) today</div>",
+            unsafe_allow_html=True,
+        )
+        st.sidebar.metric("Buying Power", _fmt_dollar(account.get("buying_power", 0)))
+        st.sidebar.metric("Cash", _fmt_dollar(account.get("cash", 0)))
+    else:
+        st.sidebar.warning("API unavailable")
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(
+        f"<p style='font-family:\"DM Sans\",sans-serif;font-size:0.78rem;"
+        f"color:#9e9e9e;margin:0;'>Open positions: {len(positions)}</p>",
+        unsafe_allow_html=True,
     )
 
 
-def main():
-    """Main Streamlit application entry point"""
+# ── Main ──────────────────────────────────────────────────────────────────────
 
-    # Initialize session state
-    initialize_session_state()
+def main() -> None:
+    load_css()
 
-    # Load custom CSS
-    load_custom_css()
+    from api_client import get_api_client
+    api = get_api_client()
 
-    # Create sidebar
-    create_sidebar()
+    # Fetch live data
+    clock = api.get_market_clock()
+    account = api.get_alpaca_account()
+    positions = api.get_alpaca_positions()
+    orders = api.get_alpaca_orders(status="open", limit=20)
 
-    # Welcome message
-    st.title("🏠 Trading System Dashboard")
-    st.write("Welcome to the Trading System. Use the navigation menu to explore different sections.")
+    render_sidebar(account, positions)
 
-    # Quick stats
-    col1, col2, col3, col4 = st.columns(4)
+    # ── Greeting + title ──
+    from datetime import datetime as _dt
+    hour = _dt.now().hour
+    greeting = "Good morning" if hour < 12 else ("Good afternoon" if hour < 17 else "Good evening")
 
-    with col1:
-        st.metric("Portfolio Value", f"${st.session_state.portfolio_value:,.0f}", "$5,000")
+    st.markdown(
+        f"<div style='margin-bottom:0.2rem;font-family:\"DM Sans\",sans-serif;"
+        f"font-size:0.85rem;color:#4a4a4a;'>{greeting}, Nishant</div>"
+        f"<h1 style='margin-top:0;'>Dashboard</h1>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p style='color:#6b6b6b;font-size:0.88rem;margin-top:-0.8rem;"
+        "margin-bottom:1.2rem;'>"
+        "Here's what's happening in your paper trading account today.</p>",
+        unsafe_allow_html=True,
+    )
 
-    with col2:
-        st.metric("Total Return", f"{st.session_state.total_return:.1f}%", "2.1%")
+    # ── Market clock ──
+    if "error" not in clock:
+        render_market_banner(clock)
 
-    with col3:
-        st.metric("Active Positions", st.session_state.active_positions, "2")
+    # ── Account metrics ──
+    if "error" not in account:
+        equity = float(account.get("equity", 0))
+        last_equity = float(account.get("last_equity", equity))
+        day_pnl = equity - last_equity
+        day_pct = (day_pnl / last_equity * 100) if last_equity else 0
+        buying_power = float(account.get("buying_power", 0))
 
-    with col4:
-        st.metric("Win Rate", f"{st.session_state.win_rate}%", "5%")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Portfolio Value", _fmt_dollar(equity))
+        sign = "+" if day_pnl >= 0 else ""
+        c2.metric(
+            "Today's P&L",
+            _fmt_dollar(day_pnl),
+            f"{sign}{day_pct:.2f}%",
+        )
+        c3.metric("Buying Power", _fmt_dollar(buying_power))
+        c4.metric("Open Positions", len(positions))
+    else:
+        st.error("Could not load account data — is the API running on port 8001?")
 
-    # Navigation instructions
-    st.info(
-        "💡 **Navigation**: Use the pages menu in the sidebar to navigate between different sections of the application.")
+    st.markdown("---")
+
+    # ── Positions ──
+    col_left, col_right = st.columns([3, 1])
+
+    with col_left:
+        st.markdown("<h2>Positions</h2>", unsafe_allow_html=True)
+
+        if positions:
+            rows = []
+            for p in positions:
+                unrl = float(p.get("unrealized_pl", 0))
+                unrl_pct = float(p.get("unrealized_plpc", 0)) * 100
+                intraday_pct = float(p.get("unrealized_intraday_plpc", 0)) * 100
+                sign_u = "+" if unrl >= 0 else ""
+                sign_i = "+" if intraday_pct >= 0 else ""
+                rows.append({
+                    "Symbol": p.get("symbol", ""),
+                    "Side": p.get("side", "").upper(),
+                    "Qty": int(float(p.get("qty", 0))),
+                    "Avg Entry": _fmt_dollar(p.get("avg_entry_price", 0)),
+                    "Price": _fmt_dollar(p.get("current_price", 0)),
+                    "Mkt Value": _fmt_dollar(p.get("market_value", 0)),
+                    "Unrlzd P&L": (
+                        f"{sign_u}{_fmt_dollar(unrl)} ({sign_u}{unrl_pct:.2f}%)"
+                    ),
+                    "Today %": f"{sign_i}{intraday_pct:.2f}%",
+                })
+
+            import pandas as pd
+            df = pd.DataFrame(rows)
+            st.dataframe(df, width='stretch', hide_index=True)
+        else:
+            st.markdown(
+                "<p style='color:#9e9e9e;font-family:\"DM Sans\",sans-serif;"
+                "font-size:0.9rem;padding:1rem 0;'>No open positions.</p>",
+                unsafe_allow_html=True,
+            )
+
+    with col_right:
+        st.markdown("<h2>Open Orders</h2>", unsafe_allow_html=True)
+
+        if orders:
+            for o in orders[:8]:
+                sym = o.get("symbol", "")
+                side = o.get("side", "").upper()
+                qty = o.get("qty", "")
+                otype = o.get("order_type") or o.get("type", "")
+                color = "#2A7A4B" if side == "BUY" else "#C0392B"
+                st.markdown(
+                    f"<div style='border:1px solid rgba(26,26,26,0.08);"
+                    f"border-radius:4px;padding:0.55rem 0.8rem;margin-bottom:0.4rem;"
+                    f"background:#fff;'>"
+                    f"<span style='font-family:\"DM Mono\",monospace;font-weight:500;"
+                    f"color:#1a1a1a;'>{sym}</span>"
+                    f"&nbsp;<span style='color:{color};font-size:0.78rem;"
+                    f"font-family:\"DM Sans\",sans-serif;font-weight:500;"
+                    f"text-transform:uppercase;'>{side}</span><br>"
+                    f"<span style='font-family:\"DM Mono\",monospace;font-size:0.78rem;"
+                    f"color:#6b6b6b;'>{qty} shares · {otype}</span>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+            if len(orders) > 8:
+                st.caption(f"+{len(orders) - 8} more — see Portfolio page")
+        else:
+            st.markdown(
+                "<p style='color:#9e9e9e;font-family:\"DM Sans\",sans-serif;"
+                "font-size:0.85rem;padding:0.6rem 0;'>No open orders.</p>",
+                unsafe_allow_html=True,
+            )
+
+    # ── Refresh ──
+    st.markdown("---")
+    st.markdown(
+        "<p style='font-family:\"DM Sans\",sans-serif;font-size:0.75rem;"
+        "color:#9e9e9e;'>Data refreshes on page reload.</p>",
+        unsafe_allow_html=True,
+    )
+    if st.button("↻ Refresh", key="home_refresh"):
+        st.cache_data.clear()
+        st.rerun()
 
 
 if __name__ == "__main__":
