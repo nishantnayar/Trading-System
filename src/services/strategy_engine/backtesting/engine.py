@@ -34,7 +34,6 @@ from src.shared.database.base import db_readonly_session
 from src.shared.database.models.market_data import MarketData
 from src.shared.database.models.strategy_models import PairRegistry
 
-
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------

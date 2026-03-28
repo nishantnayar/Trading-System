@@ -26,7 +26,9 @@ import streamlit as st
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from src.services.strategy_engine.backtesting.engine import BacktestEngine  # noqa: E402
-from src.services.strategy_engine.backtesting.metrics import MetricsCalculator  # noqa: E402
+from src.services.strategy_engine.backtesting.metrics import (  # noqa: E402
+    MetricsCalculator,
+)
 from src.services.strategy_engine.backtesting.report import BacktestReport  # noqa: E402
 from src.shared.database.base import db_readonly_session, db_transaction  # noqa: E402
 from src.shared.database.models.company_info import CompanyInfo  # noqa: E402
@@ -34,7 +36,10 @@ from src.shared.database.models.dividends import Dividend  # noqa: E402
 from src.shared.database.models.key_statistics import KeyStatistics  # noqa: E402
 from src.shared.database.models.market_data import MarketData  # noqa: E402
 from src.shared.database.models.stock_splits import StockSplit  # noqa: E402
-from src.shared.database.models.strategy_models import BacktestRun, PairRegistry  # noqa: E402
+from src.shared.database.models.strategy_models import (  # noqa: E402
+    BacktestRun,
+    PairRegistry,
+)
 
 # ---------------------------------------------------------------------------
 # Page config

@@ -30,14 +30,13 @@ sys.path.insert(0, str(project_root))
 
 from datetime import timezone
 
-from sqlalchemy import select, and_, func
+from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from src.shared.database.base import db_readonly_session, db_transaction
 from src.shared.database.models.market_data import MarketData
-from src.shared.database.models.symbols import Symbol
 from src.shared.database.models.strategy_models import PairRegistry
-
+from src.shared.database.models.symbols import Symbol
 
 # ---------------------------------------------------------------------------
 # Data loading
@@ -126,9 +125,9 @@ def engle_granger_cointegration(s1: pd.Series, s2: pd.Series) -> Tuple[float, fl
     Returns (p_value, hedge_ratio).
     hedge_ratio is the OLS beta from regressing log(s1) on log(s2).
     """
-    from statsmodels.tsa.stattools import coint
     from statsmodels.regression.linear_model import OLS
     from statsmodels.tools import add_constant
+    from statsmodels.tsa.stattools import coint
 
     log_s1 = np.log(s1)
     log_s2 = np.log(s2)

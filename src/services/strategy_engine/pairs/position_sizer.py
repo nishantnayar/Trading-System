@@ -30,7 +30,6 @@ from loguru import logger
 from src.shared.database.base import db_readonly_session
 from src.shared.database.models.strategy_models import PairRegistry, PairTrade
 
-
 # Bootstrap threshold
 BOOTSTRAP_TRADES = 20
 

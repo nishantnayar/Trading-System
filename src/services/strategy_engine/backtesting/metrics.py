@@ -25,8 +25,10 @@ from typing import List, Optional
 
 import numpy as np
 
-from src.services.strategy_engine.backtesting.engine import BacktestResult, SimulatedTrade
-
+from src.services.strategy_engine.backtesting.engine import (
+    BacktestResult,
+    SimulatedTrade,
+)
 
 # ---------------------------------------------------------------------------
 # Result dataclass

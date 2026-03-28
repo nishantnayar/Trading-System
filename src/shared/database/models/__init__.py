@@ -16,7 +16,6 @@ from .load_runs import LoadRun
 from .logging_models import PerformanceLog, SystemLog
 from .market_data import MarketData
 from .stock_splits import StockSplit
-from .symbols import DelistedSymbol, Symbol, SymbolDataStatus
 from .strategy_models import (
     BacktestRun,
     PairPerformance,
@@ -25,6 +24,7 @@ from .strategy_models import (
     PairSpread,
     PairTrade,
 )
+from .symbols import DelistedSymbol, Symbol, SymbolDataStatus
 from .technical_indicators import TechnicalIndicators, TechnicalIndicatorsLatest
 
 __all__ = [

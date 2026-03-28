@@ -30,7 +30,6 @@ from prefect import flow, task
 from src.services.alpaca.client import AlpacaClient
 from src.services.strategy_engine.pairs.strategy import PairsStrategy
 
-
 # ---------------------------------------------------------------------------
 # Run name helper
 # ---------------------------------------------------------------------------
