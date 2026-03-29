@@ -8,7 +8,7 @@ PairSpread, PairSignal, and BacktestRun tables.
 
 import os
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml  # type: ignore
 from fastapi import APIRouter, HTTPException
@@ -130,7 +130,7 @@ def _open_trade(pair_id: int) -> Optional[PairTrade]:
         return trade
 
 
-def _latest_prices(pair_id: int):
+def _latest_prices(pair_id: int) -> Tuple[Optional[float], Optional[float]]:
     """Return (price1, price2) from the most recent PairSpread row."""
     with db_readonly_session() as session:
         row = (

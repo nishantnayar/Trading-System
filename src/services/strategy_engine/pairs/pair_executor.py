@@ -17,7 +17,7 @@ Signal → Order mapping:
 
 import asyncio
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Tuple
 
 from loguru import logger
 
@@ -249,7 +249,7 @@ def _compute_pnl(
     trade: PairTrade,
     exit_price1: Optional[float],
     exit_price2: Optional[float],
-):
+) -> Tuple[Optional[float], Optional[float]]:
     """
     Compute realized P&L given exit prices.
     Returns (pnl, pnl_pct) or (None, None) if prices unavailable.

@@ -16,7 +16,7 @@ Deploy alongside existing flows in the Prefect work pool.
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Awaitable, Optional, cast
 
 # Add project root to path when running directly
 if __file__ and Path(__file__).exists():
@@ -57,7 +57,7 @@ async def check_market_open_task(alpaca: AlpacaClient) -> bool:
         logger.info("Market is OPEN — proceeding with strategy cycle")
     else:
         logger.info(f"Market is CLOSED — next open: {next_open}")
-    return is_open
+    return bool(is_open)
 
 
 @task(
@@ -143,9 +143,12 @@ async def deploy_pairs_flow() -> None:
 
     from src.shared.prefect.config import PrefectConfig
 
-    deployment = await intraday_pairs_flow.from_source(
-        source=source_path,
-        entrypoint=f"{flow_file}:intraday_pairs_flow",
+    deployment = await cast(
+        Awaitable,
+        intraday_pairs_flow.from_source(
+            source=source_path,
+            entrypoint=f"{flow_file}:intraday_pairs_flow",
+        ),
     )
     await deployment.deploy(
         name="Intraday Pairs Trading",

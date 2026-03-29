@@ -97,4 +97,4 @@ class SpreadCalculator:
 
     def spread_at(self, price1: float, price2: float) -> float:
         """Compute instantaneous spread for a single price pair."""
-        return np.log(price1) - self.hedge_ratio * np.log(price2)
+        return float(np.log(price1) - self.hedge_ratio * np.log(price2))

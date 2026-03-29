@@ -19,7 +19,7 @@ The strategy reads prices from the DB (not Yahoo API) for low latency.
 
 import asyncio
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 from loguru import logger
@@ -138,6 +138,8 @@ class PairsStrategy:
         action = "NONE"
 
         if signal.signal_type in ("LONG_SPREAD", "SHORT_SPREAD"):
+            if p1 is None or p2 is None:
+                return {"pair": f"{sym1}/{sym2}", "status": "NO_PRICE"}
             sizer = KellySizer(pair)
             qty1, qty2 = sizer.calculate_size(portfolio_equity, p1, p2)
             trade = await executor.open_pair_trade(
@@ -184,7 +186,7 @@ class PairsStrategy:
                 session.expunge(p)
             return pairs
 
-    async def _fetch_prices(self, pair: PairRegistry):
+    async def _fetch_prices(self, pair: PairRegistry) -> Tuple[pd.Series, pd.Series]:
         """
         Fetch the last PRICE_LOOKBACK_BARS hourly closes from Alpaca.
 
@@ -268,7 +270,10 @@ class PairsStrategy:
         total_pnl = sum(t.pnl or 0 for t in trades)
         hold_times = [t for t in trades if t.entry_time and t.exit_time]
         avg_hold = (
-            sum((t.exit_time - t.entry_time).total_seconds() / 3600 for t in hold_times)
+            sum(
+                (t.exit_time - t.entry_time).total_seconds() / 3600  # type: ignore[operator,misc]
+                for t in hold_times
+            )
             / len(hold_times)
             if hold_times else 0.0
         )

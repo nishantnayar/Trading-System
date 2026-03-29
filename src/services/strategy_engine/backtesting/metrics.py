@@ -21,6 +21,7 @@ Gate thresholds (defaults match plan):
 """
 
 from dataclasses import dataclass
+from datetime import date
 from typing import List, Optional
 
 import numpy as np
@@ -144,11 +145,17 @@ class MetricsCalculator:
         losing_trades = len(losses)
         win_rate_pct = (winning_trades / total_trades * 100) if total_trades > 0 else 0.0
 
-        avg_win_pct = float(np.mean([t.pnl_pct for t in wins])) if wins else 0.0
-        avg_loss_pct = float(np.mean([abs(t.pnl_pct) for t in losses])) if losses else 0.0
+        avg_win_pct = (
+            float(np.mean([t.pnl_pct for t in wins if t.pnl_pct is not None]))
+            if wins else 0.0
+        )
+        avg_loss_pct = (
+            float(np.mean([abs(t.pnl_pct) for t in losses if t.pnl_pct is not None]))
+            if losses else 0.0
+        )
 
-        gross_profit = sum(t.pnl for t in wins) if wins else 0.0
-        gross_loss = abs(sum(t.pnl for t in losses)) if losses else 0.0
+        gross_profit = sum(t.pnl for t in wins if t.pnl is not None) if wins else 0.0
+        gross_loss = abs(sum(t.pnl for t in losses if t.pnl is not None)) if losses else 0.0
         profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else float("inf")
 
         hold_times = [t.hold_hours for t in trades if t.hold_hours is not None]
@@ -238,7 +245,7 @@ def _kelly_fraction(win_rate: float, avg_win_pct: float, avg_loss_pct: float) ->
     return float(max(0.0, min(1.0, kelly)))
 
 
-def _count_trading_days(start_date, end_date) -> int:
+def _count_trading_days(start_date: date, end_date: date) -> int:
     """Approximate trading days (weekdays only) in date range."""
     from datetime import timedelta
     delta = (end_date - start_date).days + 1
@@ -251,4 +258,4 @@ def _count_trading_days(start_date, end_date) -> int:
         1 for i in range(remaining)
         if (start_weekday + i) % 7 < 5
     )
-    return total_weeks * 5 + extra
+    return int(total_weeks * 5 + extra)

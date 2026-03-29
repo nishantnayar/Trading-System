@@ -5,583 +5,996 @@ Filter stocks by technical and fundamental criteria with AI-powered analysis
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import numpy as np
 import pandas as pd
 import streamlit as st
 from loguru import logger
-from st_aggrid import AgGrid, GridOptionsBuilder
+from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 
 # Add parent directory to path
 parent_dir = os.path.dirname(os.path.dirname(__file__))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-from streamlit_ui.api_client import get_api_client
-from streamlit_ui.services.llm_service import LLMService, get_llm_service
-from streamlit_ui.utils import (
-    format_currency,
+from streamlit_ui.api_client import get_api_client  # noqa: E402
+from streamlit_ui.services.llm_service import LLMService, get_llm_service  # noqa: E402
+from streamlit_ui.utils import (  # noqa: E402
     format_number,
-    format_percentage,
     get_real_market_data,
-    show_error_message,
-    show_info_message,
     show_loading_spinner,
 )
 
-# Note: Technical indicators are now fetched from database, not calculated on the fly
+# ---------------------------------------------------------------------------
+# Module-level constants
+# ---------------------------------------------------------------------------
 
-# Initialize session state
-if 'screener_results' not in st.session_state:
+SECTOR_VARIATIONS: Dict[str, List[str]] = {
+    "finance": ["financial", "finance", "banking", "bank", "financial services"],
+    "technology": ["tech", "technology", "software", "information technology"],
+    "healthcare": ["health", "healthcare", "medical", "pharmaceutical"],
+    "energy": ["energy", "oil", "gas", "petroleum"],
+    "consumer": ["consumer", "retail", "consumer goods"],
+}
+
+SORT_OPTIONS = [
+    "None",
+    "RSI (highest first)",
+    "RSI (lowest first)",
+    "Price Change 30d (best first)",
+    "Price Change 30d (worst first)",
+    "Market Cap (largest first)",
+    "Price (highest first)",
+    "Volatility (highest first)",
+]
+
+SORT_KEY_MAP = {
+    "RSI (highest first)": ("rsi", True),
+    "RSI (lowest first)": ("rsi", False),
+    "Price Change 30d (best first)": ("price_change_30d", True),
+    "Price Change 30d (worst first)": ("price_change_30d", False),
+    "Market Cap (largest first)": ("market_cap", True),
+    "Price (highest first)": ("current_price", True),
+    "Volatility (highest first)": ("volatility", True),
+}
+
+# sort_by values returned by LLM → (field, descending)
+LLM_SORT_MAP = {
+    "rsi_desc": ("rsi", True),
+    "rsi_asc": ("rsi", False),
+    "price_change_desc": ("price_change_30d", True),
+    "price_change_asc": ("price_change_30d", False),
+    "market_cap_desc": ("market_cap", True),
+    "price_desc": ("current_price", True),
+}
+
+# ---------------------------------------------------------------------------
+# Session state initialisation
+# ---------------------------------------------------------------------------
+
+if "screener_results" not in st.session_state:
     st.session_state.screener_results = []
-if 'screener_query' not in st.session_state:
+if "screener_query" not in st.session_state:
     st.session_state.screener_query = ""
+if "screener_chat_history" not in st.session_state:
+    st.session_state.screener_chat_history = []
 
+
+# ---------------------------------------------------------------------------
+# CSS
+# ---------------------------------------------------------------------------
 
 def load_custom_css():
-    """Load custom CSS"""
     css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
     try:
         with open(css_file, "r") as f:
             css_content = f.read()
         from streamlit_ui.css_config import generate_css_variables, get_theme_css
-        css_variables = generate_css_variables()
-        theme_css = get_theme_css()
-        full_css = css_variables + css_content + theme_css
+        full_css = generate_css_variables() + css_content + get_theme_css()
         st.markdown(f"<style>{full_css}</style>", unsafe_allow_html=True)
     except Exception as e:
         st.warning(f"Error loading CSS: {e}")
 
 
+# ---------------------------------------------------------------------------
+# Data helpers
+# ---------------------------------------------------------------------------
+
 def get_indicators_for_symbol_from_db(
     symbol: str,
-    ohlc_data: List[Dict[str, Any]]
+    ohlc_data: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
-    """Get all technical indicators for a symbol from database"""
+    """Get all technical indicators for a symbol from the database."""
     from utils import get_latest_technical_indicators
-    
+
     if not ohlc_data:
         return {}
-    
-    # Get latest indicators from database
-    latest_indicators = get_latest_technical_indicators(symbol)
-    
-    if not latest_indicators:
-        # Fallback: return basic info if no database data
-        closing_prices = [item['close'] for item in ohlc_data]
-        volumes = [item.get('volume', 0) for item in ohlc_data]
-        return {
-            'symbol': symbol,
-            'current_price': closing_prices[-1] if closing_prices else None,
-            'current_volume': volumes[-1] if volumes else 0,
-        }
-    
-    # Extract current price and volume from OHLC data
-    closing_prices = [item['close'] for item in ohlc_data]
-    volumes = [item.get('volume', 0) for item in ohlc_data]
-    
-    indicators = {
-        'symbol': symbol,
-        'current_price': closing_prices[-1] if closing_prices else None,
-        'sma_20': latest_indicators.get('sma_20'),
-        'sma_50': latest_indicators.get('sma_50'),
-        'rsi': latest_indicators.get('rsi_14') or latest_indicators.get('rsi'),
-        'price_change_1d': latest_indicators.get('price_change_1d'),
-        'price_change_5d': latest_indicators.get('price_change_5d'),
-        'price_change_30d': latest_indicators.get('price_change_30d'),
-        'volatility': latest_indicators.get('volatility_20'),
-        'macd': latest_indicators.get('macd_line'),
-        'macd_signal': latest_indicators.get('macd_signal'),
-        'macd_histogram': latest_indicators.get('macd_histogram'),
-        'bb_position': latest_indicators.get('bb_position'),
-        'avg_volume': latest_indicators.get('avg_volume_20'),
-        'current_volume': volumes[-1] if volumes else latest_indicators.get('current_volume'),
-    }
-    
-    return indicators
 
+    latest_indicators = get_latest_technical_indicators(symbol)
+
+    closing_prices = [item["close"] for item in ohlc_data]
+    volumes = [item.get("volume", 0) for item in ohlc_data]
+
+    if not latest_indicators:
+        return {
+            "symbol": symbol,
+            "current_price": closing_prices[-1] if closing_prices else None,
+            "current_volume": volumes[-1] if volumes else 0,
+        }
+
+    return {
+        "symbol": symbol,
+        "current_price": closing_prices[-1] if closing_prices else None,
+        "sma_20": latest_indicators.get("sma_20"),
+        "sma_50": latest_indicators.get("sma_50"),
+        "rsi": (
+            latest_indicators.get("rsi_14")
+            or latest_indicators.get("rsi")
+        ),
+        "price_change_1d": latest_indicators.get("price_change_1d"),
+        "price_change_5d": latest_indicators.get("price_change_5d"),
+        "price_change_30d": latest_indicators.get("price_change_30d"),
+        "volatility": latest_indicators.get("volatility_20"),
+        "macd": latest_indicators.get("macd_line"),
+        "macd_signal": latest_indicators.get("macd_signal"),
+        "macd_histogram": latest_indicators.get("macd_histogram"),
+        "bb_position": latest_indicators.get("bb_position"),
+        "avg_volume": latest_indicators.get("avg_volume_20"),
+        "current_volume": (
+            volumes[-1] if volumes
+            else latest_indicators.get("current_volume")
+        ),
+    }
+
+
+def _sector_matches(sector_criteria: str, stock_sector: str) -> bool:
+    """Case-insensitive sector match with common alias expansion."""
+    sc = sector_criteria.lower()
+    ss = stock_sector.lower()
+    if sc in ss or ss == sc:
+        return True
+    for key, variations in SECTOR_VARIATIONS.items():
+        if sc in key or key in sc:
+            if any(var in ss for var in variations):
+                return True
+    return False
+
+
+def _compute_signal(stock: Dict[str, Any]) -> str:
+    """Derive a human-readable signal badge from indicator values."""
+    rsi = stock.get("rsi")
+    macd_h = stock.get("macd_histogram")
+
+    if rsi is not None and rsi < 30:
+        return "Oversold"
+    if rsi is not None and rsi > 70:
+        return "Overbought"
+    if macd_h is not None and macd_h > 0 and rsi is not None and rsi < 50:
+        return "Bullish"
+    if macd_h is not None and macd_h < 0 and rsi is not None and rsi > 50:
+        return "Bearish"
+    return "Neutral"
+
+
+def _format_criteria_readable(criteria: Dict[str, Any]) -> str:
+    """Convert a criteria dict into a human-readable summary string."""
+    parts = []
+    if criteria.get("sector"):
+        parts.append(f"**{criteria['sector']}** sector")
+    if criteria.get("industry"):
+        parts.append(f"industry: *{criteria['industry']}*")
+    if criteria.get("min_price") or criteria.get("max_price"):
+        lo = f"${criteria['min_price']:.0f}" if criteria.get("min_price") else "$0"
+        hi = (
+            f"${criteria['max_price']:.0f}"
+            if criteria.get("max_price")
+            else "any"
+        )
+        parts.append(f"price {lo}–{hi}")
+    if criteria.get("rsi_min") or criteria.get("rsi_max"):
+        lo = criteria.get("rsi_min", 0)
+        hi = criteria.get("rsi_max", 100)
+        parts.append(f"RSI {lo:.0f}–{hi:.0f}")
+    if criteria.get("min_volume"):
+        parts.append(
+            f"min vol {format_number(criteria['min_volume'])}"
+        )
+    if criteria.get("min_market_cap"):
+        parts.append(f"mkt cap ≥ ${criteria['min_market_cap']:.1f}B")
+    sort_by = criteria.get("sort_by")
+    if sort_by and sort_by in LLM_SORT_MAP:
+        field, desc = LLM_SORT_MAP[sort_by]
+        direction = "highest" if desc else "lowest"
+        parts.append(f"sorted by {direction} {field.replace('_', ' ')}")
+    if criteria.get("keywords"):
+        parts.append(f"keywords: {', '.join(criteria['keywords'])}")
+    if not parts:
+        return "No filters applied — showing all stocks."
+    return "Searching for " + " · ".join(parts)
+
+
+# ---------------------------------------------------------------------------
+# Core screening logic
+# ---------------------------------------------------------------------------
 
 def screen_stocks(
     api_client,
-    llm_service: Optional[LLMService],
+    llm_service: Optional[LLMService],  # noqa: F841
     criteria: Dict[str, Any],
     symbols: List[str],
-    use_llm: bool = False
+    query: str = "",
 ) -> List[Dict[str, Any]]:
     """
-    Screen stocks based on criteria
-    
-    Args:
-        api_client: API client instance
-        llm_service: LLM service instance
-        criteria: Screening criteria dictionary
-        symbols: List of symbols to screen
-        use_llm: Whether to use LLM for analysis
-        
-    Returns:
-        List of screened stock results
+    Screen stocks based on criteria dict.
+
+    sort_by and limit are handled here; the caller does not need to sort
+    the results. The query parameter is used only for logging.
     """
     results = []
     progress_bar = st.progress(0)
     status_text = st.empty()
-    
-    total_symbols = len(symbols)
-    
+    total = len(symbols)
+
     for idx, symbol in enumerate(symbols):
         try:
-            status_text.text(f"Processing {symbol} ({idx + 1}/{total_symbols})...")
-            progress_bar.progress((idx + 1) / total_symbols)
-            
-            # Get market data
+            status_text.text(f"Processing {symbol} ({idx + 1}/{total})...")
+            progress_bar.progress((idx + 1) / total)
+
             ohlc_data = get_real_market_data(
                 _api_client=api_client,
                 symbol=symbol,
-                data_source="yahoo"
+                data_source="yahoo",
             )
-            
             if not ohlc_data:
-                # Log skipped symbols for debugging
-                logger.debug(f"Skipping {symbol}: No market data available")
+                logger.debug(f"Skipping {symbol}: no market data")
                 continue
-            
-            # Get indicators from database
+
             indicators = get_indicators_for_symbol_from_db(symbol, ohlc_data)
-            
-            # Get company info
+
             company_info = api_client.get_company_info(symbol)
             if "error" not in company_info:
-                indicators.update({
-                    'name': company_info.get('name', symbol),
-                    'sector': company_info.get('sector'),
-                    'industry': company_info.get('industry'),
-                    'market_cap': company_info.get('marketCap') or company_info.get('market_cap'),
-                })
-            
-            # Apply filters
-            # If no criteria specified, show all stocks
-            if not criteria or len(criteria) == 0:
-                matches = True
-            else:
-                matches = True
-                
-                # Sector filter (case-insensitive partial match)
-                if criteria.get('sector'):
-                    sector_criteria = criteria['sector'].lower()
-                    stock_sector = (indicators.get('sector') or '').lower()
-                    # Check for exact match or if criteria is contained in sector name
-                    if stock_sector and sector_criteria not in stock_sector and stock_sector != sector_criteria:
-                        # Also check common variations
-                        sector_variations = {
-                            'finance': ['financial', 'finance', 'banking', 'bank'],
-                            'technology': ['tech', 'technology', 'software'],
-                            'healthcare': ['health', 'healthcare', 'medical'],
-                        }
-                        matched = False
-                        for key, variations in sector_variations.items():
-                            if sector_criteria in key or key in sector_criteria:
-                                if any(var in stock_sector for var in variations):
-                                    matched = True
-                                    break
-                        if not matched:
-                            matches = False
-            
-            # Industry filter
-            if matches and criteria.get('industry') and indicators.get('industry'):
-                industry_criteria = criteria['industry'].lower()
-                stock_industry = indicators.get('industry', '').lower()
-                if industry_criteria not in stock_industry and stock_industry != industry_criteria:
+                indicators.update(
+                    {
+                        "name": company_info.get("name", symbol),
+                        "sector": company_info.get("sector"),
+                        "industry": company_info.get("industry"),
+                        "market_cap": (
+                            company_info.get("marketCap")
+                            or company_info.get("market_cap")
+                        ),
+                    }
+                )
+
+            if not criteria:
+                results.append(indicators)
+                continue
+
+            matches = True
+
+            # Sector
+            if matches and criteria.get("sector"):
+                stock_sector = indicators.get("sector") or ""
+                if not _sector_matches(criteria["sector"], stock_sector):
                     matches = False
-            
-            # Price filters
-            if matches and indicators.get('current_price'):
-                if criteria.get('min_price') and indicators['current_price'] < criteria['min_price']:
+
+            # Industry
+            if matches and criteria.get("industry"):
+                ind_c = criteria["industry"].lower()
+                ind_s = (indicators.get("industry") or "").lower()
+                if ind_c not in ind_s and ind_s != ind_c:
                     matches = False
-                if criteria.get('max_price') and indicators['current_price'] > criteria['max_price']:
+
+            # Price
+            if matches and indicators.get("current_price"):
+                p = indicators["current_price"]
+                if criteria.get("min_price") and p < criteria["min_price"]:
                     matches = False
-            
-            # Volume filter
-            if matches and criteria.get('min_volume'):
-                if indicators.get('avg_volume', 0) < criteria['min_volume']:
+                if criteria.get("max_price") and p > criteria["max_price"]:
                     matches = False
-            
-            # Market cap filter
-            if matches and criteria.get('min_market_cap'):
-                market_cap_b = indicators.get('market_cap', 0) / 1_000_000_000 if indicators.get('market_cap') else 0
-                if market_cap_b < criteria['min_market_cap']:
+
+            # Volume
+            if matches and criteria.get("min_volume"):
+                if (indicators.get("avg_volume") or 0) < criteria["min_volume"]:
                     matches = False
-            
-            # RSI filters (only apply if not looking for "highest" or "lowest")
-            if matches and indicators.get('rsi') is not None:
-                # Check if query is about "highest" or "lowest" - if so, don't filter, just include
-                query_lower = st.session_state.get('screener_query', '').lower()
-                is_highest_lowest_query = 'highest' in query_lower or 'lowest' in query_lower or 'top' in query_lower
-                
-                if not is_highest_lowest_query:
-                    if criteria.get('rsi_min') and indicators['rsi'] < criteria['rsi_min']:
-                        matches = False
-                    if criteria.get('rsi_max') and indicators['rsi'] > criteria['rsi_max']:
-                        matches = False
-            
-            # Price change filters
+
+            # Market cap
+            if matches and criteria.get("min_market_cap"):
+                mc = indicators.get("market_cap") or 0
+                mc_b = mc / 1_000_000_000
+                if mc_b < criteria["min_market_cap"]:
+                    matches = False
+
+            # RSI (skip range filter when sort_by is rsi-based)
+            sort_by = criteria.get("sort_by", "")
+            rsi_sort = sort_by in ("rsi_desc", "rsi_asc")
+            if matches and not rsi_sort and indicators.get("rsi") is not None:
+                rsi = indicators["rsi"]
+                if criteria.get("rsi_min") and rsi < criteria["rsi_min"]:
+                    matches = False
+                if criteria.get("rsi_max") and rsi > criteria["rsi_max"]:
+                    matches = False
+
+            # 30d price change
             if matches:
-                if criteria.get('min_price_change_pct'):
-                    change = indicators.get('price_change_30d', 0)
-                    if change is not None and change < criteria['min_price_change_pct']:
+                chg = indicators.get("price_change_30d")
+                if chg is not None:
+                    if (
+                        criteria.get("min_price_change_pct") is not None
+                        and chg < criteria["min_price_change_pct"]
+                    ):
                         matches = False
-                if criteria.get('max_price_change_pct'):
-                    change = indicators.get('price_change_30d', 0)
-                    if change is not None and change > criteria['max_price_change_pct']:
+                    if (
+                        criteria.get("max_price_change_pct") is not None
+                        and chg > criteria["max_price_change_pct"]
+                    ):
                         matches = False
-            
-            # Keyword filter - check symbol, name, sector, and industry
-            # Ignore sorting-related keywords (highest, lowest, top, etc.)
-            if matches and criteria.get('keywords'):
-                # Filter out sorting/ranking keywords
-                sorting_keywords = ['highest', 'lowest', 'top', 'bottom', 'best', 'worst', 'rsi', 'price', 'volume']
-                relevant_keywords = [
-                    kw for kw in criteria['keywords'] 
-                    if not any(sort_kw in kw.lower() for sort_kw in sorting_keywords)
-                ]
-                
-                # If no relevant keywords after filtering, skip keyword matching
-                if not relevant_keywords:
-                    # No actual search keywords, just sorting terms - allow all
-                    pass
-                else:
-                    keyword_matched = False
-                    search_text = f"{symbol} {indicators.get('name', '')} {indicators.get('sector', '')} {indicators.get('industry', '')}".lower()
-                    
-                    for kw in relevant_keywords:
-                        kw_lower = kw.lower()
-                        # Check if keyword matches symbol, name, sector, or industry
-                        if kw_lower in search_text:
-                            keyword_matched = True
-                            break
-                        # Also check sector variations
-                        sector_variations = {
-                            'finance': ['financial', 'finance', 'banking', 'bank', 'financial services'],
-                            'technology': ['tech', 'technology', 'software', 'information technology'],
-                            'healthcare': ['health', 'healthcare', 'medical', 'pharmaceutical'],
-                            'energy': ['energy', 'oil', 'gas', 'petroleum'],
-                            'consumer': ['consumer', 'retail', 'consumer goods'],
-                        }
-                        for key, variations in sector_variations.items():
-                            if kw_lower in key or key in kw_lower:
-                                stock_sector = (indicators.get('sector') or '').lower()
-                                if any(var in stock_sector for var in variations):
-                                    keyword_matched = True
-                                    break
-                        if keyword_matched:
-                            break
-                    
-                    if not keyword_matched:
+
+            # 1d price change
+            if matches and criteria.get("min_price_change_1d") is not None:
+                chg1d = indicators.get("price_change_1d")
+                if chg1d is not None and chg1d < criteria["min_price_change_1d"]:
+                    matches = False
+
+            # 5d price change
+            if matches and criteria.get("min_price_change_5d") is not None:
+                chg5d = indicators.get("price_change_5d")
+                if chg5d is not None and chg5d < criteria["min_price_change_5d"]:
+                    matches = False
+
+            # Volatility
+            if matches and criteria.get("max_volatility") is not None:
+                vol = indicators.get("volatility")
+                if vol is not None and vol > criteria["max_volatility"]:
+                    matches = False
+
+            # MACD signal
+            if matches and criteria.get("macd_signal"):
+                macd_h = indicators.get("macd_histogram")
+                if macd_h is not None:
+                    if criteria["macd_signal"] == "bullish" and macd_h <= 0:
                         matches = False
-            
+                    elif criteria["macd_signal"] == "bearish" and macd_h >= 0:
+                        matches = False
+
+            # Bollinger Band position
+            if matches:
+                bb = indicators.get("bb_position")
+                if bb is not None:
+                    if (
+                        criteria.get("bb_min") is not None
+                        and bb < criteria["bb_min"]
+                    ):
+                        matches = False
+                    if (
+                        criteria.get("bb_max") is not None
+                        and bb > criteria["bb_max"]
+                    ):
+                        matches = False
+
+            # SMA crossover
+            if matches and criteria.get("sma_crossover"):
+                sma20 = indicators.get("sma_20")
+                sma50 = indicators.get("sma_50")
+                price = indicators.get("current_price")
+                xover = criteria["sma_crossover"]
+                if xover == "above_sma20" and (
+                    price is None or sma20 is None or price <= sma20
+                ):
+                    matches = False
+                elif xover == "below_sma20" and (
+                    price is None or sma20 is None or price >= sma20
+                ):
+                    matches = False
+                elif xover == "golden_cross" and (
+                    sma20 is None or sma50 is None or sma20 <= sma50
+                ):
+                    matches = False
+                elif xover == "death_cross" and (
+                    sma20 is None or sma50 is None or sma20 >= sma50
+                ):
+                    matches = False
+
+            # Keywords (company name / symbol)
+            if matches and criteria.get("keywords"):
+                search_text = " ".join(
+                    str(indicators.get(f, "") or "")
+                    for f in ("symbol", "name", "sector", "industry")
+                ).lower()
+                kw_matched = False
+                for kw in criteria["keywords"]:
+                    kw_lower = kw.lower()
+                    if kw_lower in search_text:
+                        kw_matched = True
+                        break
+                    # Also try sector alias expansion
+                    for key, variations in SECTOR_VARIATIONS.items():
+                        if kw_lower in key or key in kw_lower:
+                            stock_sector = (indicators.get("sector") or "").lower()
+                            if any(v in stock_sector for v in variations):
+                                kw_matched = True
+                                break
+                    if kw_matched:
+                        break
+                if not kw_matched:
+                    matches = False
+
             if matches:
                 results.append(indicators)
-                logger.debug(f"Match found: {symbol} - {indicators.get('name', 'N/A')}")
-            else:
-                logger.debug(f"No match: {symbol} - Criteria: {criteria}")
-                
+                logger.debug(
+                    f"Match: {symbol} - {indicators.get('name', 'N/A')}"
+                )
+
         except Exception as e:
             logger.error(f"Error processing {symbol}: {e}")
             st.warning(f"Error processing {symbol}: {e}")
             continue
-    
+
     progress_bar.empty()
     status_text.empty()
-    
-    # Sort results if query mentions "highest", "lowest", or "top"
-    query_lower = st.session_state.get('screener_query', '').lower()
-    if 'highest' in query_lower or 'top' in query_lower:
-        # Sort by RSI descending (highest first)
-        results.sort(key=lambda x: x.get('rsi', 0) if x.get('rsi') is not None else -1, reverse=True)
-        # Limit to top 10 if many results
+
+    # Sort results
+    sort_by = criteria.get("sort_by") if criteria else None
+    manual_sort = criteria.get("manual_sort") if criteria else None
+
+    if sort_by and sort_by in LLM_SORT_MAP:
+        field, descending = LLM_SORT_MAP[sort_by]
+        default = -1 if descending else float("inf")
+        results.sort(
+            key=lambda x: (x.get(field) or default),
+            reverse=descending,
+        )
         if len(results) > 10:
             results = results[:10]
-            logger.info(f"Limited results to top 10 for 'highest' query")
-    elif 'lowest' in query_lower:
-        # Sort by RSI ascending (lowest first)
-        results.sort(key=lambda x: x.get('rsi', 100) if x.get('rsi') is not None else 100)
-        # Limit to top 10 if many results
-        if len(results) > 10:
-            results = results[:10]
-            logger.info(f"Limited results to top 10 for 'lowest' query")
-    
+    elif manual_sort and manual_sort in SORT_KEY_MAP:
+        field, descending = SORT_KEY_MAP[manual_sort]
+        default = -1 if descending else float("inf")
+        results.sort(
+            key=lambda x: (x.get(field) or default),
+            reverse=descending,
+        )
+
     return results
 
 
+# ---------------------------------------------------------------------------
+# Results display
+# ---------------------------------------------------------------------------
+
+def _build_results_df(results: List[Dict[str, Any]]) -> pd.DataFrame:
+    """Build a DataFrame with numeric columns for proper AgGrid sorting."""
+    rows = []
+    for s in results:
+        macd_h = s.get("macd_histogram")
+        signal = _compute_signal(s)
+        rows.append(
+            {
+                "Symbol": s.get("symbol", "N/A"),
+                "Name": s.get("name", "N/A"),
+                "Sector": s.get("sector", "N/A"),
+                "Signal": signal,
+                "Price": s.get("current_price"),
+                "RSI": s.get("rsi"),
+                "1d %": s.get("price_change_1d"),
+                "5d %": s.get("price_change_5d"),
+                "30d %": s.get("price_change_30d"),
+                "Volatility": s.get("volatility"),
+                "MACD Hist": macd_h,
+                "BB Pos": s.get("bb_position"),
+                "SMA 20": s.get("sma_20"),
+                "Avg Vol": s.get("avg_volume"),
+                "Mkt Cap": s.get("market_cap"),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _configure_aggrid(df: pd.DataFrame):
+    """Build AgGrid options with cell styling and value formatters."""
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_pagination(paginationAutoPageSize=True)
+    gb.configure_side_bar()
+    gb.configure_default_column(
+        groupable=True, sortable=True, filterable=True, resizable=True
+    )
+
+    # RSI colour coding
+    rsi_style = JsCode("""
+    function(params) {
+        if (params.value == null) return {};
+        if (params.value < 30)
+            return {'backgroundColor': '#1a4731', 'color': '#4ade80'};
+        if (params.value > 70)
+            return {'backgroundColor': '#4b1a1a', 'color': '#f87171'};
+        return {};
+    }
+    """)
+    rsi_fmt = JsCode(
+        "function(p){return p.value==null?'N/A':p.value.toFixed(1);}"
+    )
+    gb.configure_column(
+        "RSI", cellStyle=rsi_style, valueFormatter=rsi_fmt, width=80
+    )
+
+    # Signal badge colours
+    signal_style = JsCode("""
+    function(params) {
+        const v = params.value;
+        if (v === 'Oversold')  return {color:'#4ade80', fontWeight:'bold'};
+        if (v === 'Overbought') return {color:'#f87171', fontWeight:'bold'};
+        if (v === 'Bullish')   return {color:'#60a5fa', fontWeight:'bold'};
+        if (v === 'Bearish')   return {color:'#fb923c', fontWeight:'bold'};
+        return {color:'#9ca3af'};
+    }
+    """)
+    gb.configure_column("Signal", cellStyle=signal_style, width=110)
+
+    # Numeric formatters (keep values numeric so sorting works)
+    price_fmt = JsCode(
+        "function(p){return p.value==null?'N/A':'$'+p.value.toFixed(2);}"
+    )
+    pct_fmt = JsCode(
+        "function(p){return p.value==null?'N/A':"
+        "(p.value>=0?'+':'')+p.value.toFixed(1)+'%';}"
+    )
+    mc_fmt = JsCode("""
+    function(p) {
+        if (p.value == null) return 'N/A';
+        const b = p.value / 1e9;
+        return b >= 1 ? '$'+b.toFixed(1)+'B' : '$'+(p.value/1e6).toFixed(0)+'M';
+    }
+    """)
+    vol_fmt = JsCode("""
+    function(p) {
+        if (p.value == null) return 'N/A';
+        if (p.value >= 1e6) return (p.value/1e6).toFixed(1)+'M';
+        if (p.value >= 1e3) return (p.value/1e3).toFixed(0)+'K';
+        return p.value.toFixed(0);
+    }
+    """)
+    f2_fmt = JsCode(
+        "function(p){return p.value==null?'N/A':p.value.toFixed(2);}"
+    )
+
+    gb.configure_column("Price", valueFormatter=price_fmt, width=90)
+    gb.configure_column("1d %", valueFormatter=pct_fmt, width=80)
+    gb.configure_column("5d %", valueFormatter=pct_fmt, width=80)
+    gb.configure_column("30d %", valueFormatter=pct_fmt, width=85)
+    gb.configure_column(
+        "Volatility",
+        valueFormatter=JsCode(
+            "function(p){return p.value==null?'N/A':p.value.toFixed(1)+'%';}"
+        ),
+        width=95,
+    )
+    gb.configure_column("MACD Hist", valueFormatter=f2_fmt, width=100)
+    gb.configure_column("BB Pos", valueFormatter=f2_fmt, width=85)
+    gb.configure_column("SMA 20", valueFormatter=price_fmt, width=90)
+    gb.configure_column("Avg Vol", valueFormatter=vol_fmt, width=95)
+    gb.configure_column("Mkt Cap", valueFormatter=mc_fmt, width=100)
+
+    return gb.build()
+
+
+def display_results(
+    results: List[Dict[str, Any]],
+    llm_service: Optional[LLMService],
+    query: str,
+):
+    """Render the AI analysis, results table, chat panel, and CSV download."""
+    st.markdown("---")
+    st.subheader("Screening Results")
+
+    # AI Analysis
+    if llm_service and query:
+        with st.expander("AI Analysis", expanded=True):
+            with show_loading_spinner("Generating AI analysis..."):
+                analysis = llm_service.analyze_screened_results(
+                    results, query=query
+                )
+                st.write(analysis)
+
+    # Results table
+    df = _build_results_df(results)
+    grid_opts = _configure_aggrid(df)
+    AgGrid(
+        df,
+        gridOptions=grid_opts,
+        theme="streamlit",
+        height=420,
+        allow_unsafe_jscode=True,
+    )
+
+    # CSV export
+    export_df = df.copy()
+    csv = export_df.to_csv(index=False)
+    st.download_button(
+        label="Download Results as CSV",
+        data=csv,
+        file_name=(
+            f"screener_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        ),
+        mime="text/csv",
+    )
+
+    # Chat panel
+    if llm_service:
+        with st.expander("Ask a follow-up question about these results"):
+            chat_history = st.session_state.screener_chat_history
+            # Render prior exchanges
+            for msg in chat_history:
+                role = msg["role"]
+                with st.chat_message(role):
+                    st.write(msg["content"])
+            # New question input
+            col_q, col_btn = st.columns([5, 1])
+            with col_q:
+                follow_up = st.text_input(
+                    "Your question:",
+                    key="screener_chat_input",
+                    label_visibility="collapsed",
+                    placeholder="e.g. Which of these has the best risk/reward?",
+                )
+            with col_btn:
+                ask_btn = st.button("Ask", key="screener_ask_btn")
+
+            if ask_btn and follow_up:
+                with show_loading_spinner("Thinking..."):
+                    answer = llm_service.chat_about_results(
+                        results=results,
+                        history=chat_history,
+                        question=follow_up,
+                    )
+                chat_history.append({"role": "user", "content": follow_up})
+                chat_history.append({"role": "assistant", "content": answer})
+                # Trim to last 6 turns
+                if len(chat_history) > 6:
+                    st.session_state.screener_chat_history = chat_history[-6:]
+                st.rerun()
+
+
+# ---------------------------------------------------------------------------
+# Main page
+# ---------------------------------------------------------------------------
+
 def screener_page():
-    """Main screener page"""
     st.set_page_config(layout="wide", page_title="Stock Screener - AI Powered")
-    
     load_custom_css()
-    
-    st.title("🔍 Stock Screener with AI Analysis")
-    st.write("Filter stocks using natural language queries or traditional filters, powered by local LLM")
-    
-    # Initialize API client
+
+    st.title("Stock Screener with AI Analysis")
+    st.write(
+        "Filter stocks using natural language or traditional filters, "
+        "powered by your local LLM."
+    )
+
     api_client = get_api_client()
-    
-    # Check API connection
+
     with show_loading_spinner("Connecting to API..."):
         health = api_client.health_check()
         if "error" in health:
-            st.error("Failed to connect to API. Please check your API connection.")
+            st.error(
+                "Failed to connect to API. Please check your connection."
+            )
             return
-        # Debug: API connection success message (commented out, uncomment if needed for debugging)
-        # st.success("✅ Connected to API")
-        pass
-    
-    # Initialize LLM service
-    llm_service = None
-    try:
-        with show_loading_spinner("Initializing LLM service..."):
-            llm_service = get_llm_service(model="phi3")
-            st.success("✅ LLM service ready")
-    except Exception as e:
-        st.warning(f"⚠️ LLM service not available: {e}. You can still use traditional filters.")
-    
-    # Create tabs
-    tab1, tab2 = st.tabs(["🤖 Natural Language Query", "⚙️ Traditional Filters"])
-    
+
+    # ---- Sidebar ----
+    with st.sidebar:
+        st.header("Screener Settings")
+        symbol_limit = st.slider(
+            "Symbols to screen", min_value=10, max_value=200, value=50, step=10
+        )
+
+        st.subheader("LLM Settings")
+        llm_service: Optional[LLMService] = None
+        try:
+            # Use a temporary service to discover available models
+            temp_svc = LLMService(model="phi3")
+            model_info = temp_svc.get_model_info()
+            available = [m["name"] for m in model_info["available_models"]]
+        except Exception:
+            available = []
+
+        if available:
+            default_model = "phi3" if "phi3" in available else available[0]
+            selected_model = st.selectbox(
+                "Ollama model",
+                available,
+                index=available.index(default_model)
+                if default_model in available
+                else 0,
+            )
+        else:
+            selected_model = st.text_input(
+                "Ollama model (manual)", value="phi3"
+            )
+
+        try:
+            with show_loading_spinner("Initialising LLM..."):
+                llm_service = get_llm_service(model=selected_model)
+            st.success(f"LLM ready ({selected_model})")
+        except Exception as e:
+            st.warning(
+                f"LLM not available: {e}. Traditional filters still work."
+            )
+
+    # ---- Tabs ----
+    tab1, tab2 = st.tabs(
+        ["Natural Language Query", "Traditional Filters"]
+    )
+
+    # ------------------------------------------------------------------ Tab 1
     with tab1:
         st.subheader("Ask in Natural Language")
-        st.write("Example: 'Find tech stocks with RSI below 30 and high volume'")
-        
+        st.caption(
+            "Example: 'Find oversold tech stocks with RSI < 30 and high volume'"
+        )
+
         query = st.text_input(
             "Enter your screening query:",
             value=st.session_state.screener_query,
-            placeholder="e.g., Find undervalued tech stocks with RSI < 30"
+            placeholder="e.g., Find undervalued tech stocks with RSI < 30",
         )
-        
-        col1, col2 = st.columns([1, 4])
+
+        col1, _ = st.columns([1, 4])
         with col1:
-            search_button = st.button("🔍 Search", type="primary", width='stretch')
-        
+            search_button = st.button(
+                "Search", type="primary", use_container_width=True
+            )
+
         if search_button and query:
             st.session_state.screener_query = query
-            
+            st.session_state.screener_chat_history = []
+
+            criteria: Dict[str, Any] = {}
             if llm_service:
-                with show_loading_spinner("Interpreting your query with AI..."):
+                with show_loading_spinner("Interpreting query..."):
                     try:
                         criteria = llm_service.interpret_screening_query(query)
-                        st.json(criteria)  # Show parsed criteria
                     except Exception as e:
                         st.error(f"Error interpreting query: {e}")
                         criteria = {}
+                # Human-readable interpretation
+                readable = _format_criteria_readable(criteria)
+                st.info(readable)
             else:
-                st.warning("LLM service not available. Please use Traditional Filters tab.")
-                criteria = {}
-            
-            # Get symbols to screen (always do this, even if criteria is empty)
+                st.warning(
+                    "LLM not available. Please use the Traditional Filters tab."
+                )
+
             with show_loading_spinner("Loading symbols..."):
                 try:
-                    all_symbols_data = api_client.get_all_symbols()
-                    if "error" not in all_symbols_data and all_symbols_data:
-                        symbols = [s.get('symbol', '') for s in all_symbols_data if s.get('symbol')]
-                        if not symbols:
-                            st.warning("No symbols found in database. Using fallback symbols.")
-                            symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"]
+                    all_syms = api_client.get_all_symbols()
+                    if "error" not in all_syms and all_syms:
+                        symbols = [
+                            s.get("symbol", "")
+                            for s in all_syms
+                            if s.get("symbol")
+                        ]
                     else:
-                        st.warning("API returned error or empty data. Using fallback symbols.")
-                        symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"]
-                    
-                    st.info(f"📊 Screening {len(symbols[:50])} symbols...")
+                        symbols = _fallback_symbols()
+                except Exception:
+                    symbols = _fallback_symbols()
+                st.info(
+                    f"Screening {min(len(symbols), symbol_limit)} symbols..."
+                )
+
+            with show_loading_spinner("Screening stocks..."):
+                try:
+                    results = screen_stocks(
+                        api_client,
+                        llm_service,
+                        criteria,
+                        symbols[:symbol_limit],
+                        query=query,
+                    )
+                    st.session_state.screener_results = results
                 except Exception as e:
-                    st.error(f"Error loading symbols: {e}")
-                    symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"]
-            
-            if symbols:
-                # Screen stocks (even with empty criteria, show all stocks)
-                with show_loading_spinner("Screening stocks..."):
-                    try:
-                        results = screen_stocks(api_client, llm_service, criteria, symbols[:50])  # Limit to 50 for demo
-                        st.session_state.screener_results = results
-                    except Exception as e:
-                        st.error(f"Error during screening: {e}")
-                        import traceback
-                        st.code(traceback.format_exc())
-                        results = []
-                
-                # Show results
-                if results:
-                    st.success(f"✅ Found {len(results)} matching stocks")
-                else:
-                    st.warning("⚠️ No stocks matched your criteria.")
-                    st.info("💡 **Troubleshooting tips:**")
-                    st.markdown("""
-                    - Try using **Traditional Filters** tab for more control
-                    - Check if market data is available for symbols
-                    - Relax your filter criteria (e.g., remove RSI filters)
-                    - Verify API connection is working
-                    """)
+                    st.error(f"Error during screening: {e}")
+                    import traceback as tb
+                    st.code(tb.format_exc())
+                    results = []
+
+            if results:
+                st.success(f"Found {len(results)} matching stocks")
             else:
-                st.error("No symbols available to screen. Please check your API connection.")
-    
+                _show_no_results_tips()
+
+    # ------------------------------------------------------------------ Tab 2
     with tab2:
         st.subheader("Traditional Filter Options")
-        
-        col1, col2, col3 = st.columns(3)
-        
+
+        col1, col2, col3, col4 = st.columns(4)
+
         with col1:
             st.write("**Sector & Industry**")
             sectors = api_client.get_sectors() if "error" not in health else []
             selected_sector = st.selectbox("Sector", ["All"] + sectors)
-            
-            industries = []
             if selected_sector != "All":
-                industries = api_client.get_industries(sector=selected_sector) if "error" not in health else []
+                industries = (
+                    api_client.get_industries(sector=selected_sector)
+                    if "error" not in health
+                    else []
+                )
             else:
-                industries = api_client.get_industries() if "error" not in health else []
-            
+                industries = (
+                    api_client.get_industries()
+                    if "error" not in health
+                    else []
+                )
             selected_industry = st.selectbox("Industry", ["All"] + industries)
-        
+
         with col2:
             st.write("**Price & Volume**")
-            min_price = st.number_input("Min Price ($)", min_value=0.0, value=0.0, step=1.0)
-            max_price = st.number_input("Max Price ($)", min_value=0.0, value=0.0, step=1.0)
-            min_volume = st.number_input("Min Avg Volume", min_value=0, value=0, step=10000)
-            min_market_cap = st.number_input("Min Market Cap (B)", min_value=0.0, value=0.0, step=0.1)
-        
+            min_price = st.number_input(
+                "Min Price ($)", min_value=0.0, value=0.0, step=1.0
+            )
+            max_price = st.number_input(
+                "Max Price ($)", min_value=0.0, value=0.0, step=1.0
+            )
+            min_volume = st.number_input(
+                "Min Avg Volume", min_value=0, value=0, step=10_000
+            )
+            min_market_cap = st.number_input(
+                "Min Market Cap (B)", min_value=0.0, value=0.0, step=0.1
+            )
+
         with col3:
             st.write("**Technical Indicators**")
             rsi_min = st.slider("RSI Min", 0, 100, 0)
             rsi_max = st.slider("RSI Max", 0, 100, 100)
-            min_price_change = st.number_input("Min Price Change % (30d)", min_value=-100.0, value=0.0, step=1.0)
-            max_price_change = st.number_input("Max Price Change % (30d)", min_value=-100.0, value=100.0, step=1.0)
-        
-        filter_button = st.button("🔍 Apply Filters", type="primary", width='stretch')
-        
+            min_price_change = st.number_input(
+                "Min 30d Change %", min_value=-100.0, value=0.0, step=1.0
+            )
+            max_price_change = st.number_input(
+                "Max 30d Change %", min_value=-100.0, value=100.0, step=1.0
+            )
+            max_volatility = st.number_input(
+                "Max Volatility %", min_value=0.0, value=0.0, step=1.0
+            )
+
+        with col4:
+            st.write("**Advanced Filters**")
+            macd_signal_opt = st.selectbox(
+                "MACD Signal", ["Any", "Bullish", "Bearish"]
+            )
+            sma_crossover_opt = st.selectbox(
+                "SMA Crossover",
+                [
+                    "Any",
+                    "Price above SMA20",
+                    "Price below SMA20",
+                    "Golden Cross (SMA20>SMA50)",
+                    "Death Cross (SMA20<SMA50)",
+                ],
+            )
+            bb_min = st.slider(
+                "BB Position Min", 0.0, 1.0, 0.0, step=0.05
+            )
+            bb_max = st.slider(
+                "BB Position Max", 0.0, 1.0, 1.0, step=0.05
+            )
+            sort_opt = st.selectbox("Sort Results By", SORT_OPTIONS)
+
+        filter_button = st.button(
+            "Apply Filters", type="primary", use_container_width=True
+        )
+
         if filter_button:
-            # Build criteria
             criteria = {}
             if selected_sector != "All":
-                criteria['sector'] = selected_sector
+                criteria["sector"] = selected_sector
             if selected_industry != "All":
-                criteria['industry'] = selected_industry
+                criteria["industry"] = selected_industry
             if min_price > 0:
-                criteria['min_price'] = min_price
+                criteria["min_price"] = min_price
             if max_price > 0:
-                criteria['max_price'] = max_price
+                criteria["max_price"] = max_price
             if min_volume > 0:
-                criteria['min_volume'] = min_volume
+                criteria["min_volume"] = min_volume
             if min_market_cap > 0:
-                criteria['min_market_cap'] = min_market_cap
+                criteria["min_market_cap"] = min_market_cap
             if rsi_min > 0:
-                criteria['rsi_min'] = rsi_min
+                criteria["rsi_min"] = rsi_min
             if rsi_max < 100:
-                criteria['rsi_max'] = rsi_max
+                criteria["rsi_max"] = rsi_max
             if min_price_change != 0:
-                criteria['min_price_change_pct'] = min_price_change
+                criteria["min_price_change_pct"] = min_price_change
             if max_price_change != 100:
-                criteria['max_price_change_pct'] = max_price_change
-            
-            # Get symbols
+                criteria["max_price_change_pct"] = max_price_change
+            if max_volatility > 0:
+                criteria["max_volatility"] = max_volatility
+            if macd_signal_opt != "Any":
+                criteria["macd_signal"] = macd_signal_opt.lower()
+            if bb_min > 0:
+                criteria["bb_min"] = bb_min
+            if bb_max < 1.0:
+                criteria["bb_max"] = bb_max
+            if sma_crossover_opt != "Any":
+                xover_map = {
+                    "Price above SMA20": "above_sma20",
+                    "Price below SMA20": "below_sma20",
+                    "Golden Cross (SMA20>SMA50)": "golden_cross",
+                    "Death Cross (SMA20<SMA50)": "death_cross",
+                }
+                criteria["sma_crossover"] = xover_map[sma_crossover_opt]
+            if sort_opt != "None":
+                criteria["manual_sort"] = sort_opt
+
             with show_loading_spinner("Loading symbols..."):
                 if selected_sector != "All" or selected_industry != "All":
-                    symbols_data = api_client.get_symbols_by_filter(
-                        sector=selected_sector if selected_sector != "All" else None,
-                        industry=selected_industry if selected_industry != "All" else None
+                    syms_data = api_client.get_symbols_by_filter(
+                        sector=(
+                            selected_sector
+                            if selected_sector != "All"
+                            else None
+                        ),
+                        industry=(
+                            selected_industry
+                            if selected_industry != "All"
+                            else None
+                        ),
                     )
                 else:
-                    symbols_data = api_client.get_all_symbols()
-                
-                if "error" not in symbols_data:
-                    symbols = [s.get('symbol', '') for s in symbols_data if s.get('symbol')]
+                    syms_data = api_client.get_all_symbols()
+
+                if "error" not in syms_data:
+                    symbols = [
+                        s.get("symbol", "") for s in syms_data if s.get("symbol")
+                    ]
                 else:
-                    symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"]
-            
-            if symbols:
-                # Screen stocks
-                with show_loading_spinner("Screening stocks..."):
-                    try:
-                        results = screen_stocks(api_client, llm_service, criteria, symbols[:50])
-                        st.session_state.screener_results = results
-                    except Exception as e:
-                        st.error(f"Error during screening: {e}")
-                        import traceback
-                        st.code(traceback.format_exc())
-                        results = []
-                
-                # Show results
-                if results:
-                    st.success(f"✅ Found {len(results)} matching stocks")
-                else:
-                    st.warning("⚠️ No stocks matched your criteria.")
-                    st.info("💡 **Troubleshooting tips:**")
-                    st.markdown("""
-                    - Try relaxing your filter criteria
-                    - Check if market data is available
-                    - Verify symbols have sufficient historical data
-                    - Try screening without filters first
-                    """)
+                    symbols = _fallback_symbols()
+
+            with show_loading_spinner("Screening stocks..."):
+                try:
+                    results = screen_stocks(
+                        api_client,
+                        llm_service,
+                        criteria,
+                        symbols[:symbol_limit],
+                        query="",
+                    )
+                    st.session_state.screener_results = results
+                    st.session_state.screener_query = ""
+                    st.session_state.screener_chat_history = []
+                except Exception as e:
+                    st.error(f"Error during screening: {e}")
+                    import traceback as tb
+                    st.code(tb.format_exc())
+                    results = []
+
+            if results:
+                st.success(f"Found {len(results)} matching stocks")
             else:
-                st.error("No symbols available to screen.")
-    
-    # Display Results
+                _show_no_results_tips()
+
+    # ---- Results (shared between tabs) ----
     if st.session_state.screener_results:
-        st.markdown("---")
-        st.subheader("📊 Screening Results")
-        
-        results = st.session_state.screener_results
-        
-        # LLM Analysis
-        if llm_service and st.session_state.screener_query:
-            with st.expander("🤖 AI Analysis", expanded=True):
-                with show_loading_spinner("Generating AI analysis..."):
-                    analysis = llm_service.analyze_screened_results(
-                        results, 
-                        query=st.session_state.screener_query
-                    )
-                    st.write(analysis)
-        
-        # Results Table
-        if results:
-            # Prepare DataFrame
-            df_data = []
-            for stock in results:
-                df_data.append({
-                    'Symbol': stock.get('symbol', 'N/A'),
-                    'Name': stock.get('name', 'N/A'),
-                    'Sector': stock.get('sector', 'N/A'),
-                    'Industry': stock.get('industry', 'N/A'),
-                    'Price': f"${stock.get('current_price', 0):.2f}" if stock.get('current_price') else 'N/A',
-                    'RSI': f"{stock.get('rsi', 0):.1f}" if stock.get('rsi') is not None else 'N/A',
-                    'Price Chg (30d)': format_percentage(stock.get('price_change_30d', 0) / 100) if stock.get('price_change_30d') is not None else 'N/A',
-                    'Volatility': f"{stock.get('volatility', 0):.1f}%" if stock.get('volatility') else 'N/A',
-                    'Avg Volume': format_number(stock.get('avg_volume', 0)) if stock.get('avg_volume') else 'N/A',
-                    'Market Cap': format_currency(stock.get('market_cap', 0)) if stock.get('market_cap') else 'N/A',
-                })
-            
-            df = pd.DataFrame(df_data)
-            
-            # Configure AgGrid
-            gb = GridOptionsBuilder.from_dataframe(df)
-            gb.configure_pagination(paginationAutoPageSize=True)
-            gb.configure_side_bar()
-            gb.configure_default_column(groupable=True, sortable=True, filterable=True)
-            grid_options = gb.build()
-            
-            AgGrid(df, gridOptions=grid_options, theme='streamlit', height=400)
-            
-            # Export button
-            csv = df.to_csv(index=False)
-            st.download_button(
-                label="📥 Download Results as CSV",
-                data=csv,
-                file_name=f"stock_screener_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv"
-            )
+        display_results(
+            results=st.session_state.screener_results,
+            llm_service=llm_service,
+            query=st.session_state.screener_query,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _fallback_symbols() -> List[str]:
+    return ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"]
+
+
+def _show_no_results_tips():
+    st.warning("No stocks matched your criteria.")
+    st.info(
+        "**Tips:** Relax your filters · Check market data availability "
+        "· Try Traditional Filters for more control"
+    )
 
 
 def main():
-    """Main function"""
     screener_page()
 
 
 if __name__ == "__main__":
     main()
-

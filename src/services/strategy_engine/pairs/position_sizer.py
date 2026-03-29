@@ -136,9 +136,9 @@ class KellySizer:
             f"avg_win={avg_win:.2f}%, avg_loss={avg_loss:.2f}%, "
             f"kelly={kelly:.4f}, half_kelly={half_kelly:.4f}"
         )
-        return half_kelly
+        return float(half_kelly)
 
-    def _load_closed_trades(self):
+    def _load_closed_trades(self) -> list:
         """Load completed trades for this pair from the DB."""
         with db_readonly_session() as session:
             trades = (

@@ -22,8 +22,8 @@ Usage:
 """
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
-from typing import List, Optional
+from datetime import date, datetime, timedelta
+from typing import List, Optional, Tuple
 
 import pandas as pd
 from loguru import logger
@@ -37,6 +37,7 @@ from src.shared.database.models.strategy_models import PairRegistry
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SimulatedTrade:
@@ -157,7 +158,7 @@ class BacktestEngine:
     # Price loading
     # ------------------------------------------------------------------
 
-    def _load_prices(self):
+    def _load_prices(self) -> Tuple[pd.Series, pd.Series]:
         """Fetch hourly close prices from DB for both symbols."""
         # Add buffer before start_date so rolling window is warm on day 1
         buffer_days = max(int(self.pair.z_score_window / 6.5) + 5, 30)
@@ -176,7 +177,9 @@ class BacktestEngine:
                 .filter(
                     MarketData.symbol.in_([sym1, sym2]),
                     MarketData.data_source == self.data_source,
-                    MarketData.timestamp >= datetime.combine(fetch_start, datetime.min.time()),
+                    MarketData.timestamp >= datetime.combine(
+                        fetch_start, datetime.min.time()
+                    ),
                     MarketData.timestamp <= datetime.combine(
                         self.end_date + timedelta(days=1), datetime.min.time()
                     ),
@@ -221,7 +224,6 @@ class BacktestEngine:
             hedge_ratio=float(self.pair.hedge_ratio),
         )
 
-        window = self.pair.z_score_window
         open_trade: Optional[SimulatedTrade] = None
         equity = self.initial_capital
         realized_pnl = 0.0
@@ -247,13 +249,17 @@ class BacktestEngine:
             p2 = float(row["p2"])
 
             open_entry_time = open_trade.entry_time if open_trade else None
-            signal_type, reason = self._sig_gen.evaluate(z, open_entry_time, ts.to_pydatetime())
+            signal_type, reason = self._sig_gen.evaluate(
+                z, open_entry_time, ts.to_pydatetime()
+            )
 
             if signal_type is None:
                 # Update equity curve even on no-signal bars
                 result.equity_curve.append({
                     "timestamp": ts.isoformat(),
-                    "equity": equity + realized_pnl + _unrealized_pnl(open_trade, p1, p2),
+                    "equity": equity + realized_pnl + _unrealized_pnl(
+                        open_trade, p1, p2
+                    ),
                 })
                 result.bars_processed += 1
                 continue
@@ -276,7 +282,7 @@ class BacktestEngine:
                     qty2=qty2,
                 )
 
-            elif signal_type in ("EXIT", "STOP_LOSS", "EXPIRE") and open_trade is not None:
+            elif signal_type in ("EXIT", "STOP_LOSS", "EXPIRE") and open_trade is not None:  # noqa: E501
                 pnl, pnl_pct = _compute_pnl(open_trade, fill_p1, fill_p2)
                 open_trade.exit_time = ts.to_pydatetime()
                 open_trade.exit_z = z
@@ -306,7 +312,9 @@ class BacktestEngine:
             last_p2 = float(bars["p2"].iloc[-1])
             pnl, pnl_pct = _compute_pnl(open_trade, last_p1, last_p2)
             open_trade.exit_time = last_ts.to_pydatetime()
-            open_trade.exit_z = float(z_series[last_ts]) if last_ts in z_series.index else None
+            open_trade.exit_z = (
+                float(z_series[last_ts]) if last_ts in z_series.index else None
+            )
             open_trade.exit_price1 = last_p1
             open_trade.exit_price2 = last_p2
             open_trade.exit_reason = "END_OF_BACKTEST"
@@ -328,7 +336,7 @@ class BacktestEngine:
 
     def _size_position(
         self, equity: float, price1: float, price2: float
-    ):
+    ) -> Tuple[float, float]:
         """
         Simple fixed-fraction sizing: 2% of equity per leg.
         Returns (qty1, qty2) as floats (fractional shares allowed in backtest).
@@ -362,7 +370,7 @@ class BacktestEngine:
 
 def _compute_pnl(
     trade: SimulatedTrade, exit_p1: float, exit_p2: float
-):
+) -> Tuple[float, float]:
     """
     Compute P&L for closing a trade.
 
@@ -392,4 +400,4 @@ def _unrealized_pnl(
     if trade is None:
         return 0.0
     pnl, _ = _compute_pnl(trade, current_p1, current_p2)
-    return pnl
+    return float(pnl)

@@ -17,7 +17,7 @@ Rules:
 """
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Tuple
 
 from loguru import logger
 
@@ -108,7 +108,7 @@ class SignalGenerator:
         z: float,
         open_trade: Optional[PairTrade],
         current_time: datetime,
-    ):
+    ) -> Tuple[Optional[str], Optional[str]]:
         """
         Core signal logic.
 
@@ -202,7 +202,7 @@ class BacktestSignalGenerator:
         z: float,
         open_trade_entry_time: Optional[datetime],
         current_time: datetime,
-    ):
+    ) -> Tuple[Optional[str], Optional[str]]:
         """
         Args:
             z:                     Current z-score

@@ -270,7 +270,7 @@ class AlpacaClient:
                 return pd.Series(dtype=float, name=symbol)
             df = bars.df
             df.index = pd.to_datetime(df.index, utc=True)
-            return df["close"].rename(symbol)
+            return pd.Series(df["close"].rename(symbol), dtype=float)
         except APIError as e:
             raise AlpacaAPIError(f"Failed to get bars for {symbol}: {str(e)}")
         except Exception as e:
