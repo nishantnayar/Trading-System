@@ -203,7 +203,7 @@ async def get_market_data(
 
             # Convert to response model
             market_data = []
-            def _safe_float(val) -> Optional[float]:
+            def _safe_float(val: object) -> Optional[float]:
                 if val is None:
                     return None
                 f = float(val)
