@@ -4,7 +4,7 @@ Market Data API endpoints for trading dashboard
 
 import math
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -152,7 +152,8 @@ async def get_available_symbols() -> List[SymbolInfo]:
 async def get_market_data(
     symbol: str,
     limit: Optional[int] = Query(
-        default=None, ge=1, le=5000, description="Number of records to return (no limit if not specified)"
+        default=None, ge=1, le=5000,
+        description="Number of records to return (no limit if not specified)"
     ),
     offset: int = Query(default=0, ge=0, description="Number of records to skip"),
     start_date: Optional[str] = Query(
@@ -203,7 +204,8 @@ async def get_market_data(
 
             # Convert to response model
             market_data = []
-            def _safe_float(val: object) -> Optional[float]:
+
+            def _safe_float(val: Union[str, float, int, None]) -> Optional[float]:
                 if val is None:
                     return None
                 f = float(val)
