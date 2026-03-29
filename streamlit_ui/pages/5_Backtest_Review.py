@@ -415,7 +415,7 @@ def main():
     # -----------------------------------------------------------------------
     # Pair header row: stats + activate button
     # -----------------------------------------------------------------------
-    col_a, col_b, col_c, col_d, col_r, col_e = st.columns([2, 2, 2, 2, 2, 2])
+    col_a, col_b, col_c, col_d, col_r = st.columns([2, 2, 2, 2, 2])
     col_a.metric("Hedge Ratio (β)", f"{selected['hedge_ratio']:.4f}")
     col_b.metric(
         "Half-Life",
@@ -445,14 +445,16 @@ def main():
 
     col_d.metric("Status", "Active" if selected["is_active"] else "Inactive")
 
-    with col_e:
+    # Activate / Deactivate — own row so it's never squished
+    btn_col, _ = st.columns([2, 8])
+    with btn_col:
         if selected["is_active"]:
-            if st.button("Deactivate Pair", type="secondary", use_container_width=True):
+            if st.button("⏸ Deactivate Pair", type="secondary", use_container_width=True):
                 _set_pair_active(selected["id"], False)
                 load_pairs.clear()
                 st.rerun()
         else:
-            if st.button("Activate Pair", type="primary", use_container_width=True):
+            if st.button("▶ Activate Pair", type="primary", use_container_width=True):
                 _set_pair_active(selected["id"], True)
                 load_pairs.clear()
                 st.rerun()

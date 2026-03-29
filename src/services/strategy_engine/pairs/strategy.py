@@ -25,6 +25,7 @@ import pandas as pd
 from loguru import logger
 
 from src.services.alpaca.client import AlpacaClient
+from src.services.notification.email_notifier import get_notifier
 from src.services.strategy_engine.pairs.pair_executor import PairExecutor
 from src.services.strategy_engine.pairs.position_sizer import KellySizer
 from src.services.strategy_engine.pairs.signal_generator import SignalGenerator
@@ -135,18 +136,39 @@ class PairsStrategy:
 
         # 5. Execute
         executor = PairExecutor(pair, self.alpaca)
+        notifier = get_notifier()
         action = "NONE"
+        pair_label = f"{sym1}/{sym2}"
 
         if signal.signal_type in ("LONG_SPREAD", "SHORT_SPREAD"):
             if p1 is None or p2 is None:
-                return {"pair": f"{sym1}/{sym2}", "status": "NO_PRICE"}
+                return {"pair": pair_label, "status": "NO_PRICE"}
             sizer = KellySizer(pair)
             qty1, qty2 = sizer.calculate_size(portfolio_equity, p1, p2)
             trade = await executor.open_pair_trade(
                 signal=signal, qty1=qty1, qty2=qty2,
                 current_price1=p1, current_price2=p2,
             )
-            action = f"OPEN ({signal.signal_type})" if trade else "OPEN_FAILED"
+            if trade:
+                action = f"OPEN ({signal.signal_type})"
+                await notifier.send_trade_opened(
+                    pair=pair_label,
+                    signal_type=signal.signal_type,
+                    z_score=current_z,
+                    qty1=qty1,
+                    qty2=qty2,
+                    price1=p1,
+                    price2=p2,
+                    sym1=sym1,
+                    sym2=sym2,
+                )
+            else:
+                action = "OPEN_FAILED"
+                await notifier.send_trade_failed(
+                    pair=pair_label,
+                    action=f"OPEN ({signal.signal_type})",
+                    reason="Alpaca order submission returned no trade record",
+                )
 
         elif signal.signal_type in ("EXIT", "STOP_LOSS", "EXPIRE"):
             open_trade = self._get_open_trade(pair)
@@ -158,7 +180,38 @@ class PairsStrategy:
                     current_price1=p1,
                     current_price2=p2,
                 )
-                action = f"CLOSE ({signal.signal_type})" if success else "CLOSE_FAILED"
+                if success:
+                    action = f"CLOSE ({signal.signal_type})"
+                    hold_hours = 0.0
+                    if open_trade.entry_time and open_trade.exit_time:
+                        hold_hours = (
+                            open_trade.exit_time - open_trade.entry_time
+                        ).total_seconds() / 3600
+                    pnl = float(open_trade.pnl or 0)
+                    pnl_pct = float(open_trade.pnl_pct or 0)
+                    if signal.signal_type == "STOP_LOSS":
+                        await notifier.send_stop_loss(
+                            pair=pair_label,
+                            z_score=current_z,
+                            pnl=pnl,
+                            pnl_pct=pnl_pct,
+                        )
+                    else:
+                        await notifier.send_trade_closed(
+                            pair=pair_label,
+                            exit_reason=signal.signal_type,
+                            z_score=current_z,
+                            pnl=pnl,
+                            pnl_pct=pnl_pct,
+                            hold_hours=hold_hours,
+                        )
+                else:
+                    action = "CLOSE_FAILED"
+                    await notifier.send_trade_failed(
+                        pair=pair_label,
+                        action=f"CLOSE ({signal.signal_type})",
+                        reason="Alpaca close order returned failure",
+                    )
 
         # 6. Update performance metrics
         self._update_performance(pair)

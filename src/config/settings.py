@@ -87,6 +87,7 @@ class Settings(BaseSettings):
     smtp_username: Optional[str] = Field(default=None, alias="SMTP_USERNAME")
     smtp_password: Optional[str] = Field(default=None, alias="SMTP_PASSWORD")
     smtp_from_email: Optional[str] = Field(default=None, alias="SMTP_FROM_EMAIL")
+    smtp_to_email: Optional[str] = Field(default=None, alias="SMTP_TO_EMAIL")
 
     # Prefect Configuration (Essential)
     prefect_api_url: str = Field(

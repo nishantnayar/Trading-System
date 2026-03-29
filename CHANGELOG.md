@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- ✅ **Unit Tests — Strategy Engine & Notifications** (44 tests, 0 DB/network required):
+  - `tests/unit/test_spread_calculator.py` — 11 tests covering log-spread formula, z-score normalization, edge cases (empty series, insufficient window, zero std, misaligned timestamps)
+  - `tests/unit/test_signal_generator.py` — 13 tests covering all signal types (LONG_SPREAD, SHORT_SPREAD, EXIT, STOP_LOSS, EXPIRE), boundary conditions, and priority ordering via `BacktestSignalGenerator`
+  - `tests/unit/test_position_sizer.py` — 10 tests covering bootstrap mode, full Half-Kelly calculation, max leg cap, minimum share floor, and quantity proportionality via `KellySizer`
+  - `tests/unit/test_email_notifier.py` — 10 tests covering all five event methods, unconfigured no-op behaviour, SMTP failure swallowing, paper/live mode subject, and singleton pattern
+
 - **Screener — Advanced Traditional Filters**: MACD signal (bullish/bearish), Bollinger Band position range, SMA crossover (golden cross, death cross, price above/below SMA20), max volatility, and sort-by dropdown in the Traditional Filters tab
 - **Screener — Signal Badge column**: `_compute_signal()` derives Oversold / Overbought / Bullish / Bearish / Neutral badge for each result row with colour-coded AgGrid styling
 - **Screener — Multi-turn AI Chat**: After screening, an expandable "Ask a follow-up question" panel allows conversational queries about the results using `LLMService.chat_about_results()` (last 6 turns of history trimmed to avoid context bloat)

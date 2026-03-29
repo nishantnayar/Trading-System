@@ -28,6 +28,7 @@ from loguru import logger
 from prefect import flow, task
 
 from src.services.alpaca.client import AlpacaClient
+from src.services.notification.email_notifier import get_notifier
 from src.services.strategy_engine.pairs.strategy import PairsStrategy
 
 # ---------------------------------------------------------------------------
@@ -122,7 +123,13 @@ async def intraday_pairs_flow(skip_market_check: bool = False) -> dict:
         if not is_open:
             return {"status": "MARKET_CLOSED", "pairs_evaluated": 0}
 
-    summary = await run_pairs_strategy_task(alpaca)
+    try:
+        summary = await run_pairs_strategy_task(alpaca)
+    except Exception as exc:
+        err_msg = str(exc)
+        logger.error(f"Unhandled flow error: {err_msg}")
+        await get_notifier().send_flow_error(error=err_msg)
+        raise
 
     logger.info(
         f"Flow complete: {summary['total_pairs']} pairs, "
