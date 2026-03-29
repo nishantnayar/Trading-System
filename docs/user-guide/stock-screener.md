@@ -75,10 +75,16 @@ The screener calculates and displays:
 ### 🧠 AI-Powered Analysis
 Get intelligent insights about your screening results:
 
-- Pattern recognition in results
-- Notable opportunities or risks
-- Sector distribution analysis
-- Key observations and recommendations
+- Pattern recognition in results, referencing specific tickers
+- Notable RSI levels, MACD signals, and price trends
+- Most interesting opportunity or risk in the screened set
+
+### 💬 Follow-Up Chat
+After screening, ask follow-up questions about the results in natural language:
+
+- "Which of these has the best risk/reward?"
+- "Which stocks look oversold?"
+- Conversation history is maintained (last 3 exchanges) for contextual follow-ups
 
 ## How to Use
 
@@ -99,10 +105,11 @@ Get intelligent insights about your screening results:
         Find tech stocks with RSI below 30 and volume above 1 million
         ```
 
-3. Click **"🔍 Search"**
-4. The AI will interpret your query and show the parsed criteria
-5. Review the matching stocks in the results table
-6. Expand **"🤖 AI Analysis"** to see intelligent insights
+3. Click **"Search"**
+4. The AI will interpret your query; a human-readable criteria summary is shown below the input
+5. Review the matching stocks in the interactive results table
+6. Expand **"AI Analysis"** to see intelligent insights
+7. Optionally expand **"Ask a follow-up question"** to chat about the results
 
 **Example Queries:**
 
@@ -132,8 +139,13 @@ Get intelligent insights about your screening results:
 | Max Price | Maximum stock price | $500.00 |
 | Min Volume | Minimum average volume | 1,000,000 |
 | Min Market Cap | Minimum market cap (billions) | $1.0B |
-| RSI Range | RSI value range | 30-70 |
-| Price Change | 30-day price change % | -10% to +20% |
+| RSI Range | RSI value range (slider) | 30-70 |
+| Price Change (30d) | 30-day price change % | -10% to +20% |
+| Max Volatility | Maximum annualised volatility % | 40% |
+| MACD Signal | Bullish (histogram > 0) or Bearish (< 0) | Bullish |
+| SMA Crossover | Price vs SMA20, or Golden/Death Cross | Golden Cross |
+| BB Position | Bollinger Band position range 0–1 | 0.0–0.3 (near lower band) |
+| Sort Results By | Sort order for results | RSI (highest first) |
 
 ### Understanding Results
 
@@ -144,13 +156,16 @@ The results table displays:
 | Symbol | Stock ticker symbol |
 | Name | Company name |
 | Sector | Business sector |
-| Industry | Industry classification |
+| Signal | AI-derived badge: Oversold / Overbought / Bullish / Bearish / Neutral |
 | Price | Current stock price |
-| RSI | Relative Strength Index (0-100) |
-| Price Chg (30d) | 30-day price change percentage |
-| Volatility | Annualized volatility % |
-| Avg Volume | Average trading volume |
-| Market Cap | Market capitalization |
+| RSI | Relative Strength Index (0-100); colour-coded (green < 30, red > 70) |
+| 1d % / 5d % / 30d % | Price change percentages |
+| Volatility | Annualised volatility % |
+| MACD Hist | MACD histogram value |
+| BB Pos | Bollinger Band position (0 = lower band, 1 = upper band) |
+| SMA 20 | 20-day simple moving average |
+| Avg Vol | Average trading volume |
+| Mkt Cap | Market capitalisation |
 
 ### Exporting Results
 
@@ -417,15 +432,12 @@ Find stocks with price between $20 and $100, low volatility, and positive 30-day
 
 Planned improvements:
 
-- **Database-Backed Indicators**: Store pre-calculated indicators for 10-100x faster screening
-- **More Symbols**: Increase screening limit (1000+ with database storage)
-- **Advanced Filters**: More technical indicators (Stochastic, ADX, etc.)
+- **More Symbols**: Increase screening limit beyond 200 (1000+ with optimised DB queries)
+- **Advanced Filters**: Additional technical indicators (Stochastic, ADX, etc.)
 - **Saved Screens**: Save and reuse filter combinations
 - **Alerts**: Set up alerts for matching criteria or indicator crossovers
-- **Backtesting**: Test screening strategies historically using stored indicators
 - **Custom Indicators**: Add user-defined indicators
 - **Real-Time Updates**: Automatic indicator recalculation on new market data
-- **Indicator History**: Track indicator changes over time for pattern analysis
 
 ## Technical Documentation
 
@@ -444,6 +456,6 @@ For issues or questions:
 
 ---
 
-**Last Updated**: December 2025  
-**Version**: 1.0.0
+**Last Updated**: March 2026
+**Version**: 1.1.0+
 

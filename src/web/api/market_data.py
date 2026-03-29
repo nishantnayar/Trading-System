@@ -2,6 +2,7 @@
 Market Data API endpoints for trading dashboard
 """
 
+import math
 from datetime import datetime
 from typing import List, Optional
 
@@ -202,15 +203,21 @@ async def get_market_data(
 
             # Convert to response model
             market_data = []
+            def _safe_float(val) -> Optional[float]:
+                if val is None:
+                    return None
+                f = float(val)
+                return None if math.isnan(f) or math.isinf(f) else f
+
             for record in records:
                 market_data.append(
                     MarketDataResponse(
                         symbol=record.symbol,
                         timestamp=record.timestamp,
-                        open=float(record.open) if record.open else None,
-                        high=float(record.high) if record.high else None,
-                        low=float(record.low) if record.low else None,
-                        close=float(record.close) if record.close else None,
+                        open=_safe_float(record.open),
+                        high=_safe_float(record.high),
+                        low=_safe_float(record.low),
+                        close=_safe_float(record.close),
                         volume=record.volume,
                         data_source=record.data_source,
                     )

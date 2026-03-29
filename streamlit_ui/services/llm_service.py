@@ -136,6 +136,19 @@ Query: "best performing healthcare stocks this month"
             # Remove null values for cleaner downstream handling
             criteria = {k: v for k, v in criteria.items() if v is not None}
 
+            # Correct comparison direction using the raw query text
+            criteria = self._fix_comparison_direction(query, criteria)
+
+            # Drop hallucinated keywords not present in the original query
+            if "keywords" in criteria:
+                q_lower = query.lower()
+                criteria["keywords"] = [
+                    kw for kw in criteria["keywords"]
+                    if kw.lower() in q_lower
+                ]
+                if not criteria["keywords"]:
+                    del criteria["keywords"]
+
             logger.info(f"Parsed query '{query}' → criteria: {criteria}")
             return criteria
 
@@ -143,6 +156,55 @@ Query: "best performing healthcare stocks this month"
             logger.error(f"Error interpreting query: {e}")
             logger.debug(traceback.format_exc())
             return {}
+
+    def _fix_comparison_direction(
+        self, query: str, criteria: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Correct RSI/price comparison direction by re-reading the raw query.
+
+        LLMs occasionally swap rsi_min/rsi_max or min_price/max_price.
+        This method uses simple regex to detect explicit '<' / '>' / 'below' /
+        'above' constructs and enforces the right field.
+        """
+        q = query.lower()
+
+        # Patterns: "rsi < 30", "rsi below 30", "rsi under 30"  → rsi_max
+        #           "rsi > 70", "rsi above 70", "rsi over 70"   → rsi_min
+        rsi_upper = re.search(
+            r'\brsi\b\s*(?:<|<=|below|under|less\s+than)\s*(\d+(?:\.\d+)?)', q
+        )
+        rsi_lower = re.search(
+            r'\brsi\b\s*(?:>|>=|above|over|greater\s+than)\s*(\d+(?:\.\d+)?)', q
+        )
+
+        if rsi_upper:
+            val = float(rsi_upper.group(1))
+            criteria.pop("rsi_min", None)
+            criteria["rsi_max"] = val
+        if rsi_lower:
+            val = float(rsi_lower.group(1))
+            criteria.pop("rsi_max", None)
+            criteria["rsi_min"] = val
+
+        # price < X → max_price; price > X → min_price
+        price_upper = re.search(
+            r'\bprice\b\s*(?:<|<=|below|under|less\s+than)\s*(\d+(?:\.\d+)?)', q
+        )
+        price_lower = re.search(
+            r'\bprice\b\s*(?:>|>=|above|over|greater\s+than)\s*(\d+(?:\.\d+)?)', q
+        )
+
+        if price_upper:
+            val = float(price_upper.group(1))
+            criteria.pop("min_price", None)
+            criteria["max_price"] = val
+        if price_lower:
+            val = float(price_lower.group(1))
+            criteria.pop("max_price", None)
+            criteria["min_price"] = val
+
+        return criteria
 
     def _fallback_parse(self, content: str) -> Dict[str, Any]:
         """Regex-based fallback for malformed JSON responses."""

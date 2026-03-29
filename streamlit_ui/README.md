@@ -60,8 +60,11 @@ All pages share a consistent visual language defined in `css_config.py` and `sty
 
 ## AI Features (Optional)
 
-The Stock Screener page supports natural language queries via Ollama:
-- Requires Ollama running locally with the `phi3` model
+The Stock Screener page (`pages/3_Screener.py`) supports:
+- **Natural language queries** — Ollama LLM (`phi3`) parses queries into structured criteria with automatic comparison-direction correction and keyword hallucination filtering
+- **AI analysis** — 3–4 sentence analysis of top results referencing specific tickers
+- **Follow-up chat** — multi-turn conversational Q&A about screened results (last 3 exchanges retained)
+- Requires Ollama running locally; filter mode works without it
 - Test connection: `python scripts/test_ollama.py`
 - See [Stock Screener Guide](../docs/user-guide/stock-screener.md) for details
 

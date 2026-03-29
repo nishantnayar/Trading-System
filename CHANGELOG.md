@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Screener — Advanced Traditional Filters**: MACD signal (bullish/bearish), Bollinger Band position range, SMA crossover (golden cross, death cross, price above/below SMA20), max volatility, and sort-by dropdown in the Traditional Filters tab
+- **Screener — Signal Badge column**: `_compute_signal()` derives Oversold / Overbought / Bullish / Bearish / Neutral badge for each result row with colour-coded AgGrid styling
+- **Screener — Multi-turn AI Chat**: After screening, an expandable "Ask a follow-up question" panel allows conversational queries about the results using `LLMService.chat_about_results()` (last 6 turns of history trimmed to avoid context bloat)
+- **LLM Service — `chat_about_results()`**: New method for context-aware follow-up questions using conversation history; `@st.cache_resource` replaces deprecated `@st.cache`
+- **LLM Service — `_fix_comparison_direction()`**: Post-parse regex correction that enforces correct `rsi_min`/`rsi_max` and `min_price`/`max_price` mapping when the model swaps comparison direction
+- **LLM Service — `_fallback_parse()`**: Regex-based fallback parser for responses where the model returns malformed JSON despite `format="json"`
+- **LLM Service — keyword hallucination filter**: Keywords not present in the original query text are stripped from parsed criteria before screening
+- **LLM Service — `sort_by` support**: `interpret_screening_query()` now returns a `sort_by` field (`rsi_desc`, `rsi_asc`, `price_change_desc`, `price_change_asc`, `market_cap_desc`, `price_desc`) which drives automatic result sorting + top-10 truncation for LLM-driven searches
+- **Screener — sector alias expansion** (`SECTOR_VARIATIONS`): Common synonyms (e.g. "finance"/"banking" → "Financial Services") resolved in both the AI and traditional filter paths
+- **Market Data API — `_safe_float()`**: All OHLC float conversions now reject `NaN` and `Inf` values (returns `None`) to prevent JSON serialization errors for corrupt data points
+
 ### Planned
 - Risk management service
-- Order placement UI
 - Advanced analytics and reporting
 - Additional pairs beyond QRVO/SWKS
 

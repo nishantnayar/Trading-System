@@ -735,11 +735,21 @@ def screener_page():
             placeholder="e.g., Find undervalued tech stocks with RSI < 30",
         )
 
-        col1, _ = st.columns([1, 4])
+        col1, col2, _ = st.columns([1, 1, 3])
         with col1:
             search_button = st.button(
                 "Search", type="primary", use_container_width=True
             )
+        with col2:
+            clear_button = st.button(
+                "Clear", type="secondary", use_container_width=True
+            )
+
+        if clear_button:
+            st.session_state.screener_results = []
+            st.session_state.screener_query = ""
+            st.session_state.screener_chat_history = []
+            st.rerun()
 
         if search_button and query:
             st.session_state.screener_query = query

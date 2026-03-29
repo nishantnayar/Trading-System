@@ -10,10 +10,10 @@ The Stock Screener is a Streamlit-based application that combines traditional fi
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Streamlit UI (Screener.py)                │
+│                Streamlit UI (pages/3_Screener.py)            │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │ Natural Lang │  │ Traditional │  │   Results   │       │
-│  │   Query Tab  │  │ Filters Tab │  │   Display   │       │
+│  │ Natural Lang │  │ Traditional │  │  Results +  │       │
+│  │   Query Tab  │  │ Filters Tab │  │  Chat Panel │       │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
 └─────────┼──────────────────┼──────────────────┼─────────────┘
           │                  │                  │
@@ -23,6 +23,7 @@ The Stock Screener is a Streamlit-based application that combines traditional fi
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │  interpret_screening_query()                        │  │
 │  │  analyze_screened_results()                         │  │
+│  │  chat_about_results()                               │  │
 │  └──────────────────┬─────────────────────────────────┘  │
 └──────────────────────┼────────────────────────────────────┘
                        │
@@ -49,7 +50,7 @@ The Stock Screener is a Streamlit-based application that combines traditional fi
 
 ## Components
 
-### 1. Screener Page (`streamlit_ui/pages/Screener.py`)
+### 1. Screener Page (`streamlit_ui/pages/3_Screener.py`)
 
 Main Streamlit page component.
 
@@ -58,29 +59,48 @@ Main Streamlit page component.
 ```python
 def screener_page()
     """Main screener page entry point"""
-    # Initializes API client and LLM service
-    # Creates tabbed interface
+    # Initializes API client and LLM service (model selector in sidebar)
+    # Creates tabbed interface (Natural Language / Traditional Filters)
     # Handles user interactions
-    # Displays results
+    # Displays results via display_results()
 
-def calculate_indicators_for_symbol(api_client, symbol, ohlc_data)
-    """Calculate all technical indicators for a symbol"""
-    # Calculates RSI, MACD, SMA, volatility
-    # Extracts price and volume metrics
-    # Returns dictionary of indicators
+def get_indicators_for_symbol_from_db(symbol, ohlc_data)
+    """Load pre-calculated technical indicators from database (database-first)"""
+    # Reads latest values via get_latest_technical_indicators()
+    # Falls back to current price + volume if no DB record
+    # Returns dict with sma_20, sma_50, rsi, price_change_*, volatility, macd_*, bb_position
 
-def screen_stocks(api_client, llm_service, criteria, symbols)
-    """Screen stocks based on criteria"""
-    # Iterates through symbols
-    # Fetches market data
-    # Calculates indicators
-    # Applies filters
+def _sector_matches(sector_criteria, stock_sector)
+    """Case-insensitive sector match with alias expansion (SECTOR_VARIATIONS)"""
+
+def _compute_signal(stock)
+    """Derive Oversold / Overbought / Bullish / Bearish / Neutral badge from RSI + MACD histogram"""
+
+def _format_criteria_readable(criteria)
+    """Convert parsed criteria dict to human-readable info string shown below query box"""
+
+def screen_stocks(api_client, llm_service, criteria, symbols, query)
+    """Screen stocks based on criteria dict"""
+    # Iterates through symbols with progress bar
+    # Fetches market data and DB indicators
+    # Applies all filters (sector, price, volume, RSI, MACD, BB, SMA crossover, etc.)
+    # Sorts and optionally truncates to top 10 when sort_by from LLM is set
     # Returns matching stocks
+
+def display_results(results, llm_service, query)
+    """Render AI analysis expander, AgGrid results table, CSV download, and chat panel"""
+
+def _build_results_df(results)
+    """Build DataFrame with numeric columns for correct AgGrid sorting"""
+
+def _configure_aggrid(df)
+    """Build AgGrid options with RSI colour coding, signal badge styling, and value formatters"""
 ```
 
 **Session State:**
 - `screener_results`: List of screened stock results
 - `screener_query`: Last natural language query
+- `screener_chat_history`: Conversation history for follow-up chat panel (trimmed to last 6 turns)
 
 ### 2. LLM Service (`streamlit_ui/services/llm_service.py`)
 
@@ -92,74 +112,59 @@ Service for interacting with Ollama local LLM.
 class LLMService:
     def __init__(self, model: str = "phi3", base_url: Optional[str] = None)
         """Initialize LLM service with model and base URL"""
-    
+
     def interpret_screening_query(self, query: str) -> Dict[str, Any]
         """Parse natural language query into structured criteria"""
-        # Uses LLM to extract:
-        # - sector, industry
-        # - price ranges
-        # - volume thresholds
-        # - RSI ranges
-        # - price change filters
-        # - keywords
-    
+        # Returns dict with: sector, industry, min_price, max_price,
+        # min_volume, min_market_cap, rsi_min, rsi_max,
+        # min_price_change_pct, max_price_change_pct, keywords,
+        # sort_by (rsi_desc|rsi_asc|price_change_desc|price_change_asc|market_cap_desc|price_desc)
+        # Post-processing: _fix_comparison_direction(), keyword hallucination filter
+
+    def _fix_comparison_direction(self, query: str, criteria: Dict) -> Dict
+        """Regex correction for swapped rsi_min/rsi_max and min_price/max_price"""
+        # Detects 'rsi < 30', 'price above 50', etc. and enforces correct field
+
+    def _fallback_parse(self, content: str) -> Dict
+        """Regex-based fallback for malformed JSON LLM responses"""
+
     def analyze_screened_results(self, results: List[Dict], query: Optional[str]) -> str
-        """Generate AI analysis of screening results"""
-        # Analyzes patterns
-        # Identifies opportunities/risks
-        # Provides insights
-    
+        """Generate AI analysis of screening results (top 10, 3-4 sentences)"""
+        # Includes RSI, MACD direction, 30d change, Bollinger Band position
+
+    def chat_about_results(self, results: List[Dict], history: List[Dict], question: str) -> str
+        """Multi-turn conversational follow-up about screened results"""
+        # Builds compact context string from results (up to 15 stocks)
+        # Prepends system message with context, appends trimmed history (last 6 turns)
+
     def get_model_info(self) -> Dict[str, Any]
-        """Get information about available models"""
+        """Get information about available Ollama models"""
 ```
+
+The service is instantiated via `@st.cache_resource`-decorated `get_llm_service(model)` for session-scoped caching.
 
 **Query Interpretation Prompt:**
-The LLM receives a structured prompt asking it to extract screening criteria from natural language and return JSON with specific fields.
+The LLM receives a structured prompt requesting JSON output with `format="json"` and `temperature=0.1`. A post-parse `_fix_comparison_direction()` pass corrects any swapped comparison operators. Keywords not appearing verbatim in the original query are stripped to prevent hallucination.
 
 **Analysis Prompt:**
-The LLM receives a summary of results and generates 2-3 sentence analysis with insights.
+The LLM receives a compact data block (top 10 stocks with RSI, MACD, 30d change, BB position) and returns a focused 3–4 sentence analysis referencing specific tickers.
 
-### 3. Technical Indicators (`streamlit_ui/utils/technical_indicators.py`)
+### 3. Technical Indicators (Database-Backed)
 
-Collection of technical indicator calculation functions.
+The screener uses **database-backed indicators** as the primary source (implemented). Pre-calculated values are read via `get_latest_technical_indicators(symbol)` from the `data_ingestion.technical_indicators_latest` table. A lightweight fallback (current price + volume only) is used if no DB record exists.
 
-**Functions:**
+**Indicator fields returned by `get_indicators_for_symbol_from_db()`:**
 
-```python
-def calculate_rsi(prices: List[float], period: int = 14) -> Optional[float]
-    """Calculate Relative Strength Index (0-100)"""
-    # Uses price changes over period
-    # Calculates average gains vs losses
-    # Returns RSI value
-
-def calculate_macd(prices: List[float], fast: int = 12, slow: int = 26, signal: int = 9) -> Optional[Dict]
-    """Calculate MACD indicator"""
-    # Calculates fast and slow EMAs
-    # Computes MACD line and signal
-    # Returns dictionary with values
-
-def calculate_sma(prices: List[float], period: int) -> Optional[float]
-    """Calculate Simple Moving Average"""
-    
-def calculate_ema(prices: List[float], period: int) -> Optional[float]
-    """Calculate Exponential Moving Average"""
-    
-def calculate_bollinger_bands(prices: List[float], period: int = 20, std_dev: float = 2.0) -> Optional[Dict]
-    """Calculate Bollinger Bands"""
-    
-def calculate_price_change(prices: List[float], periods: int = 1) -> Optional[float]
-    """Calculate price change percentage"""
-    
-def calculate_volatility(prices: List[float], period: int = 20) -> Optional[float]
-    """Calculate annualized volatility"""
-```
-
-**Implementation Details:**
-- Uses pandas-ta library for all technical indicator calculations
-- Industry-standard implementations (SMA, EMA, RSI, MACD, Bollinger Bands)
-- Handles edge cases (insufficient data, division by zero)
-- Returns `None` when data is insufficient
-- Proper MACD signal line calculation (not simplified)
+| Field | Source |
+|-------|--------|
+| `current_price` | Latest close price |
+| `sma_20`, `sma_50` | DB: `sma_20`, `sma_50` |
+| `rsi` | DB: `rsi_14` or `rsi` |
+| `price_change_1d`, `_5d`, `_30d` | DB: `price_change_*` |
+| `volatility` | DB: `volatility_20` |
+| `macd`, `macd_signal`, `macd_histogram` | DB: `macd_line`, `macd_signal`, `macd_histogram` |
+| `bb_position` | DB: `bb_position` |
+| `avg_volume` | DB: `avg_volume_20` |
 
 ### 4. API Client Integration
 
@@ -208,13 +213,16 @@ company_info = api_client.get_company_info(symbol="AAPL")
      d. Adds to results if matches
    │
    ▼
-5. Results displayed in table
+5. Results displayed in AgGrid table (Signal badge, RSI colour coding)
    │
    ▼
-6. LLM generates analysis of results
+6. LLM generates analysis of results (top 10, references specific tickers)
    │
    ▼
-7. Analysis displayed to user
+7. Analysis displayed in expandable section
+   │
+   ▼
+8. User may ask follow-up questions via chat panel (chat_about_results())
 ```
 
 ### Traditional Filter Flow
@@ -238,17 +246,31 @@ company_info = api_client.get_company_info(symbol="AAPL")
 
 ```python
 {
-    "sector": str | None,              # Sector name
-    "industry": str | None,             # Industry name
-    "min_price": float | None,          # Minimum price
-    "max_price": float | None,          # Maximum price
-    "min_volume": int | None,           # Minimum average volume
-    "min_market_cap": float | None,     # Minimum market cap (billions)
-    "rsi_min": float | None,            # Minimum RSI (0-100)
-    "rsi_max": float | None,            # Maximum RSI (0-100)
-    "min_price_change_pct": float | None,  # Min 30d price change %
-    "max_price_change_pct": float | None,  # Max 30d price change %
-    "keywords": List[str] | None        # Search keywords
+    # Core filters
+    "sector": str | None,                    # Sector name (alias-expanded via SECTOR_VARIATIONS)
+    "industry": str | None,                  # Industry name
+    "min_price": float | None,               # Minimum price
+    "max_price": float | None,               # Maximum price
+    "min_volume": int | None,                # Minimum average volume
+    "min_market_cap": float | None,          # Minimum market cap (billions)
+    # RSI
+    "rsi_min": float | None,                 # Minimum RSI (0-100)
+    "rsi_max": float | None,                 # Maximum RSI (0-100)
+    # Price change
+    "min_price_change_pct": float | None,    # Min 30d price change %
+    "max_price_change_pct": float | None,    # Max 30d price change %
+    "min_price_change_1d": float | None,     # Min 1d price change %
+    "min_price_change_5d": float | None,     # Min 5d price change %
+    # Advanced technical filters
+    "max_volatility": float | None,          # Max annualised volatility %
+    "macd_signal": "bullish"|"bearish"|None, # MACD histogram direction
+    "bb_min": float | None,                  # Min Bollinger Band position (0-1)
+    "bb_max": float | None,                  # Max Bollinger Band position (0-1)
+    "sma_crossover": str | None,             # above_sma20 | below_sma20 | golden_cross | death_cross
+    # Sorting
+    "sort_by": str | None,                   # LLM sort key (see LLM_SORT_MAP)
+    "manual_sort": str | None,               # UI sort label (see SORT_KEY_MAP)
+    "keywords": List[str] | None,            # Company name or ticker search
 }
 ```
 
@@ -559,25 +581,18 @@ requests>=2.31.0
    - Use asyncio for API calls
    - Reduce total screening time
 
-2. **Advanced Filters:**
-   - More technical indicators
-   - Custom indicator definitions
-   - Pattern recognition filters
-
-3. **Saved Screens:**
+2. **Saved Screens:**
    - Save filter combinations
    - Schedule automatic screening
    - Alert on matches
 
-4. **Performance Improvements:**
+3. **Performance Improvements:**
    - Batch API calls
-   - Pre-calculate indicators
-   - Cache results
+   - Cache results between tab switches
 
-5. **Enhanced AI:**
-   - Better query understanding
-   - Multi-turn conversations
-   - Strategy suggestions
+4. **Enhanced AI:**
+   - Strategy suggestions from screened results
+   - Pattern recognition filters
 
 ## Security Considerations
 
@@ -658,7 +673,7 @@ Query: "{query}"
 
 ---
 
-**Last Updated**: December 2025  
-**Version**: 1.0.0  
+**Last Updated**: March 2026
+**Version**: 1.1.0+
 **Author**: Trading System Development Team
 
