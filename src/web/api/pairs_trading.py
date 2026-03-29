@@ -14,6 +14,7 @@ import yaml  # type: ignore
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from ...services.risk_management.portfolio_risk_manager import PortfolioRiskManager
 from ...shared.database.base import db_readonly_session, db_transaction
 from ...shared.database.models.strategy_models import (
     BacktestRun,
@@ -32,6 +33,11 @@ router = APIRouter(prefix="/api/strategies/pairs", tags=["pairs-trading"])
 # ---------------------------------------------------------------------------
 # Pydantic models (kept compatible with existing Streamlit client)
 # ---------------------------------------------------------------------------
+
+
+class DrawdownThresholdRequest(BaseModel):
+    threshold: float
+
 
 class PairConfig(BaseModel):
     entry_threshold: float = 2.0
@@ -96,8 +102,11 @@ class StrategyStatus(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _load_strategy_config() -> Dict[str, Any]:
-    config_path = os.path.join(os.path.dirname(__file__), "../../../config/strategies.yaml")
+    config_path = os.path.join(
+        os.path.dirname(__file__), "../../../config/strategies.yaml"
+    )
     try:
         with open(config_path, "r") as f:
             return yaml.safe_load(f) or {}
@@ -151,6 +160,7 @@ def _latest_prices(pair_id: int) -> Tuple[Optional[float], Optional[float]]:
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.get("/active", response_model=Dict[str, List[PairData]])
 async def get_active_pairs() -> Dict[str, List[PairData]]:
     """Return active pairs with latest z-score and open trade info."""
@@ -181,21 +191,23 @@ async def get_active_pairs() -> Dict[str, List[PairData]]:
                 entry_p2 = float(trade.entry_price2) if trade.entry_price2 else None
                 pnl = float(trade.pnl) if trade.pnl else 0.0
 
-            result.append(PairData(
-                id=str(pair.id),
-                name=f"{pair.symbol1}/{pair.symbol2}",
-                symbol1=pair.symbol1,
-                symbol2=pair.symbol2,
-                status="in_trade" if trade else "watching",
-                z_score=z,
-                pnl=pnl,
-                correlation=float(pair.correlation) if pair.correlation else 0.0,
-                days_held=days_held,
-                entry_price1=entry_p1,
-                entry_price2=entry_p2,
-                current_price1=p1,
-                current_price2=p2,
-            ))
+            result.append(
+                PairData(
+                    id=str(pair.id),
+                    name=f"{pair.symbol1}/{pair.symbol2}",
+                    symbol1=pair.symbol1,
+                    symbol2=pair.symbol2,
+                    status="in_trade" if trade else "watching",
+                    z_score=z,
+                    pnl=pnl,
+                    correlation=float(pair.correlation) if pair.correlation else 0.0,
+                    days_held=days_held,
+                    entry_price1=entry_p1,
+                    entry_price2=entry_p2,
+                    current_price1=p1,
+                    current_price2=p2,
+                )
+            )
 
         return {"pairs": result}
 
@@ -228,8 +240,12 @@ async def get_performance_data() -> PerformanceData:
 
         if not perf_rows:
             return PerformanceData(
-                total_pnl=0.0, sharpe_ratio=0.0, max_drawdown=0.0,
-                win_rate=0.0, active_pairs=active_count, avg_hold_time=0.0,
+                total_pnl=0.0,
+                sharpe_ratio=0.0,
+                max_drawdown=0.0,
+                win_rate=0.0,
+                active_pairs=active_count,
+                avg_hold_time=0.0,
             )
 
         total_pnl = sum(float(r.total_pnl or 0) for r in perf_rows)
@@ -237,7 +253,9 @@ async def get_performance_data() -> PerformanceData:
         avg_dd = sum(float(r.max_drawdown or 0) for r in perf_rows) / len(perf_rows)
         win_rates = [float(r.win_rate or 0) for r in perf_rows if r.win_rate]
         avg_win_rate = sum(win_rates) / len(win_rates) if win_rates else 0.0
-        hold_times = [float(r.avg_hold_hours or 0) for r in perf_rows if r.avg_hold_hours]
+        hold_times = [
+            float(r.avg_hold_hours or 0) for r in perf_rows if r.avg_hold_hours
+        ]
         avg_hold = sum(hold_times) / len(hold_times) if hold_times else 0.0
 
         return PerformanceData(
@@ -293,7 +311,11 @@ async def get_configuration() -> PairConfig:
     try:
         cfg = _load_strategy_config()
         pairs_strategy = next(
-            (s for s in cfg.get("strategies", []) if s.get("name") == "pairs_trading_strategy"),
+            (
+                s
+                for s in cfg.get("strategies", [])
+                if s.get("name") == "pairs_trading_strategy"
+            ),
             None,
         )
         if not pairs_strategy:
@@ -325,23 +347,29 @@ async def save_configuration(config: PairConfig) -> Dict[str, str]:
         cfg = _load_strategy_config()
         for strategy in cfg.get("strategies", []):
             if strategy.get("name") == "pairs_trading_strategy":
-                strategy.setdefault("parameters", {}).update({
-                    "entry_threshold": config.entry_threshold,
-                    "exit_threshold": config.exit_threshold,
-                    "stop_loss_threshold": config.stop_loss_threshold,
-                    "position_size": config.position_size,
-                    "lookback_period": config.lookback_period,
-                    "rebalance_frequency": config.rebalance_frequency,
-                })
-                strategy.setdefault("risk_limits", {}).update({
-                    "max_positions": config.max_active_pairs,
-                    "max_drawdown": config.max_drawdown_limit,
-                    "max_daily_loss": config.max_daily_loss,
-                    "max_sector_exposure": config.max_sector_exposure,
-                })
+                strategy.setdefault("parameters", {}).update(
+                    {
+                        "entry_threshold": config.entry_threshold,
+                        "exit_threshold": config.exit_threshold,
+                        "stop_loss_threshold": config.stop_loss_threshold,
+                        "position_size": config.position_size,
+                        "lookback_period": config.lookback_period,
+                        "rebalance_frequency": config.rebalance_frequency,
+                    }
+                )
+                strategy.setdefault("risk_limits", {}).update(
+                    {
+                        "max_positions": config.max_active_pairs,
+                        "max_drawdown": config.max_drawdown_limit,
+                        "max_daily_loss": config.max_daily_loss,
+                        "max_sector_exposure": config.max_sector_exposure,
+                    }
+                )
                 break
 
-        config_path = os.path.join(os.path.dirname(__file__), "../../../config/strategies.yaml")
+        config_path = os.path.join(
+            os.path.dirname(__file__), "../../../config/strategies.yaml"
+        )
         with open(config_path, "w") as f:
             yaml.dump(cfg, f, default_flow_style=False)
 
@@ -396,6 +424,7 @@ async def emergency_stop() -> Dict[str, str]:
                 session.expunge(p)
 
         import asyncio
+
         for pair in pairs:
             executor = PairExecutor(pair, alpaca)
             await executor.emergency_stop()
@@ -487,7 +516,9 @@ async def get_pair_details(pair_id: int) -> Dict[str, Any]:
             "symbol2": pair.symbol2,
             "sector": pair.sector,
             "correlation": float(pair.correlation) if pair.correlation else None,
-            "cointegration_pvalue": float(pair.coint_pvalue) if pair.coint_pvalue else None,
+            "cointegration_pvalue": (
+                float(pair.coint_pvalue) if pair.coint_pvalue else None
+            ),
             "half_life": float(pair.half_life_hours) if pair.half_life_hours else None,
             "hedge_ratio": float(pair.hedge_ratio),
             "z_score_window": pair.z_score_window,
@@ -495,15 +526,23 @@ async def get_pair_details(pair_id: int) -> Dict[str, Any]:
             "exit_threshold": float(pair.exit_threshold),
             "stop_loss_threshold": float(pair.stop_loss_threshold),
             "is_active": pair.is_active,
-            "last_validated": pair.last_validated.isoformat() if pair.last_validated else None,
+            "last_validated": (
+                pair.last_validated.isoformat() if pair.last_validated else None
+            ),
             "current_z_score": z,
             "open_trade": trade.to_dict() if trade else None,
-            "last_signal": {
-                "type": latest_sig.signal_type,
-                "z_score": float(latest_sig.z_score) if latest_sig.z_score else None,
-                "timestamp": latest_sig.timestamp.isoformat(),
-                "reason": latest_sig.reason,
-            } if latest_sig else None,
+            "last_signal": (
+                {
+                    "type": latest_sig.signal_type,
+                    "z_score": (
+                        float(latest_sig.z_score) if latest_sig.z_score else None
+                    ),
+                    "timestamp": latest_sig.timestamp.isoformat(),
+                    "reason": latest_sig.reason,
+                }
+                if latest_sig
+                else None
+            ),
         }
 
     except HTTPException:
@@ -511,6 +550,36 @@ async def get_pair_details(pair_id: int) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error getting pair details for {pair_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to get pair details")
+
+
+@router.get("/{pair_id}/sparkline")
+async def get_pair_sparkline(pair_id: int, points: int = 48) -> Dict[str, Any]:
+    """Return last N z-score data points for sparkline rendering."""
+    try:
+        with db_readonly_session() as session:
+            pair = session.query(PairRegistry).filter_by(id=pair_id).first()
+            if pair is None:
+                raise HTTPException(status_code=404, detail="Pair not found")
+            rows = (
+                session.query(PairSpread.timestamp, PairSpread.z_score)
+                .filter(
+                    PairSpread.pair_id == pair_id,
+                    PairSpread.z_score.isnot(None),
+                )
+                .order_by(PairSpread.timestamp.desc())
+                .limit(points)
+                .all()
+            )
+        data = [
+            {"t": int(r.timestamp.timestamp() * 1000), "z": float(r.z_score)}
+            for r in reversed(rows)
+        ]
+        return {"pair_id": pair_id, "data": data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting sparkline for pair {pair_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get sparkline data")
 
 
 @router.post("/{pair_id}/close")
@@ -615,3 +684,55 @@ async def get_backtest_history(pair_id: Optional[int] = None) -> List[Dict[str, 
     except Exception as e:
         logger.error(f"Error getting backtest history: {e}")
         raise HTTPException(status_code=500, detail="Failed to get backtest history")
+
+
+# ---------------------------------------------------------------------------
+# Risk controls
+# ---------------------------------------------------------------------------
+
+
+@router.get("/risk")
+async def get_risk_state() -> Dict[str, Any]:
+    """Return current portfolio risk state (circuit breaker, drawdown, peak equity)."""
+    try:
+        state = PortfolioRiskManager().get_state()
+        if state is None:
+            return {
+                "peak_equity": None,
+                "circuit_breaker_active": False,
+                "circuit_breaker_triggered_at": None,
+                "drawdown_threshold": 0.05,
+                "updated_at": None,
+            }
+        return state
+    except Exception as e:
+        logger.error(f"Error getting risk state: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get risk state")
+
+
+@router.post("/risk/reset-circuit-breaker")
+async def reset_circuit_breaker() -> Dict[str, str]:
+    """Manually reset the portfolio drawdown circuit breaker."""
+    try:
+        PortfolioRiskManager().reset_circuit_breaker()
+        return {"message": "Circuit breaker reset"}
+    except Exception as e:
+        logger.error(f"Error resetting circuit breaker: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset circuit breaker")
+
+
+@router.put("/risk/threshold")
+async def update_drawdown_threshold(
+    body: DrawdownThresholdRequest,
+) -> Dict[str, Any]:
+    """Update the portfolio drawdown threshold (0 < threshold < 1)."""
+    try:
+        PortfolioRiskManager().update_drawdown_threshold(body.threshold)
+        return {"message": "Threshold updated", "threshold": body.threshold}
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error updating drawdown threshold: {e}")
+        raise HTTPException(
+            status_code=500, detail="Failed to update drawdown threshold"
+        )

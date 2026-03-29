@@ -9,7 +9,7 @@ All data fetched from the FastAPI server via TradingSystemAPI.
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -18,6 +18,7 @@ import streamlit as st
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from api_client import TradingSystemAPI
+from utils import render_market_banner
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -45,6 +46,7 @@ def _load_css() -> None:
         with open(css_file) as f:
             css = f.read()
         from css_config import generate_css_variables, get_theme_css
+
         st.markdown(
             f"<style>{generate_css_variables()}{css}{get_theme_css()}</style>",
             unsafe_allow_html=True,
@@ -56,6 +58,7 @@ def _load_css() -> None:
 # ---------------------------------------------------------------------------
 # Cached data fetchers
 # ---------------------------------------------------------------------------
+
 
 @st.cache_data(ttl=30)
 def fetch_status():
@@ -75,7 +78,9 @@ def fetch_performance():
 
 @st.cache_data(ttl=30)
 def fetch_pair_history(pair_id: int, days: int = 30):
-    return api._make_request("GET", f"/api/strategies/pairs/{pair_id}/history?days={days}")
+    return api._make_request(
+        "GET", f"/api/strategies/pairs/{pair_id}/history?days={days}"
+    )
 
 
 @st.cache_data(ttl=30)
@@ -83,13 +88,80 @@ def fetch_pair_details(pair_id: int):
     return api._make_request("GET", f"/api/strategies/pairs/{pair_id}/details")
 
 
+@st.cache_data(ttl=30)
+def fetch_risk_state():
+    return api._make_request("GET", "/api/strategies/pairs/risk")
+
+
+@st.cache_data(ttl=60)
+def fetch_market_clock():
+    return api._make_request("GET", "/clock")
+
+
+@st.cache_data(ttl=60)
+def fetch_pair_sparkline(pair_id: int, points: int = 48):
+    return api._make_request(
+        "GET", f"/api/strategies/pairs/{pair_id}/sparkline?points={points}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
+
+def _render_sparkline(z_values: list, entry_thr: float = 2.0) -> go.Figure:
+    """Return a compact Plotly sparkline figure for a z-score series."""
+    colours = [
+        "red" if abs(z) > entry_thr else ("orange" if abs(z) > 1.5 else "#1f77b4")
+        for z in z_values
+    ]
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            y=z_values,
+            mode="lines",
+            line=dict(color="#1f77b4", width=1.5),
+            showlegend=False,
+            hovertemplate="z=%{y:.2f}<extra></extra>",
+        )
+    )
+    # shade the last point
+    if z_values:
+        fig.add_trace(
+            go.Scatter(
+                x=[len(z_values) - 1],
+                y=[z_values[-1]],
+                mode="markers",
+                marker=dict(color=colours[-1], size=6),
+                showlegend=False,
+                hoverinfo="skip",
+            )
+        )
+    for level, color, dash in [
+        (entry_thr, "rgba(255,60,60,0.5)", "dot"),
+        (-entry_thr, "rgba(255,60,60,0.5)", "dot"),
+        (0, "rgba(150,150,150,0.4)", "dot"),
+    ]:
+        fig.add_hline(y=level, line_color=color, line_dash=dash, line_width=1)
+    fig.update_layout(
+        height=70,
+        margin=dict(l=0, r=0, t=4, b=4),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+    )
+    return fig
+
+
 def main():
     _load_css()
     st.title("Pairs Trading — Live Monitoring")
+
+    clock = fetch_market_clock()
+    if "error" not in clock:
+        render_market_banner(clock)
 
     # ---- Strategy Status Bar ----
     status = fetch_status()
@@ -122,7 +194,9 @@ def main():
         with bcol3:
             if st.button("Emergency Stop", type="secondary"):
                 if st.session_state.get("confirm_estop"):
-                    r = api._make_request("POST", "/api/strategies/pairs/emergency-stop")
+                    r = api._make_request(
+                        "POST", "/api/strategies/pairs/emergency-stop"
+                    )
                     st.error(r.get("message", "Emergency stop sent"))
                     st.session_state["confirm_estop"] = False
                     st.cache_data.clear()
@@ -132,53 +206,137 @@ def main():
     else:
         st.error("Could not reach API server. Is FastAPI running on port 8001?")
 
+    # ---- Risk Controls Banner ----
+    risk = fetch_risk_state()
+    if "error" not in risk:
+        cb_active = risk.get("circuit_breaker_active", False)
+        peak = risk.get("peak_equity")
+        threshold = risk.get("drawdown_threshold", 0.05)
+        triggered_at = risk.get("circuit_breaker_triggered_at")
+
+        if cb_active:
+            st.error(
+                f"Circuit Breaker ACTIVE — all new entries blocked. "
+                f"Triggered: {triggered_at or 'unknown'}"
+            )
+
+        with st.expander("Risk Controls", expanded=cb_active):
+            rc1, rc2, rc3, rc4 = st.columns(4)
+            rc1.metric(
+                "Circuit Breaker",
+                "ACTIVE" if cb_active else "CLEAR",
+            )
+            rc2.metric(
+                "Peak Equity",
+                f"${peak:,.2f}" if peak else "—",
+            )
+            rc3.metric(
+                "Drawdown Threshold",
+                f"{threshold * 100:.1f}%",
+            )
+            with rc4:
+                if cb_active:
+                    if st.button("Reset Circuit Breaker", type="primary"):
+                        api._make_request(
+                            "POST",
+                            "/api/strategies/pairs/risk/reset-circuit-breaker",
+                        )
+                        st.success("Circuit breaker reset")
+                        st.cache_data.clear()
+                new_threshold = st.number_input(
+                    "Update threshold (%)",
+                    min_value=1.0,
+                    max_value=50.0,
+                    value=float(threshold * 100),
+                    step=0.5,
+                    key="risk_threshold_input",
+                )
+                if st.button("Save Threshold"):
+                    api._make_request(
+                        "PUT",
+                        "/api/strategies/pairs/risk/threshold",
+                        json={"threshold": new_threshold / 100},
+                    )
+                    st.success(f"Threshold updated to {new_threshold:.1f}%")
+                    st.cache_data.clear()
+
     st.divider()
 
-    # ---- Active Pairs Table ----
+    # ---- Active Pairs Grid ----
     st.subheader("Active Pairs")
     pairs = fetch_active_pairs()
 
     if not pairs:
-        st.info("No active pairs found. Run `scripts/discover_pairs.py` and register pairs.")
+        st.info(
+            "No active pairs found. Run `scripts/discover_pairs.py` and register pairs."
+        )
         return
 
-    # Summary table
-    table_rows = []
+    # Column headers
+    h1, h2, h3, h4, h5 = st.columns([2, 1, 1, 1, 3])
+    h1.markdown("**Pair**")
+    h2.markdown("**Status**")
+    h3.markdown("**Z-Score**")
+    h4.markdown("**Unrealized P&L**")
+    h5.markdown("**Z-Score (last 48 pts)**")
+    st.divider()
+
     for p in pairs:
+        pair_id = int(p["id"])
         z = p.get("z_score")
-        table_rows.append({
-            "Pair": p["name"],
-            "Status": p["status"],
-            "Z-Score": f"{z:.3f}" if z is not None else "—",
-            "Unrealized P&L": f"${p.get('pnl', 0):,.2f}",
-            "Correlation": f"{p.get('correlation', 0):.3f}",
-            "Days Held": p.get("days_held") or "—",
-        })
+        pnl = p.get("pnl", 0.0)
 
-    df = pd.DataFrame(table_rows)
+        # P&L delta vs previous load
+        prev_key = f"prev_pnl_{pair_id}"
+        prev_pnl = st.session_state.get(prev_key)
+        pnl_delta = pnl - prev_pnl if prev_pnl is not None else None
+        st.session_state[prev_key] = pnl
 
-    def colour_z(val):
-        try:
-            v = float(val)
-            if abs(v) > 2.0:
-                return "color: red; font-weight: bold"
-            if abs(v) > 1.5:
-                return "color: orange"
-            return ""
-        except Exception:
-            return ""
+        # Z-score colour label
+        if z is None:
+            z_label = "—"
+            z_color = ""
+        elif abs(z) > 2.0:
+            z_label = f"**:red[{z:.3f}]**"
+            z_color = "red"
+        elif abs(z) > 1.5:
+            z_label = f"**:orange[{z:.3f}]**"
+            z_color = "orange"
+        else:
+            z_label = f"{z:.3f}"
+            z_color = ""
 
-    def colour_pnl(val):
-        try:
-            v = float(str(val).replace("$", "").replace(",", ""))
-            return "color: green" if v > 0 else ("color: red" if v < 0 else "")
-        except Exception:
-            return ""
+        status_icon = "🔵" if p["status"] == "in_trade" else "⚪"
 
-    styled_df = df.style.map(colour_z, subset=["Z-Score"]).map(
-        colour_pnl, subset=["Unrealized P&L"]
-    )
-    st.dataframe(styled_df, width="stretch", hide_index=True)
+        c1, c2, c3, c4, c5 = st.columns([2, 1, 1, 1, 3])
+        c1.markdown(
+            f"**{p['name']}**  \n<small>corr {p.get('correlation', 0):.3f} · {p.get('days_held') or 0}d held</small>",
+            unsafe_allow_html=True,
+        )
+        c2.markdown(f"{status_icon} {p['status']}")
+        c3.markdown(z_label)
+        c4.metric(
+            label="P&L",
+            value=f"${pnl:,.2f}",
+            delta=f"${pnl_delta:+,.2f}" if pnl_delta is not None else None,
+            delta_color="normal",
+        )
+
+        spark_data = fetch_pair_sparkline(pair_id)
+        if "error" not in spark_data:
+            pts = spark_data.get("data", [])
+            if pts:
+                z_vals = [d["z"] for d in pts]
+                spark_fig = _render_sparkline(z_vals)
+                c5.plotly_chart(
+                    spark_fig,
+                    use_container_width=True,
+                    config={"displayModeBar": False},
+                )
+            else:
+                c5.caption("No spread data yet")
+        else:
+            c5.caption("—")
 
     st.divider()
 
@@ -203,13 +361,15 @@ def main():
             hist_df = hist_df.dropna(subset=["z_score"])
 
             fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=hist_df["timestamp"],
-                y=hist_df["z_score"],
-                mode="lines",
-                name="Z-Score",
-                line=dict(color="#1f77b4", width=1.5),
-            ))
+            fig.add_trace(
+                go.Scatter(
+                    x=hist_df["timestamp"],
+                    y=hist_df["z_score"],
+                    mode="lines",
+                    name="Z-Score",
+                    line=dict(color="#1f77b4", width=1.5),
+                )
+            )
             for level, color, dash, label in [
                 (entry_thr, "red", "dash", f"+{entry_thr} Entry"),
                 (-entry_thr, "red", "dash", f"-{entry_thr} Entry"),
@@ -262,7 +422,9 @@ def main():
             dc1, dc2, dc3, dc4 = st.columns(4)
             dc1.metric("Hedge Ratio", f"{details.get('hedge_ratio', 0):.4f}")
             dc2.metric("Half-Life", f"{details.get('half_life', '—')}h")
-            dc3.metric("Cointegration p", f"{details.get('cointegration_pvalue', 0):.4f}")
+            dc3.metric(
+                "Cointegration p", f"{details.get('cointegration_pvalue', 0):.4f}"
+            )
             dc4.metric("Correlation", f"{details.get('correlation', 0):.3f}")
 
             open_trade = details.get("open_trade")
@@ -282,6 +444,7 @@ def main():
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _fmt_time(ts_str):
     try:

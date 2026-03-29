@@ -5,13 +5,13 @@ Real-time account overview, market status, and positions summary.
 
 import os
 import sys
-from datetime import datetime
 from pathlib import Path
 
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import streamlit as st  # noqa: E402
+from utils import render_market_banner  # noqa: E402
 
 from src.shared.logging import setup_logging  # noqa: E402
 
@@ -27,12 +27,14 @@ st.set_page_config(
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
 
+
 def load_css() -> None:
     css_file = os.path.join(os.path.dirname(__file__), "styles.css")
     try:
         with open(css_file) as f:
             css = f.read()
         from css_config import generate_css_variables, get_theme_css
+
         st.markdown(
             f"<style>{generate_css_variables()}{css}{get_theme_css()}</style>",
             unsafe_allow_html=True,
@@ -42,6 +44,7 @@ def load_css() -> None:
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _fmt_dollar(v) -> str:
     try:
@@ -67,65 +70,12 @@ def _pnl_color(v) -> str:
         return "#6b6b6b"
 
 
-def _parse_dt(s: str) -> "datetime | None":
-    if not s:
-        return None
-    for fmt in (
-        "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"
-    ):
-        try:
-            ts = s.replace("Z", "+00:00") if s.endswith("Z") else s
-            return datetime.strptime(ts, fmt)
-        except ValueError:
-            continue
-    return None
-
-
-# ── Market clock banner ───────────────────────────────────────────────────────
-
-def render_market_banner(clock: dict) -> None:
-    is_open: bool = clock.get("is_open", False)
-    next_open = _parse_dt(clock.get("next_open", ""))
-    next_close = _parse_dt(clock.get("next_close", ""))
-
-    if is_open:
-        css_class = "market-open-banner"
-        dot = "●"
-        status = "Market Open"
-        if next_close:
-            try:
-                closes = next_close.strftime("%I:%M %p ET")
-            except Exception:
-                closes = str(next_close)
-            detail = f'<span class="market-time">Closes {closes}</span>'
-        else:
-            detail = ""
-    else:
-        css_class = "market-closed-banner"
-        dot = "○"
-        status = "Market Closed"
-        if next_open:
-            try:
-                opens = next_open.strftime("%I:%M %p ET")
-            except Exception:
-                opens = str(next_open)
-            detail = f'<span class="market-time">Opens {opens}</span>'
-        else:
-            detail = ""
-
-    st.markdown(
-        f'<div class="market-banner {css_class}">'
-        f'{dot}&nbsp;&nbsp;<strong>{status}</strong>&nbsp;&nbsp;{detail}'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-
-
 # ── Sidebar ───────────────────────────────────────────────────────────────────
+
 
 def render_sidebar(account: dict, positions: list) -> None:
     st.sidebar.markdown(
-        "<h2 style='font-family:\"Playfair Display\",Georgia,serif;"
+        '<h2 style=\'font-family:"Playfair Display",Georgia,serif;'
         "font-size:1.15rem;font-weight:500;color:#1a1a1a;"
         "border-bottom:1px solid rgba(26,26,26,0.1);padding-bottom:0.4rem;"
         "margin-bottom:0.8rem;'>Trading System</h2>",
@@ -142,7 +92,7 @@ def render_sidebar(account: dict, positions: list) -> None:
         color = _pnl_color(day_pnl)
         sign = "+" if day_pnl >= 0 else ""
         st.sidebar.markdown(
-            f"<div style='font-family:\"DM Mono\",monospace;font-size:0.85rem;"
+            f'<div style=\'font-family:"DM Mono",monospace;font-size:0.85rem;'
             f"color:{color};margin:-0.4rem 0 0.6rem 0;'>"
             f"{sign}{_fmt_dollar(abs(day_pnl))} ({sign}{day_pct:.2f}%) today</div>",
             unsafe_allow_html=True,
@@ -154,7 +104,7 @@ def render_sidebar(account: dict, positions: list) -> None:
 
     st.sidebar.markdown("---")
     st.sidebar.markdown(
-        f"<p style='font-family:\"DM Sans\",sans-serif;font-size:0.78rem;"
+        f'<p style=\'font-family:"DM Sans",sans-serif;font-size:0.78rem;'
         f"color:#9e9e9e;margin:0;'>Open positions: {len(positions)}</p>",
         unsafe_allow_html=True,
     )
@@ -162,10 +112,12 @@ def render_sidebar(account: dict, positions: list) -> None:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+
 def main() -> None:
     load_css()
 
     from api_client import get_api_client
+
     api = get_api_client()
 
     # Fetch live data
@@ -178,11 +130,16 @@ def main() -> None:
 
     # ── Greeting + title ──
     from datetime import datetime as _dt
+
     hour = _dt.now().hour
-    greeting = "Good morning" if hour < 12 else ("Good afternoon" if hour < 17 else "Good evening")
+    greeting = (
+        "Good morning"
+        if hour < 12
+        else ("Good afternoon" if hour < 17 else "Good evening")
+    )
 
     st.markdown(
-        f"<div style='margin-bottom:0.2rem;font-family:\"DM Sans\",sans-serif;"
+        f'<div style=\'margin-bottom:0.2rem;font-family:"DM Sans",sans-serif;'
         f"font-size:0.85rem;color:#4a4a4a;'>{greeting}, Nishant</div>"
         f"<h1 style='margin-top:0;'>Dashboard</h1>",
         unsafe_allow_html=True,
@@ -235,25 +192,28 @@ def main() -> None:
                 intraday_pct = float(p.get("unrealized_intraday_plpc", 0)) * 100
                 sign_u = "+" if unrl >= 0 else ""
                 sign_i = "+" if intraday_pct >= 0 else ""
-                rows.append({
-                    "Symbol": p.get("symbol", ""),
-                    "Side": p.get("side", "").upper(),
-                    "Qty": int(float(p.get("qty", 0))),
-                    "Avg Entry": _fmt_dollar(p.get("avg_entry_price", 0)),
-                    "Price": _fmt_dollar(p.get("current_price", 0)),
-                    "Mkt Value": _fmt_dollar(p.get("market_value", 0)),
-                    "Unrlzd P&L": (
-                        f"{sign_u}{_fmt_dollar(unrl)} ({sign_u}{unrl_pct:.2f}%)"
-                    ),
-                    "Today %": f"{sign_i}{intraday_pct:.2f}%",
-                })
+                rows.append(
+                    {
+                        "Symbol": p.get("symbol", ""),
+                        "Side": p.get("side", "").upper(),
+                        "Qty": int(float(p.get("qty", 0))),
+                        "Avg Entry": _fmt_dollar(p.get("avg_entry_price", 0)),
+                        "Price": _fmt_dollar(p.get("current_price", 0)),
+                        "Mkt Value": _fmt_dollar(p.get("market_value", 0)),
+                        "Unrlzd P&L": (
+                            f"{sign_u}{_fmt_dollar(unrl)} ({sign_u}{unrl_pct:.2f}%)"
+                        ),
+                        "Today %": f"{sign_i}{intraday_pct:.2f}%",
+                    }
+                )
 
             import pandas as pd
+
             df = pd.DataFrame(rows)
-            st.dataframe(df, width='stretch', hide_index=True)
+            st.dataframe(df, width="stretch", hide_index=True)
         else:
             st.markdown(
-                "<p style='color:#9e9e9e;font-family:\"DM Sans\",sans-serif;"
+                '<p style=\'color:#9e9e9e;font-family:"DM Sans",sans-serif;'
                 "font-size:0.9rem;padding:1rem 0;'>No open positions.</p>",
                 unsafe_allow_html=True,
             )
@@ -272,12 +232,12 @@ def main() -> None:
                     f"<div style='border:1px solid rgba(26,26,26,0.08);"
                     f"border-radius:4px;padding:0.55rem 0.8rem;margin-bottom:0.4rem;"
                     f"background:#fff;'>"
-                    f"<span style='font-family:\"DM Mono\",monospace;font-weight:500;"
+                    f'<span style=\'font-family:"DM Mono",monospace;font-weight:500;'
                     f"color:#1a1a1a;'>{sym}</span>"
                     f"&nbsp;<span style='color:{color};font-size:0.78rem;"
-                    f"font-family:\"DM Sans\",sans-serif;font-weight:500;"
+                    f'font-family:"DM Sans",sans-serif;font-weight:500;'
                     f"text-transform:uppercase;'>{side}</span><br>"
-                    f"<span style='font-family:\"DM Mono\",monospace;font-size:0.78rem;"
+                    f'<span style=\'font-family:"DM Mono",monospace;font-size:0.78rem;'
                     f"color:#6b6b6b;'>{qty} shares · {otype}</span>"
                     f"</div>",
                     unsafe_allow_html=True,
@@ -286,7 +246,7 @@ def main() -> None:
                 st.caption(f"+{len(orders) - 8} more — see Portfolio page")
         else:
             st.markdown(
-                "<p style='color:#9e9e9e;font-family:\"DM Sans\",sans-serif;"
+                '<p style=\'color:#9e9e9e;font-family:"DM Sans",sans-serif;'
                 "font-size:0.85rem;padding:0.6rem 0;'>No open orders.</p>",
                 unsafe_allow_html=True,
             )
@@ -294,7 +254,7 @@ def main() -> None:
     # ── Refresh ──
     st.markdown("---")
     st.markdown(
-        "<p style='font-family:\"DM Sans\",sans-serif;font-size:0.75rem;"
+        '<p style=\'font-family:"DM Sans",sans-serif;font-size:0.75rem;'
         "color:#9e9e9e;'>Data refreshes on page reload.</p>",
         unsafe_allow_html=True,
     )

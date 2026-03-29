@@ -70,6 +70,7 @@ __all__ = [
     'filter_ohlc_data_by_timeframe',
     'create_rsi_chart',
     'create_macd_chart',
+    'render_market_banner',
 ]
 
 # Re-export all functions
@@ -122,3 +123,4 @@ ohlc_data_to_dataframe = utils_module.ohlc_data_to_dataframe
 filter_ohlc_data_by_timeframe = utils_module.filter_ohlc_data_by_timeframe
 create_rsi_chart = utils_module.create_rsi_chart
 create_macd_chart = utils_module.create_macd_chart
+render_market_banner = utils_module.render_market_banner
