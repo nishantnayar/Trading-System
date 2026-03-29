@@ -26,6 +26,7 @@ from loguru import logger
 
 from src.services.alpaca.client import AlpacaClient
 from src.services.notification.email_notifier import get_notifier
+from src.services.risk_management.portfolio_risk_manager import PortfolioRiskManager
 from src.services.strategy_engine.pairs.pair_executor import PairExecutor
 from src.services.strategy_engine.pairs.position_sizer import KellySizer
 from src.services.strategy_engine.pairs.signal_generator import SignalGenerator
@@ -74,18 +75,58 @@ class PairsStrategy:
         account = await self.alpaca.get_account()
         portfolio_equity = float(account.get("equity", 0))
 
+        # Pre-fetch all price series once so the risk manager can compute
+        # cross-pair correlations without a second round of Alpaca calls.
+        prices_cache: Dict[str, pd.Series] = {}
+        for pair in pairs:
+            try:
+                p1, p2 = await self._fetch_prices(pair)
+                prices_cache[pair.symbol1] = p1
+                prices_cache[pair.symbol2] = p2
+            except Exception as e:
+                logger.warning(
+                    f"Price prefetch failed for {pair.symbol1}/{pair.symbol2}: {e}"
+                )
+
+        # Load open trades for all pairs (used by circuit breaker P&L and
+        # correlation guard's active-pair list).
+        open_trades = self._load_all_open_trades(pairs)
+        active_open_pairs = [p for p in pairs if open_trades.get(p.id)]
+
+        # Portfolio risk controls — run once per cycle
+        risk_mgr = PortfolioRiskManager()
+        unrealized_pnl = PortfolioRiskManager.compute_unrealized_pnl(
+            list(open_trades.values()), prices_cache
+        )
+        total_equity = portfolio_equity + unrealized_pnl
+        circuit_breaker_active = risk_mgr.update_and_check_drawdown(total_equity)
+
+        if circuit_breaker_active:
+            logger.warning(
+                "Circuit breaker ACTIVE — new entries blocked this cycle"
+            )
+
         results = []
         for pair in pairs:
             try:
-                result = await self._run_pair_cycle(pair, portfolio_equity)
+                result = await self._run_pair_cycle(
+                    pair,
+                    portfolio_equity,
+                    prices_cache,
+                    active_open_pairs,
+                    circuit_breaker_active,
+                    risk_mgr,
+                )
                 results.append(result)
             except Exception as e:
                 logger.error(f"Error in pair cycle {pair.symbol1}/{pair.symbol2}: {e}")
-                results.append({
-                    "pair": f"{pair.symbol1}/{pair.symbol2}",
-                    "status": "ERROR",
-                    "error": str(e),
-                })
+                results.append(
+                    {
+                        "pair": f"{pair.symbol1}/{pair.symbol2}",
+                        "status": "ERROR",
+                        "error": str(e),
+                    }
+                )
 
         return results
 
@@ -94,13 +135,20 @@ class PairsStrategy:
     # ------------------------------------------------------------------
 
     async def _run_pair_cycle(
-        self, pair: PairRegistry, portfolio_equity: float
+        self,
+        pair: PairRegistry,
+        portfolio_equity: float,
+        prices_cache: Dict[str, pd.Series],
+        active_open_pairs: List[PairRegistry],
+        circuit_breaker_active: bool,
+        risk_mgr: PortfolioRiskManager,
     ) -> Dict:
         sym1, sym2 = pair.symbol1, pair.symbol2
         logger.info(f"Evaluating pair: {sym1}/{sym2}")
 
-        # 1. Fetch prices (live intraday from Alpaca — includes today's bars)
-        prices1, prices2 = await self._fetch_prices(pair)
+        # 1. Use pre-fetched prices from cache (avoids duplicate Alpaca calls)
+        prices1 = prices_cache.get(sym1, pd.Series(dtype=float))
+        prices2 = prices_cache.get(sym2, pd.Series(dtype=float))
         if prices1.empty or prices2.empty:
             logger.warning(f"No price data for {sym1}/{sym2} — skipping")
             return {"pair": f"{sym1}/{sym2}", "status": "NO_DATA"}
@@ -143,6 +191,38 @@ class PairsStrategy:
         if signal.signal_type in ("LONG_SPREAD", "SHORT_SPREAD"):
             if p1 is None or p2 is None:
                 return {"pair": pair_label, "status": "NO_PRICE"}
+
+            # Control B — circuit breaker
+            if circuit_breaker_active:
+                logger.warning(
+                    f"Entry blocked by circuit breaker: {pair_label}"
+                )
+                return {
+                    "pair": pair_label,
+                    "status": "BLOCKED_CIRCUIT_BREAKER",
+                    "z_score": round(current_z, 4),
+                    "signal": signal.signal_type,
+                }
+
+            # Control A — correlation guard
+            # Exclude this pair from the active_open_pairs list so it
+            # doesn't block itself (it has no open trade yet at this point).
+            other_open = [p for p in active_open_pairs if p.id != pair.id]
+            allowed, reason = risk_mgr.check_correlation_guard(
+                pair, prices_cache, other_open
+            )
+            if not allowed:
+                logger.warning(
+                    f"Entry blocked by correlation guard: {pair_label} — {reason}"
+                )
+                return {
+                    "pair": pair_label,
+                    "status": "BLOCKED_CORRELATION",
+                    "reason": reason,
+                    "z_score": round(current_z, 4),
+                    "signal": signal.signal_type,
+                }
+
             sizer = KellySizer(pair)
             qty1, qty2 = sizer.calculate_size(portfolio_equity, p1, p2)
             trade = await executor.open_pair_trade(
@@ -251,6 +331,28 @@ class PairsStrategy:
         p1 = await self.alpaca.get_bars(sym1, limit=self.PRICE_LOOKBACK_BARS)
         p2 = await self.alpaca.get_bars(sym2, limit=self.PRICE_LOOKBACK_BARS)
         return p1, p2
+
+    def _load_all_open_trades(
+        self, pairs: List[PairRegistry]
+    ) -> Dict[int, PairTrade]:
+        """Return {pair_id: PairTrade} for all pairs that currently have an open trade."""
+        pair_ids = [p.id for p in pairs]
+        with db_readonly_session() as session:
+            trades = (
+                session.query(PairTrade)
+                .filter(
+                    PairTrade.pair_id.in_(pair_ids),
+                    PairTrade.status == "OPEN",
+                )
+                .all()
+            )
+            # Keep the most recent open trade per pair (there should only be one)
+            result: Dict[int, PairTrade] = {}
+            for t in trades:
+                if t.pair_id not in result or t.entry_time > result[t.pair_id].entry_time:
+                    session.expunge(t)
+                    result[t.pair_id] = t
+            return result
 
     def _get_open_trade(self, pair: PairRegistry) -> Optional[PairTrade]:
         with db_readonly_session() as session:

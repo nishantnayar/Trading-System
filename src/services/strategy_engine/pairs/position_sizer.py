@@ -128,6 +128,19 @@ class KellySizer:
         kelly = win_rate - (1 - win_rate) / (avg_win / avg_loss)
         half_kelly = kelly / 2
 
+        # Apply per-pair allocation cap if configured (Control C)
+        if (
+            hasattr(self.pair, "max_allocation_pct")
+            and self.pair.max_allocation_pct is not None
+        ):
+            cap = float(self.pair.max_allocation_pct)
+            if half_kelly > cap:
+                logger.debug(
+                    f"Per-pair allocation cap applied: "
+                    f"half_kelly={half_kelly:.4f} → {cap:.4f}"
+                )
+                half_kelly = cap
+
         # Clamp: minimum 1%, maximum (2 × MAX_LEG_FRACTION) across both legs combined
         half_kelly = max(0.01, min(MAX_LEG_FRACTION * 2, half_kelly))
 

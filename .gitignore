@@ -192,6 +192,8 @@ docs/DOCUMENTATION_REVIEW.md
 /notebooks/lightning_logs
 /notebooks
 .claude/settings.local.json
+config/scanner_prefs.json
+config/analysis_prefs.json
 docs/articles/linkedin_post_tft_xai.md
 docs/articles/medium_article_tft_xai.md
 docs/articles/xai-flight-recorder-volatile-markets-2026-website.md

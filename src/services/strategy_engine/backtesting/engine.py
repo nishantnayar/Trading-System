@@ -42,7 +42,8 @@ from src.shared.database.models.strategy_models import PairRegistry
 @dataclass
 class SimulatedTrade:
     """A single simulated round-trip trade."""
-    side: str                    # LONG_SPREAD or SHORT_SPREAD
+
+    side: str  # LONG_SPREAD or SHORT_SPREAD
     entry_time: datetime
     entry_z: float
     entry_price1: float
@@ -66,6 +67,7 @@ class BacktestResult:
 
     Passed directly to MetricsCalculator.
     """
+
     pair_id: int
     symbol1: str
     symbol2: str
@@ -77,14 +79,17 @@ class BacktestResult:
     stop_loss_threshold: float
     z_score_window: int
     hedge_ratio: float
+    slippage_bps: float = 5.0
+    commission_per_trade: float = 0.0
     trades: List[SimulatedTrade] = field(default_factory=list)
-    equity_curve: List[dict] = field(default_factory=list)   # [{timestamp, equity}]
+    equity_curve: List[dict] = field(default_factory=list)  # [{timestamp, equity}]
     bars_processed: int = 0
 
 
 # ---------------------------------------------------------------------------
 # Engine
 # ---------------------------------------------------------------------------
+
 
 class BacktestEngine:
     """
@@ -105,12 +110,16 @@ class BacktestEngine:
         end_date: date,
         initial_capital: float = 100_000.0,
         data_source: str = "yahoo_adjusted",
+        slippage_bps: float = 5.0,
+        commission_per_trade: float = 0.0,
     ):
         self.pair = pair
         self.start_date = start_date
         self.end_date = end_date
         self.initial_capital = initial_capital
         self.data_source = data_source
+        self.slippage_bps = slippage_bps
+        self.commission_per_trade = commission_per_trade
 
         self._calc = SpreadCalculator(
             hedge_ratio=float(pair.hedge_ratio),
@@ -177,10 +186,10 @@ class BacktestEngine:
                 .filter(
                     MarketData.symbol.in_([sym1, sym2]),
                     MarketData.data_source == self.data_source,
-                    MarketData.timestamp >= datetime.combine(
-                        fetch_start, datetime.min.time()
-                    ),
-                    MarketData.timestamp <= datetime.combine(
+                    MarketData.timestamp
+                    >= datetime.combine(fetch_start, datetime.min.time()),
+                    MarketData.timestamp
+                    <= datetime.combine(
                         self.end_date + timedelta(days=1), datetime.min.time()
                     ),
                     MarketData.close.isnot(None),
@@ -222,6 +231,8 @@ class BacktestEngine:
             stop_loss_threshold=float(self.pair.stop_loss_threshold),
             z_score_window=int(self.pair.z_score_window),
             hedge_ratio=float(self.pair.hedge_ratio),
+            slippage_bps=self.slippage_bps,
+            commission_per_trade=self.commission_per_trade,
         )
 
         open_trade: Optional[SimulatedTrade] = None
@@ -230,9 +241,7 @@ class BacktestEngine:
 
         # Use a rolling view: compute spread+z over the full series,
         # then iterate bar-by-bar from index `window` onwards.
-        spread_series, z_series, _ = self._calc.calculate(
-            aligned["p1"], aligned["p2"]
-        )
+        spread_series, z_series, _ = self._calc.calculate(aligned["p1"], aligned["p2"])
 
         # Only iterate bars within the requested date range
         start_dt = pd.Timestamp(self.start_date, tz="UTC")
@@ -255,39 +264,54 @@ class BacktestEngine:
 
             if signal_type is None:
                 # Update equity curve even on no-signal bars
-                result.equity_curve.append({
-                    "timestamp": ts.isoformat(),
-                    "equity": equity + realized_pnl + _unrealized_pnl(
-                        open_trade, p1, p2
-                    ),
-                })
+                result.equity_curve.append(
+                    {
+                        "timestamp": ts.isoformat(),
+                        "equity": equity
+                        + realized_pnl
+                        + _unrealized_pnl(open_trade, p1, p2),
+                    }
+                )
                 result.bars_processed += 1
                 continue
 
-            # Determine fill prices: use current bar's prices (same-bar fill).
+            # Determine fill prices: use current bar's prices (same-bar fill),
+            # worsened by slippage_bps on each leg.
             # For production realism we'd use next-bar open, but for backtest
             # this is acceptable — the z-score look-ahead is only 1 bar.
-            fill_p1 = p1
-            fill_p2 = p2
 
             if signal_type in ("LONG_SPREAD", "SHORT_SPREAD") and open_trade is None:
-                qty1, qty2 = self._size_position(equity, fill_p1, fill_p2)
+                # LONG_SPREAD: buy p1 (up), sell p2 (down)
+                # SHORT_SPREAD: sell p1 (down), buy p2 (up)
+                long_p1 = signal_type == "LONG_SPREAD"
+                entry_p1 = self._slipped_price(p1, is_buy=long_p1)
+                entry_p2 = self._slipped_price(p2, is_buy=not long_p1)
+                qty1, qty2 = self._size_position(equity, entry_p1, entry_p2)
                 open_trade = SimulatedTrade(
                     side=signal_type,
                     entry_time=ts.to_pydatetime(),
                     entry_z=z,
-                    entry_price1=fill_p1,
-                    entry_price2=fill_p2,
+                    entry_price1=entry_p1,
+                    entry_price2=entry_p2,
                     qty1=qty1,
                     qty2=qty2,
                 )
 
-            elif signal_type in ("EXIT", "STOP_LOSS", "EXPIRE") and open_trade is not None:  # noqa: E501
-                pnl, pnl_pct = _compute_pnl(open_trade, fill_p1, fill_p2)
+            elif (
+                signal_type in ("EXIT", "STOP_LOSS", "EXPIRE")
+                and open_trade is not None
+            ):  # noqa: E501
+                # Exit reverses the legs: LONG_SPREAD sells p1 (down), covers p2 (up)
+                long_p1 = open_trade.side == "LONG_SPREAD"
+                exit_p1 = self._slipped_price(p1, is_buy=not long_p1)
+                exit_p2 = self._slipped_price(p2, is_buy=long_p1)
+                pnl, pnl_pct = _compute_pnl(
+                    open_trade, exit_p1, exit_p2, self.commission_per_trade
+                )
                 open_trade.exit_time = ts.to_pydatetime()
                 open_trade.exit_z = z
-                open_trade.exit_price1 = fill_p1
-                open_trade.exit_price2 = fill_p2
+                open_trade.exit_price1 = exit_p1
+                open_trade.exit_price2 = exit_p2
                 open_trade.exit_reason = signal_type
                 open_trade.pnl = pnl
                 open_trade.pnl_pct = pnl_pct
@@ -299,18 +323,25 @@ class BacktestEngine:
                 result.trades.append(open_trade)
                 open_trade = None
 
-            result.equity_curve.append({
-                "timestamp": ts.isoformat(),
-                "equity": equity + _unrealized_pnl(open_trade, p1, p2),
-            })
+            result.equity_curve.append(
+                {
+                    "timestamp": ts.isoformat(),
+                    "equity": equity + _unrealized_pnl(open_trade, p1, p2),
+                }
+            )
             result.bars_processed += 1
 
         # Force-close any open trade at the last bar
         if open_trade is not None and len(bars) > 0:
             last_ts = bars.index[-1]
-            last_p1 = float(bars["p1"].iloc[-1])
-            last_p2 = float(bars["p2"].iloc[-1])
-            pnl, pnl_pct = _compute_pnl(open_trade, last_p1, last_p2)
+            raw_p1 = float(bars["p1"].iloc[-1])
+            raw_p2 = float(bars["p2"].iloc[-1])
+            long_p1 = open_trade.side == "LONG_SPREAD"
+            last_p1 = self._slipped_price(raw_p1, is_buy=not long_p1)
+            last_p2 = self._slipped_price(raw_p2, is_buy=long_p1)
+            pnl, pnl_pct = _compute_pnl(
+                open_trade, last_p1, last_p2, self.commission_per_trade
+            )
             open_trade.exit_time = last_ts.to_pydatetime()
             open_trade.exit_z = (
                 float(z_series[last_ts]) if last_ts in z_series.index else None
@@ -329,6 +360,19 @@ class BacktestEngine:
             f"{len(result.trades)} trades"
         )
         return result
+
+    # ------------------------------------------------------------------
+    # Slippage
+    # ------------------------------------------------------------------
+
+    def _slipped_price(self, price: float, is_buy: bool) -> float:
+        """
+        Worsen a fill price by slippage_bps basis points.
+
+        Buys are filled higher; sells are filled lower.
+        """
+        factor = self.slippage_bps / 10_000
+        return price * (1 + factor) if is_buy else price * (1 - factor)
 
     # ------------------------------------------------------------------
     # Position sizing (fixed 2% per leg — Kelly not available in backtest)
@@ -361,6 +405,8 @@ class BacktestEngine:
             stop_loss_threshold=float(self.pair.stop_loss_threshold),
             z_score_window=int(self.pair.z_score_window),
             hedge_ratio=float(self.pair.hedge_ratio),
+            slippage_bps=self.slippage_bps,
+            commission_per_trade=self.commission_per_trade,
         )
 
 
@@ -368,8 +414,12 @@ class BacktestEngine:
 # P&L helpers
 # ---------------------------------------------------------------------------
 
+
 def _compute_pnl(
-    trade: SimulatedTrade, exit_p1: float, exit_p2: float
+    trade: SimulatedTrade,
+    exit_p1: float,
+    exit_p2: float,
+    commission: float = 0.0,
 ) -> Tuple[float, float]:
     """
     Compute P&L for closing a trade.
@@ -379,6 +429,8 @@ def _compute_pnl(
 
     SHORT_SPREAD: short symbol1, long symbol2
         pnl = -qty1*(exit_p1 - entry_p1) + qty2*(exit_p2 - entry_p2)
+
+    commission is a flat dollar cost deducted from the gross P&L.
     """
     d1 = exit_p1 - trade.entry_price1
     d2 = exit_p2 - trade.entry_price2
@@ -387,6 +439,8 @@ def _compute_pnl(
         pnl = trade.qty1 * d1 - trade.qty2 * d2
     else:  # SHORT_SPREAD
         pnl = -trade.qty1 * d1 + trade.qty2 * d2
+
+    pnl -= commission
 
     entry_cost = trade.qty1 * trade.entry_price1 + trade.qty2 * trade.entry_price2
     pnl_pct = (pnl / entry_cost * 100) if entry_cost > 0 else 0.0

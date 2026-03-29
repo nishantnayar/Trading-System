@@ -58,8 +58,8 @@ PLOTLY_CONFIG = {
 }
 
 # Colour palette — consistent across all charts
-C1 = "#1f77b4"   # symbol1 — blue
-C2 = "#ff7f0e"   # symbol2 — orange
+C1 = "#1f77b4"  # symbol1 — blue
+C2 = "#ff7f0e"  # symbol2 — orange
 CDIV1 = "#1f77b4"
 CDIV2 = "#ff7f0e"
 CSPLIT = "#e377c2"
@@ -74,12 +74,14 @@ def _load_css() -> None:
         with open(css_file) as f:
             css = f.read()
         from css_config import generate_css_variables, get_theme_css
+
         st.markdown(
             f"<style>{generate_css_variables()}{css}{get_theme_css()}</style>",
             unsafe_allow_html=True,
         )
     except Exception:
         pass
+
 
 # ---------------------------------------------------------------------------
 # Cached data fetchers
@@ -106,10 +108,7 @@ def load_pairs() -> list:
                     "label": (
                         f"#{i+1}  {p.symbol1}/{p.symbol2}"
                         f"  [{p.sector or 'N/A'}]"
-                        + (
-                            f"  ★{float(p.rank_score):.3f}"
-                            if p.rank_score else ""
-                        )
+                        + (f"  ★{float(p.rank_score):.3f}" if p.rank_score else "")
                     ),
                     "symbol1": p.symbol1,
                     "symbol2": p.symbol2,
@@ -118,19 +117,13 @@ def load_pairs() -> list:
                     "half_life_hours": (
                         float(p.half_life_hours) if p.half_life_hours else None
                     ),
-                    "correlation": (
-                        float(p.correlation) if p.correlation else None
-                    ),
-                    "coint_pvalue": (
-                        float(p.coint_pvalue) if p.coint_pvalue else None
-                    ),
+                    "correlation": (float(p.correlation) if p.correlation else None),
+                    "coint_pvalue": (float(p.coint_pvalue) if p.coint_pvalue else None),
                     "z_score_window": int(p.z_score_window),
                     "entry_threshold": float(p.entry_threshold),
                     "exit_threshold": float(p.exit_threshold),
                     "stop_loss_threshold": float(p.stop_loss_threshold),
-                    "rank_score": (
-                        float(p.rank_score) if p.rank_score else None
-                    ),
+                    "rank_score": (float(p.rank_score) if p.rank_score else None),
                     "is_active": p.is_active,
                 }
                 for i, p in enumerate(pairs)
@@ -190,28 +183,26 @@ def load_key_stats(symbol1: str, symbol2: str) -> dict:
                         float(row.profit_margin) if row.profit_margin else None
                     ),
                     "roe": (
-                        float(row.return_on_equity)
-                        if row.return_on_equity else None
+                        float(row.return_on_equity) if row.return_on_equity else None
                     ),
                     "debt_to_equity": (
-                        float(row.debt_to_equity)
-                        if row.debt_to_equity else None
+                        float(row.debt_to_equity) if row.debt_to_equity else None
                     ),
                     "revenue_growth": (
-                        float(row.revenue_growth)
-                        if row.revenue_growth else None
+                        float(row.revenue_growth) if row.revenue_growth else None
                     ),
                     "earnings_growth": (
-                        float(row.earnings_growth)
-                        if row.earnings_growth else None
+                        float(row.earnings_growth) if row.earnings_growth else None
                     ),
                     "fifty_two_week_high": (
                         float(row.fifty_two_week_high)
-                        if row.fifty_two_week_high else None
+                        if row.fifty_two_week_high
+                        else None
                     ),
                     "fifty_two_week_low": (
                         float(row.fifty_two_week_low)
-                        if row.fifty_two_week_low else None
+                        if row.fifty_two_week_low
+                        else None
                     ),
                     "shares_short": row.shares_short,
                     "short_ratio": (
@@ -219,7 +210,8 @@ def load_key_stats(symbol1: str, symbol2: str) -> dict:
                     ),
                     "held_pct_inst": (
                         float(row.held_percent_institutions)
-                        if row.held_percent_institutions else None
+                        if row.held_percent_institutions
+                        else None
                     ),
                     "as_of": row.date.isoformat() if row.date else "—",
                 }
@@ -230,10 +222,15 @@ def load_key_stats(symbol1: str, symbol2: str) -> dict:
 
 @st.cache_data(ttl=300)
 def load_price_history(
-    symbol1: str, symbol2: str, start: date, end: date, data_source: str = "yahoo_adjusted"
+    symbol1: str,
+    symbol2: str,
+    start: date,
+    end: date,
+    data_source: str = "yahoo_adjusted",
 ) -> tuple:
     """Load hourly close prices for both symbols over the date range."""
     with db_readonly_session() as session:
+
         def _fetch(sym):
             rows = (
                 session.query(MarketData.timestamp, MarketData.close)
@@ -259,12 +256,12 @@ def load_price_history(
 
 
 @st.cache_data(ttl=3600)
-def load_corporate_events(
-    symbol1: str, symbol2: str, start: date, end: date
-) -> dict:
+def load_corporate_events(symbol1: str, symbol2: str, start: date, end: date) -> dict:
     """Load dividends and splits for both symbols in the date window."""
-    events: dict = {symbol1: {"dividends": [], "splits": []},
-                    symbol2: {"dividends": [], "splits": []}}
+    events: dict = {
+        symbol1: {"dividends": [], "splits": []},
+        symbol2: {"dividends": [], "splits": []},
+    }
     with db_readonly_session() as session:
         for sym in (symbol1, symbol2):
             divs = (
@@ -282,8 +279,9 @@ def load_corporate_events(
             ]
 
             splits = (
-                session.query(StockSplit.split_date, StockSplit.split_ratio,
-                              StockSplit.ratio_str)
+                session.query(
+                    StockSplit.split_date, StockSplit.split_ratio, StockSplit.ratio_str
+                )
                 .filter(
                     StockSplit.symbol == sym,
                     StockSplit.split_date >= start,
@@ -319,21 +317,24 @@ def load_run_history(pair_id: int) -> pd.DataFrame:
                 return pd.DataFrame()
             rows = []
             for r in runs:
-                rows.append({
-                    "ID": r.id,
-                    "Run Date": r.run_date,
-                    "Period": f"{r.start_date} → {r.end_date}",
-                    "Entry±": r.entry_threshold,
-                    "Exit±": r.exit_threshold,
-                    "Stop±": r.stop_loss_threshold,
-                    "Return%": round(float(r.total_return or 0), 2),
-                    "Sharpe": round(float(r.sharpe_ratio or 0), 3),
-                    "MaxDD%": round(float(r.max_drawdown or 0), 2),
-                    "WinRate%": round(float(r.win_rate or 0), 1),
-                    "Trades": r.total_trades,
-                    "Gate": "PASS" if r.passed_gate else "FAIL",
-                    "Notes": r.notes or "",
-                })
+                rows.append(
+                    {
+                        "ID": r.id,
+                        "Run Date": r.run_date,
+                        "Period": f"{r.start_date} → {r.end_date}",
+                        "Entry±": r.entry_threshold,
+                        "Exit±": r.exit_threshold,
+                        "Stop±": r.stop_loss_threshold,
+                        "Return%": round(float(r.total_return or 0), 2),
+                        "Sharpe": round(float(r.sharpe_ratio or 0), 3),
+                        "MaxDD%": round(float(r.max_drawdown or 0), 2),
+                        "WinRate%": round(float(r.win_rate or 0), 1),
+                        "Trades": r.total_trades,
+                        "Slippage": f"{r.slippage_bps or 0:.0f}bps",
+                        "Gate": "PASS" if r.passed_gate else "FAIL",
+                        "Notes": r.notes or "",
+                    }
+                )
             return pd.DataFrame(rows)
     except Exception as e:
         st.error(f"Error loading run history: {e}")
@@ -351,6 +352,7 @@ def _set_pair_active(pair_id: int, active: bool) -> None:
 # ---------------------------------------------------------------------------
 # Main page
 # ---------------------------------------------------------------------------
+
 
 def main():
     _load_css()
@@ -387,23 +389,52 @@ def main():
 
         st.subheader("Strategy Parameters")
         entry_threshold = st.slider(
-            "Entry threshold (±z)", 1.0, 3.5,
-            float(selected["entry_threshold"]), 0.1,
+            "Entry threshold (±z)",
+            1.0,
+            3.5,
+            float(selected["entry_threshold"]),
+            0.1,
         )
         exit_threshold = st.slider(
-            "Exit threshold (±z)", 0.1, 1.5,
-            float(selected["exit_threshold"]), 0.1,
+            "Exit threshold (±z)",
+            0.1,
+            1.5,
+            float(selected["exit_threshold"]),
+            0.1,
         )
         stop_threshold = st.slider(
-            "Stop loss (±z)", 2.5, 5.0,
-            float(selected["stop_loss_threshold"]), 0.1,
+            "Stop loss (±z)",
+            2.5,
+            5.0,
+            float(selected["stop_loss_threshold"]),
+            0.1,
+        )
+        slippage_bps = st.slider(
+            "Slippage (bps/fill)",
+            0,
+            20,
+            5,
+            1,
+            help="Basis points added to buys / subtracted from sells per leg fill.",
+        )
+        commission = st.number_input(
+            "Commission ($/trade)",
+            min_value=0.0,
+            max_value=2.0,
+            value=0.0,
+            step=0.01,
+            help="Flat dollar cost deducted from P&L per closed round-trip. "
+            "Alpaca is commission-free; set >0 to stress-test.",
         )
 
         st.divider()
 
         initial_capital = st.number_input(
-            "Initial Capital ($)", min_value=10_000, max_value=1_000_000,
-            value=100_000, step=10_000,
+            "Initial Capital ($)",
+            min_value=10_000,
+            max_value=1_000_000,
+            value=100_000,
+            step=10_000,
         )
 
         notes = st.text_input(
@@ -419,8 +450,7 @@ def main():
     col_a.metric("Hedge Ratio (β)", f"{selected['hedge_ratio']:.4f}")
     col_b.metric(
         "Half-Life",
-        f"{selected['half_life_hours']:.1f}h"
-        if selected["half_life_hours"] else "N/A",
+        f"{selected['half_life_hours']:.1f}h" if selected["half_life_hours"] else "N/A",
     )
     col_c.metric("Z-Score Window", f"{selected['z_score_window']} bars")
 
@@ -428,10 +458,9 @@ def main():
     rank = selected.get("rank_score")
     if rank is not None:
         rank_label = (
-            "Excellent" if rank >= 0.85
-            else "Good" if rank >= 0.75
-            else "Fair" if rank >= 0.60
-            else "Weak"
+            "Excellent"
+            if rank >= 0.85
+            else "Good" if rank >= 0.75 else "Fair" if rank >= 0.60 else "Weak"
         )
         col_r.metric(
             "Rank Score",
@@ -449,7 +478,9 @@ def main():
     btn_col, _ = st.columns([2, 8])
     with btn_col:
         if selected["is_active"]:
-            if st.button("⏸ Deactivate Pair", type="secondary", use_container_width=True):
+            if st.button(
+                "⏸ Deactivate Pair", type="secondary", use_container_width=True
+            ):
                 _set_pair_active(selected["id"], False)
                 load_pairs.clear()
                 st.rerun()
@@ -477,9 +508,7 @@ def main():
             return
 
         with db_readonly_session() as session:
-            pair_row = (
-                session.query(PairRegistry).filter_by(id=selected["id"]).first()
-            )
+            pair_row = session.query(PairRegistry).filter_by(id=selected["id"]).first()
             if pair_row is None:
                 st.error("Pair not found in database.")
                 return
@@ -497,6 +526,8 @@ def main():
                     start_date=start_date,
                     end_date=end_date,
                     initial_capital=float(initial_capital),
+                    slippage_bps=float(slippage_bps),
+                    commission_per_trade=float(commission),
                 )
                 result = engine.run()
                 calc = MetricsCalculator()
@@ -534,6 +565,7 @@ def main():
     if history_df.empty:
         st.info("No previous backtest runs for this pair.")
     else:
+
         def _highlight_gate(val):
             return (
                 "background-color: rgba(42,122,75,0.08)"
@@ -548,6 +580,7 @@ def main():
 # ---------------------------------------------------------------------------
 # Stock Analysis Panel
 # ---------------------------------------------------------------------------
+
 
 def _render_pair_analysis(selected: dict, start_date: date, end_date: date):
     """
@@ -603,20 +636,19 @@ def _render_pair_analysis(selected: dict, start_date: date, end_date: date):
             av2 = stats.get(s2, {}).get("avg_volume") or 0
             fc2.metric(
                 "Avg Volume Ratio",
-                f"{max(av1, av2) / min(av1, av2):.1f}×"
-                if min(av1, av2) > 0 else "N/A",
+                f"{max(av1, av2) / min(av1, av2):.1f}×" if min(av1, av2) > 0 else "N/A",
                 help="Liquidity balance — keep below 10×",
             )
             b1 = stats.get(s1, {}).get("beta")
             b2 = stats.get(s2, {}).get("beta")
             fc3.metric(
                 "Beta Gap",
-                f"{abs((b1 or 0) - (b2 or 0)):.2f}"
-                if b1 and b2 else "N/A",
+                f"{abs((b1 or 0) - (b2 or 0)):.2f}" if b1 and b2 else "N/A",
                 help="Market sensitivity diff — keep below 0.5",
             )
             # Upcoming dividends within 10 days
             from datetime import date as _date
+
             today = _date.today()
             upcoming = []
             for sym in (s1, s2):
@@ -640,9 +672,7 @@ def _render_pair_analysis(selected: dict, start_date: date, end_date: date):
                 info = company.get(sym, {})
                 ks = stats.get(sym, {})
                 with col:
-                    st.markdown(
-                        f"### {info.get('name', sym)}  `{sym}`"
-                    )
+                    st.markdown(f"### {info.get('name', sym)}  `{sym}`")
                     st.caption(
                         f"{info.get('industry', '—')}  ·  "
                         f"{info.get('exchange', '—')}  ·  "
@@ -651,9 +681,9 @@ def _render_pair_analysis(selected: dict, start_date: date, end_date: date):
                     mc = info.get("market_cap") or ks.get("market_cap")
                     emp = info.get("employees")
                     st.markdown(
-                        f"**Market Cap:** {_fmt_mcap(mc)}  "
-                        f"  **Employees:** {emp:,}" if emp else
-                        f"**Market Cap:** {_fmt_mcap(mc)}"
+                        f"**Market Cap:** {_fmt_mcap(mc)}  " f"  **Employees:** {emp:,}"
+                        if emp
+                        else f"**Market Cap:** {_fmt_mcap(mc)}"
                     )
                     desc = info.get("description", "")
                     if desc:
@@ -714,7 +744,10 @@ def _render_pair_analysis(selected: dict, start_date: date, end_date: date):
                 st.info("Not enough price data to compute rolling correlation.")
             else:
                 _render_correlation_chart(
-                    s1, s2, prices1, prices2,
+                    s1,
+                    s2,
+                    prices1,
+                    prices2,
                     registered_corr=selected.get("correlation"),
                 )
 
@@ -722,6 +755,7 @@ def _render_pair_analysis(selected: dict, start_date: date, end_date: date):
 # ---------------------------------------------------------------------------
 # Risk flag logic
 # ---------------------------------------------------------------------------
+
 
 def _compute_risk_flags(
     s1: str,
@@ -742,23 +776,27 @@ def _compute_risk_flags(
     if mc1 > 0 and mc2 > 0:
         ratio = max(mc1, mc2) / min(mc1, mc2)
         if ratio > 10:
-            flags.append({
-                "level": "danger",
-                "title": "Large Market Cap Mismatch",
-                "detail": (
-                    f"{s1} vs {s2} market cap ratio is {ratio:.1f}×. "
-                    "Extreme size differences weaken cointegration stability."
-                ),
-            })
+            flags.append(
+                {
+                    "level": "danger",
+                    "title": "Large Market Cap Mismatch",
+                    "detail": (
+                        f"{s1} vs {s2} market cap ratio is {ratio:.1f}×. "
+                        "Extreme size differences weaken cointegration stability."
+                    ),
+                }
+            )
         elif ratio > 5:
-            flags.append({
-                "level": "warn",
-                "title": "Market Cap Mismatch",
-                "detail": (
-                    f"Ratio is {ratio:.1f}×. Monitor — the larger company may "
-                    "absorb sector shocks differently."
-                ),
-            })
+            flags.append(
+                {
+                    "level": "warn",
+                    "title": "Market Cap Mismatch",
+                    "detail": (
+                        f"Ratio is {ratio:.1f}×. Monitor — the larger company may "
+                        "absorb sector shocks differently."
+                    ),
+                }
+            )
 
     # 2. Liquidity mismatch (>10× avg volume makes leg balancing hard)
     av1 = ks1.get("avg_volume") or 0
@@ -766,23 +804,27 @@ def _compute_risk_flags(
     if av1 > 0 and av2 > 0:
         liq_ratio = max(av1, av2) / min(av1, av2)
         if liq_ratio > 10:
-            flags.append({
-                "level": "danger",
-                "title": "Liquidity Mismatch",
-                "detail": (
-                    f"Average volume ratio is {liq_ratio:.1f}×. "
-                    "The thinner leg may experience significant slippage."
-                ),
-            })
+            flags.append(
+                {
+                    "level": "danger",
+                    "title": "Liquidity Mismatch",
+                    "detail": (
+                        f"Average volume ratio is {liq_ratio:.1f}×. "
+                        "The thinner leg may experience significant slippage."
+                    ),
+                }
+            )
         elif liq_ratio > 5:
-            flags.append({
-                "level": "warn",
-                "title": "Liquidity Imbalance",
-                "detail": (
-                    f"Volume ratio is {liq_ratio:.1f}×. "
-                    "Watch for slippage on the smaller leg."
-                ),
-            })
+            flags.append(
+                {
+                    "level": "warn",
+                    "title": "Liquidity Imbalance",
+                    "detail": (
+                        f"Volume ratio is {liq_ratio:.1f}×. "
+                        "Watch for slippage on the smaller leg."
+                    ),
+                }
+            )
 
     # 3. Beta divergence (different market sensitivity → spread driven by beta, not mean-reversion)
     b1 = ks1.get("beta")
@@ -790,23 +832,27 @@ def _compute_risk_flags(
     if b1 is not None and b2 is not None:
         gap = abs(b1 - b2)
         if gap > 0.7:
-            flags.append({
-                "level": "danger",
-                "title": "High Beta Divergence",
-                "detail": (
-                    f"{s1} β={b1:.2f}, {s2} β={b2:.2f} (gap {gap:.2f}). "
-                    "The spread will be heavily influenced by market direction."
-                ),
-            })
+            flags.append(
+                {
+                    "level": "danger",
+                    "title": "High Beta Divergence",
+                    "detail": (
+                        f"{s1} β={b1:.2f}, {s2} β={b2:.2f} (gap {gap:.2f}). "
+                        "The spread will be heavily influenced by market direction."
+                    ),
+                }
+            )
         elif gap > 0.4:
-            flags.append({
-                "level": "warn",
-                "title": "Beta Divergence",
-                "detail": (
-                    f"Gap is {gap:.2f}. Consider delta-hedging or using "
-                    "beta-adjusted position sizing."
-                ),
-            })
+            flags.append(
+                {
+                    "level": "warn",
+                    "title": "Beta Divergence",
+                    "detail": (
+                        f"Gap is {gap:.2f}. Consider delta-hedging or using "
+                        "beta-adjusted position sizing."
+                    ),
+                }
+            )
 
     # 4. Recent correlation decay
     if len(prices1) > 60 and len(prices2) > 60:
@@ -823,66 +869,77 @@ def _compute_risk_flags(
             if recent_corr is not None and reg_corr is not None:
                 decay = reg_corr - recent_corr
                 if recent_corr < 0.5:
-                    flags.append({
-                        "level": "danger",
-                        "title": "Correlation Breakdown",
-                        "detail": (
-                            f"Recent 30-bar correlation is {recent_corr:.3f} "
-                            f"(registered: {reg_corr:.3f}). "
-                            "The statistical relationship may have broken down."
-                        ),
-                    })
+                    flags.append(
+                        {
+                            "level": "danger",
+                            "title": "Correlation Breakdown",
+                            "detail": (
+                                f"Recent 30-bar correlation is {recent_corr:.3f} "
+                                f"(registered: {reg_corr:.3f}). "
+                                "The statistical relationship may have broken down."
+                            ),
+                        }
+                    )
                 elif decay > 0.2:
-                    flags.append({
-                        "level": "warn",
-                        "title": "Correlation Weakening",
-                        "detail": (
-                            f"Recent correlation dropped {decay:.3f} pts to "
-                            f"{recent_corr:.3f}. Re-validate the pair."
-                        ),
-                    })
+                    flags.append(
+                        {
+                            "level": "warn",
+                            "title": "Correlation Weakening",
+                            "detail": (
+                                f"Recent correlation dropped {decay:.3f} pts to "
+                                f"{recent_corr:.3f}. Re-validate the pair."
+                            ),
+                        }
+                    )
 
     # 5. Stock splits in the window
     for sym in (s1, s2):
         for sp in events[sym]["splits"]:
-            flags.append({
-                "level": "danger",
-                "title": f"Stock Split — {sym}",
-                "detail": (
-                    f"{sym} had a {sp['label']} split on {sp['date']}. "
-                    "This may have introduced a price discontinuity in the spread."
-                ),
-            })
+            flags.append(
+                {
+                    "level": "danger",
+                    "title": f"Stock Split — {sym}",
+                    "detail": (
+                        f"{sym} had a {sp['label']} split on {sp['date']}. "
+                        "This may have introduced a price discontinuity in the spread."
+                    ),
+                }
+            )
 
     # 6. Upcoming ex-dividend within 10 days
     from datetime import date as _date
+
     today = _date.today()
     for sym in (s1, s2):
         for d in events[sym]["dividends"]:
             days_away = (d["date"] - today).days
             if 0 <= days_away <= 10:
-                flags.append({
-                    "level": "warn",
-                    "title": f"Upcoming Ex-Dividend — {sym}",
-                    "detail": (
-                        f"{sym} goes ex-div on {d['date']} "
-                        f"(${d['amount']:.4f}, in {days_away} day(s)). "
-                        "Dividend capture effects can spike the spread near ex-date."
-                    ),
-                })
+                flags.append(
+                    {
+                        "level": "warn",
+                        "title": f"Upcoming Ex-Dividend — {sym}",
+                        "detail": (
+                            f"{sym} goes ex-div on {d['date']} "
+                            f"(${d['amount']:.4f}, in {days_away} day(s)). "
+                            "Dividend capture effects can spike the spread near ex-date."
+                        ),
+                    }
+                )
 
     # 7. High short ratio (>5 days to cover = potential squeeze risk)
     for sym, ks in ((s1, ks1), (s2, ks2)):
         sr = ks.get("short_ratio")
         if sr and sr > 5:
-            flags.append({
-                "level": "warn",
-                "title": f"Elevated Short Interest — {sym}",
-                "detail": (
-                    f"Short ratio is {sr:.1f} days-to-cover. "
-                    "A squeeze could cause an outsized move in this leg."
-                ),
-            })
+            flags.append(
+                {
+                    "level": "warn",
+                    "title": f"Elevated Short Interest — {sym}",
+                    "detail": (
+                        f"Short ratio is {sr:.1f} days-to-cover. "
+                        "A squeeze could cause an outsized move in this leg."
+                    ),
+                }
+            )
 
     return flags
 
@@ -890,6 +947,7 @@ def _compute_risk_flags(
 # ---------------------------------------------------------------------------
 # Price chart renderer
 # ---------------------------------------------------------------------------
+
 
 def _render_price_chart(
     s1: str,
@@ -911,28 +969,39 @@ def _render_price_chart(
 
     fig = go.Figure()
 
-    fig.add_trace(go.Scatter(
-        x=norm1.index, y=norm1.values,
-        mode="lines", name=s1,
-        line=dict(color=C1, width=1.8),
-    ))
-    fig.add_trace(go.Scatter(
-        x=norm2.index, y=norm2.values,
-        mode="lines", name=s2,
-        line=dict(color=C2, width=1.8),
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=norm1.index,
+            y=norm1.values,
+            mode="lines",
+            name=s1,
+            line=dict(color=C1, width=1.8),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=norm2.index,
+            y=norm2.values,
+            mode="lines",
+            name=s2,
+            line=dict(color=C2, width=1.8),
+        )
+    )
 
     # Spread (right y-axis) — log spread normalised to 0 start
     log_spread = np.log(aligned[s1]) - np.log(aligned[s2])
     log_spread_norm = (log_spread - log_spread.mean()) / (log_spread.std() or 1)
-    fig.add_trace(go.Scatter(
-        x=log_spread_norm.index,
-        y=log_spread_norm.values,
-        mode="lines", name="Spread (z-score)",
-        line=dict(color="#9467bd", width=1, dash="dot"),
-        yaxis="y2",
-        opacity=0.7,
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=log_spread_norm.index,
+            y=log_spread_norm.values,
+            mode="lines",
+            name="Spread (z-score)",
+            line=dict(color="#9467bd", width=1, dash="dot"),
+            yaxis="y2",
+            opacity=0.7,
+        )
+    )
 
     # Dividend markers
     for sym, color, side in ((s1, CDIV1, "left"), (s2, CDIV2, "right")):
@@ -992,6 +1061,7 @@ def _render_price_chart(
 # Correlation chart renderer
 # ---------------------------------------------------------------------------
 
+
 def _render_correlation_chart(
     s1: str,
     s2: str,
@@ -1020,8 +1090,11 @@ def _render_correlation_chart(
     mc1.metric(
         "Current (last bar)",
         f"{curr_corr:.3f}",
-        delta=f"{curr_corr - (registered_corr or 0):+.3f} vs registered"
-        if registered_corr else None,
+        delta=(
+            f"{curr_corr - (registered_corr or 0):+.3f} vs registered"
+            if registered_corr
+            else None
+        ),
         delta_color="normal",
     )
     mc2.metric("Mean (period)", f"{mean_corr:.3f}")
@@ -1037,7 +1110,8 @@ def _render_correlation_chart(
 
     # Red shaded danger zone below 0.5
     fig.add_hrect(
-        y0=-1, y1=0.5,
+        y0=-1,
+        y1=0.5,
         fillcolor="rgba(214,39,40,0.08)",
         line_width=0,
         annotation_text="Weak correlation zone",
@@ -1046,15 +1120,17 @@ def _render_correlation_chart(
         annotation_font_color=CDANGER,
     )
 
-    fig.add_trace(go.Scatter(
-        x=rolling_corr.index,
-        y=rolling_corr.values,
-        mode="lines",
-        name=f"{window}-bar rolling corr",
-        line=dict(color=C1, width=1.8),
-        fill="tozeroy",
-        fillcolor="rgba(31,119,180,0.12)",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=rolling_corr.index,
+            y=rolling_corr.values,
+            mode="lines",
+            name=f"{window}-bar rolling corr",
+            line=dict(color=C1, width=1.8),
+            fill="tozeroy",
+            fillcolor="rgba(31,119,180,0.12)",
+        )
+    )
 
     if registered_corr is not None:
         fig.add_hline(
@@ -1100,14 +1176,13 @@ def _render_correlation_chart(
             "Relationship shows periods of weakness."
         )
     else:
-        st.success(
-            f"Correlation stable — only {pct_below_05:.0f}% of bars below 0.5."
-        )
+        st.success(f"Correlation stable — only {pct_below_05:.0f}% of bars below 0.5.")
 
 
 # ---------------------------------------------------------------------------
 # Backtest results renderer
 # ---------------------------------------------------------------------------
+
 
 def _render_results(result, metrics, run_id: Optional[int]):
     # Gate verdict banner
@@ -1163,15 +1238,17 @@ def _render_results(result, metrics, run_id: Optional[int]):
         eq_df = eq_df.sort_values("timestamp")
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=eq_df["timestamp"],
-            y=eq_df["equity"],
-            mode="lines",
-            name="Portfolio Equity",
-            line=dict(color=C1, width=2),
-            fill="tozeroy",
-            fillcolor="rgba(31,119,180,0.08)",
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=eq_df["timestamp"],
+                y=eq_df["equity"],
+                mode="lines",
+                name="Portfolio Equity",
+                line=dict(color=C1, width=2),
+                fill="tozeroy",
+                fillcolor="rgba(31,119,180,0.08)",
+            )
+        )
         fig.add_hline(
             y=result.initial_capital,
             line_dash="dash",
@@ -1183,8 +1260,8 @@ def _render_results(result, metrics, run_id: Optional[int]):
             yaxis_title="Equity ($)",
             height=380,
             template="none",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
             margin=dict(l=0, r=0, t=30, b=0),
         )
         st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
@@ -1196,21 +1273,25 @@ def _render_results(result, metrics, run_id: Optional[int]):
     if result.trades:
         trade_rows = []
         for t in result.trades:
-            trade_rows.append({
-                "Side": t.side,
-                "Entry": (
-                    t.entry_time.strftime("%Y-%m-%d %H:%M") if t.entry_time else ""
-                ),
-                "Exit": (
-                    t.exit_time.strftime("%Y-%m-%d %H:%M") if t.exit_time else ""
-                ),
-                "Entry Z": f"{t.entry_z:.3f}" if t.entry_z is not None else "",
-                "Exit Z": f"{t.exit_z:.3f}" if t.exit_z is not None else "",
-                "P&L ($)": round(t.pnl or 0, 2),
-                "P&L %": f"{t.pnl_pct:+.2f}%" if t.pnl_pct is not None else "",
-                "Hold (h)": f"{t.hold_hours:.1f}" if t.hold_hours is not None else "",
-                "Exit Reason": t.exit_reason or "",
-            })
+            trade_rows.append(
+                {
+                    "Side": t.side,
+                    "Entry": (
+                        t.entry_time.strftime("%Y-%m-%d %H:%M") if t.entry_time else ""
+                    ),
+                    "Exit": (
+                        t.exit_time.strftime("%Y-%m-%d %H:%M") if t.exit_time else ""
+                    ),
+                    "Entry Z": f"{t.entry_z:.3f}" if t.entry_z is not None else "",
+                    "Exit Z": f"{t.exit_z:.3f}" if t.exit_z is not None else "",
+                    "P&L ($)": round(t.pnl or 0, 2),
+                    "P&L %": f"{t.pnl_pct:+.2f}%" if t.pnl_pct is not None else "",
+                    "Hold (h)": (
+                        f"{t.hold_hours:.1f}" if t.hold_hours is not None else ""
+                    ),
+                    "Exit Reason": t.exit_reason or "",
+                }
+            )
         trade_df = pd.DataFrame(trade_rows)
 
         def _colour_pnl(val):
@@ -1220,9 +1301,7 @@ def _render_results(result, metrics, run_id: Optional[int]):
             except Exception:
                 return ""
 
-        styled_trades = trade_df.style.map(
-            _colour_pnl, subset=["P&L ($)", "P&L %"]
-        )
+        styled_trades = trade_df.style.map(_colour_pnl, subset=["P&L ($)", "P&L %"])
         st.dataframe(styled_trades, width="stretch", hide_index=True)
     else:
         st.info("No trades generated in this backtest.")
@@ -1231,6 +1310,7 @@ def _render_results(result, metrics, run_id: Optional[int]):
 # ---------------------------------------------------------------------------
 # Formatting helpers
 # ---------------------------------------------------------------------------
+
 
 def _fmt_mcap(v) -> str:
     if v is None:

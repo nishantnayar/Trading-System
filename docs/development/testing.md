@@ -85,6 +85,7 @@ python scripts/run_tests.py tests/unit/test_database_connections.py
 | `test_signal_generator.py` | `BacktestSignalGenerator` | 13 — all signal types (LONG/SHORT/EXIT/STOP_LOSS/EXPIRE), boundary conditions, priority |
 | `test_position_sizer.py` | `KellySizer` | 10 — bootstrap mode, Half-Kelly, max cap, min share floor, proportionality |
 | `test_email_notifier.py` | `EmailNotifier` | 10 — SMTP dispatch, unconfigured no-op, failure swallowing, paper/live mode, singleton |
+| `test_backtest_slippage.py` | `BacktestEngine` slippage | 13 — `_slipped_price` formula, commission deduction, `BacktestResult` fields, end-to-end P&L reduction |
 
 Run just these tests (no DB required):
 ```bash

@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- ✅ **Pair Scanner** (`streamlit_ui/pages/6_Pair_Scanner.py`): new Streamlit page that backtests all registered pairs and ranks results:
+  - Configurable lookback (90–365 days, default 180) and slippage (0–20 bps, default 5)
+  - Results sorted PASS-first then by Sharpe descending — best pairs always at the top
+  - Gate PASS/FAIL verdict highlighted per row; individual failing metrics shown in red
+  - Inline Activate / Deactivate buttons — activating a failing pair shows a ⚠ warning
+  - Summary metrics row: pairs scanned, passing count, best Sharpe, active & passing count
+  - Pages renumbered: Pair Scanner = 6, Settings = 7, About = 8
+
+- ✅ **Persistent UI Preferences**: scanner and analysis settings survive page refreshes and restarts
+  - `config/scanner_prefs.json` — stores Pair Scanner lookback days and slippage bps; saved on each scan run
+  - `config/analysis_prefs.json` — stores Settings page default symbol and timeframe; saved on each change
+  - Both files are gitignored; defaults used on first run (180 days / 5 bps / AAPL / 1M)
+
+- ✅ **Slippage & Commission Modeling** in backtest engine:
+  - `BacktestEngine` now accepts `slippage_bps` (default 5) and `commission_per_trade` (default $0) parameters
+  - `_slipped_price()` worsens each fill by bps: buys filled higher, sells filled lower — applied to all 4 fills per round-trip
+  - Commission deducted from gross P&L in `_compute_pnl()`
+  - `BacktestResult` carries `slippage_bps` and `commission_per_trade` for reproducibility
+  - `BacktestRun` DB model and `scripts/23_add_slippage_to_backtest_run.sql` migration add matching columns
+  - Streamlit Backtest Review page: Slippage (bps) slider (0–20) and Commission ($) input; run history shows Slippage column
+  - 13 new unit tests in `tests/unit/test_backtest_slippage.py` (57 total across all strategy unit tests)
+
+- ✅ **CLAUDE.md** — project-level instructions for Claude Code: CI checks, test conventions, DB safety rules, trading safety boundary, key file locations, architecture constants
+- ✅ **mypy fixes** — added full type annotations to 5 private HTML template methods in `EmailNotifier` (`_trade_opened_html`, `_trade_closed_html`, `_stop_loss_html`, `_trade_failed_html`, `_flow_error_html`); `mypy src/` now clean
 - ✅ **Unit Tests — Strategy Engine & Notifications** (44 tests, 0 DB/network required):
   - `tests/unit/test_spread_calculator.py` — 11 tests covering log-spread formula, z-score normalization, edge cases (empty series, insufficient window, zero std, misaligned timestamps)
   - `tests/unit/test_signal_generator.py` — 13 tests covering all signal types (LONG_SPREAD, SHORT_SPREAD, EXIT, STOP_LOSS, EXPIRE), boundary conditions, and priority ordering via `BacktestSignalGenerator`

@@ -81,6 +81,12 @@ class Settings(BaseSettings):
     trading_timezone: str = Field(default="America/New_York", alias="TRADING_TIMEZONE")
     vendor_timezone: str = Field(default="UTC", alias="VENDOR_TIMEZONE")
 
+    # Backtest Configuration
+    backtest_slippage_bps: float = Field(default=5.0, alias="BACKTEST_SLIPPAGE_BPS")
+    backtest_commission_per_trade: float = Field(
+        default=0.0, alias="BACKTEST_COMMISSION_PER_TRADE"
+    )
+
     # Email Configuration (Optional)
     smtp_host: Optional[str] = Field(default=None, alias="SMTP_HOST")
     smtp_port: Optional[int] = Field(default=None, alias="SMTP_PORT")
@@ -91,18 +97,16 @@ class Settings(BaseSettings):
 
     # Prefect Configuration (Essential)
     prefect_api_url: str = Field(
-        default="http://localhost:4200/api",
-        alias="PREFECT_API_URL"
+        default="http://localhost:4200/api", alias="PREFECT_API_URL"
     )
-    
+
     prefect_db_connection_url: str = Field(
         default="postgresql+asyncpg://postgres:password@localhost:5432/prefect",
-        alias="PREFECT_API_DATABASE_CONNECTION_URL"
+        alias="PREFECT_API_DATABASE_CONNECTION_URL",
     )
-    
+
     prefect_work_pool_data_ingestion: str = Field(
-        default="data-ingestion-pool",
-        alias="PREFECT_WORK_POOL_DATA_INGESTION"
+        default="data-ingestion-pool", alias="PREFECT_WORK_POOL_DATA_INGESTION"
     )
 
     class Config:

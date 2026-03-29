@@ -77,12 +77,18 @@ class BacktestReport:
             stop_loss_threshold=result.stop_loss_threshold,
             z_score_window=result.z_score_window,
             initial_capital=result.initial_capital,
+            slippage_bps=result.slippage_bps,
+            commission_per_trade=result.commission_per_trade,
             total_return=metrics.total_return_pct,
             annualized_return=metrics.annualized_return_pct,
             sharpe_ratio=metrics.sharpe_ratio,
             max_drawdown=metrics.max_drawdown_pct,
             win_rate=metrics.win_rate_pct,
-            profit_factor=metrics.profit_factor if metrics.profit_factor != float("inf") else 999.0,
+            profit_factor=(
+                metrics.profit_factor
+                if metrics.profit_factor != float("inf")
+                else 999.0
+            ),
             total_trades=metrics.total_trades,
             avg_hold_time_hours=metrics.avg_hold_hours,
             kelly_fraction=metrics.kelly_fraction,
@@ -97,7 +103,9 @@ class BacktestReport:
             session.flush()
             run_id = run.id
 
-        logger.info(f"Backtest run saved: id={run_id}, passed_gate={metrics.passed_gate}")
+        logger.info(
+            f"Backtest run saved: id={run_id}, passed_gate={metrics.passed_gate}"
+        )
         return run_id
 
     def print_summary(
@@ -124,6 +132,8 @@ class BacktestReport:
             f"  Stop loss      : ±{result.stop_loss_threshold}",
             f"  Z-score window : {result.z_score_window} bars",
             f"  Hedge ratio    : {result.hedge_ratio:.4f}",
+            f"  Slippage       : {result.slippage_bps:.1f} bps/fill",
+            f"  Commission     : ${result.commission_per_trade:.2f}/trade",
             "",
             "  PERFORMANCE",
             f"  {'Total return':<22}: {metrics.total_return_pct:+.2f}%",
@@ -153,8 +163,7 @@ class BacktestReport:
             f"{'OK' if metrics.max_drawdown_pct <= metrics.gate_drawdown_threshold else 'FAIL'}"
             f"  ({metrics.max_drawdown_pct:.2f}%)",
             "",
-            f"  VERDICT: [{gate_icon}]"
-            + (f"  (run_id={run_id})" if run_id else ""),
+            f"  VERDICT: [{gate_icon}]" + (f"  (run_id={run_id})" if run_id else ""),
             sep,
             "",
         ]

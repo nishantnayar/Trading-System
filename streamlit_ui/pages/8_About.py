@@ -46,16 +46,16 @@ def main() -> None:
         st.markdown(
             "<p style='color:#6b6b6b;font-size:0.85rem;"
             "text-transform:uppercase;letter-spacing:0.07em;"
-            "margin-bottom:0.8rem;'>Vice President · Lead Solution Analyst</p>",
+            "margin-bottom:0.8rem;'>Vice President · Lead Solutions Analyst · JPMorgan Chase</p>",
             unsafe_allow_html=True,
         )
         st.markdown(
             "<p style='font-size:0.92rem;line-height:1.7;max-width:640px;'>"
-            "Data management professional with a proven track record of developing "
-            "and executing strategic initiatives within Investment Banking, Commercial "
-            "Banking, and Asset Management segments of financial services. Translates "
-            "complex data challenges into actionable solutions by leveraging data "
-            "governance best practices and applied data science techniques."
+            "Coming from a finance background — not computer science — I've spent a decade "
+            "moving between investment banking, asset management, and commercial banking "
+            "across six cities: Bangalore, Tokyo, London, New York, Boston, and Chicago. "
+            "I know what the business is actually asking for before the first line of code "
+            "gets written. MS Analytics from the University of Chicago (3.95 GPA)."
             "</p>",
             unsafe_allow_html=True,
         )
@@ -66,7 +66,7 @@ def main() -> None:
             "border-radius:4px;font-family:\"DM Sans\",sans-serif;"
             "font-size:0.85rem;line-height:2;'>"
             "<span style='color:#6b6b6b;'>Location</span><br>"
-            "<span style='font-weight:500;'>Greater Chicago Area</span><br><br>"
+            "<span style='font-weight:500;'>Chicago</span><br><br>"
             "<span style='color:#6b6b6b;'>Links</span><br>"
             "<a href='https://www.linkedin.com/in/nishantnayar/' "
             "style='color:#1a1a1a;' target='_blank'>LinkedIn</a> &nbsp;·&nbsp; "

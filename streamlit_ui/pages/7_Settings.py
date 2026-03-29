@@ -3,6 +3,7 @@ Settings — System Configuration
 API connection status and analysis preferences.
 """
 
+import json
 import os
 import sys
 from datetime import datetime
@@ -12,6 +13,30 @@ import streamlit as st
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from api_client import get_api_client  # noqa: E402
+
+_PREFS_FILE = os.path.join(
+    os.path.dirname(__file__), "..", "..", "config", "analysis_prefs.json"
+)
+_PREFS_DEFAULTS = {"symbol": "AAPL", "timeframe": "1M"}
+
+
+def _load_prefs() -> dict:
+    try:
+        with open(_PREFS_FILE) as f:
+            data = json.load(f)
+        return {**_PREFS_DEFAULTS, **data}
+    except Exception:
+        return dict(_PREFS_DEFAULTS)
+
+
+def _save_prefs(symbol: str, timeframe: str) -> None:
+    try:
+        os.makedirs(os.path.dirname(_PREFS_FILE), exist_ok=True)
+        with open(_PREFS_FILE, "w") as f:
+            json.dump({"symbol": symbol, "timeframe": timeframe}, f)
+    except Exception:
+        pass
+
 
 st.set_page_config(
     page_title="Settings",
@@ -26,6 +51,7 @@ def load_css() -> None:
         with open(css_file) as f:
             css = f.read()
         from css_config import generate_css_variables, get_theme_css
+
         st.markdown(
             f"<style>{generate_css_variables()}{css}{get_theme_css()}</style>",
             unsafe_allow_html=True,
@@ -37,11 +63,11 @@ def load_css() -> None:
 def _status_badge(ok: bool, ok_label: str, fail_label: str) -> str:
     if ok:
         return (
-            f"<span style='color:#2A7A4B;font-family:\"DM Sans\",sans-serif;"
+            f'<span style=\'color:#2A7A4B;font-family:"DM Sans",sans-serif;'
             f"font-weight:500;'>{ok_label}</span>"
         )
     return (
-        f"<span style='color:#C0392B;font-family:\"DM Sans\",sans-serif;"
+        f'<span style=\'color:#C0392B;font-family:"DM Sans",sans-serif;'
         f"font-weight:500;'>{fail_label}</span>"
     )
 
@@ -63,11 +89,11 @@ def main() -> None:
         api_ok = "error" not in health
         st.markdown(
             f"<div class='metric-container'>"
-            f"<div style='font-family:\"DM Sans\",sans-serif;font-size:0.72rem;"
+            f'<div style=\'font-family:"DM Sans",sans-serif;font-size:0.72rem;'
             f"text-transform:uppercase;letter-spacing:0.07em;color:#6b6b6b;"
             f"margin-bottom:0.3rem;'>API Server</div>"
             f"{_status_badge(api_ok, '● Connected', '● Unreachable')}"
-            f"<div style='font-family:\"DM Mono\",monospace;font-size:0.75rem;"
+            f'<div style=\'font-family:"DM Mono",monospace;font-size:0.75rem;'
             f"color:#9e9e9e;margin-top:0.2rem;'>"
             f"{os.getenv('API_BASE_URL', 'http://localhost:8001')}</div>"
             f"</div>",
@@ -81,11 +107,11 @@ def main() -> None:
         mode = "Paper Trading" if alpaca_ok else "—"
         st.markdown(
             f"<div class='metric-container'>"
-            f"<div style='font-family:\"DM Sans\",sans-serif;font-size:0.72rem;"
+            f'<div style=\'font-family:"DM Sans",sans-serif;font-size:0.72rem;'
             f"text-transform:uppercase;letter-spacing:0.07em;color:#6b6b6b;"
             f"margin-bottom:0.3rem;'>Alpaca</div>"
             f"{_status_badge(alpaca_ok, '● Connected', '● Unreachable')}"
-            f"<div style='font-family:\"DM Mono\",monospace;font-size:0.75rem;"
+            f'<div style=\'font-family:"DM Mono",monospace;font-size:0.75rem;'
             f"color:#9e9e9e;margin-top:0.2rem;'>"
             f"{acct_num or '—'} · {mode}</div>"
             f"</div>",
@@ -98,11 +124,11 @@ def main() -> None:
         is_open = clock.get("is_open", False) if clock_ok else False
         st.markdown(
             f"<div class='metric-container'>"
-            f"<div style='font-family:\"DM Sans\",sans-serif;font-size:0.72rem;"
+            f'<div style=\'font-family:"DM Sans",sans-serif;font-size:0.72rem;'
             f"text-transform:uppercase;letter-spacing:0.07em;color:#6b6b6b;"
             f"margin-bottom:0.3rem;'>Market</div>"
             f"{_status_badge(is_open, '● Open', '● Closed')}"
-            f"<div style='font-family:\"DM Mono\",monospace;font-size:0.75rem;"
+            f'<div style=\'font-family:"DM Mono",monospace;font-size:0.75rem;'
             f"color:#9e9e9e;margin-top:0.2rem;'>"
             f"{'Real-time via Alpaca' if clock_ok else 'Clock unavailable'}</div>"
             f"</div>",
@@ -123,27 +149,36 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
+    prefs = _load_prefs()
+
+    # Seed session state from persisted prefs (only on first load)
     if "selected_symbol" not in st.session_state:
-        st.session_state.selected_symbol = "AAPL"
+        st.session_state.selected_symbol = prefs["symbol"]
     if "selected_timeframe" not in st.session_state:
-        st.session_state.selected_timeframe = "1M"
+        st.session_state.selected_timeframe = prefs["timeframe"]
 
     p1, p2 = st.columns(2)
     with p1:
-        new_sym = st.text_input(
-            "Default Symbol",
-            value=st.session_state.selected_symbol,
-            help="Pre-filled symbol in the Analysis page",
-        ).upper().strip()
+        new_sym = (
+            st.text_input(
+                "Default Symbol",
+                value=st.session_state.selected_symbol,
+                help="Pre-filled symbol in the Analysis page",
+            )
+            .upper()
+            .strip()
+        )
         if new_sym and new_sym != st.session_state.selected_symbol:
             st.session_state.selected_symbol = new_sym
-            st.success(f"Default symbol set to {new_sym}")
+            _save_prefs(new_sym, st.session_state.selected_timeframe)
+            st.success(f"Default symbol saved as {new_sym}")
 
     with p2:
         timeframes = ["1D", "1W", "1M", "3M", "6M", "1Y"]
         current_idx = (
             timeframes.index(st.session_state.selected_timeframe)
-            if st.session_state.selected_timeframe in timeframes else 2
+            if st.session_state.selected_timeframe in timeframes
+            else 2
         )
         new_tf = st.selectbox(
             "Default Timeframe",
@@ -153,7 +188,8 @@ def main() -> None:
         )
         if new_tf != st.session_state.selected_timeframe:
             st.session_state.selected_timeframe = new_tf
-            st.success(f"Default timeframe set to {new_tf}")
+            _save_prefs(st.session_state.selected_symbol, new_tf)
+            st.success(f"Default timeframe saved as {new_tf}")
 
     st.markdown("---")
 
@@ -164,7 +200,7 @@ def main() -> None:
     with s1:
         api_url = os.getenv("API_BASE_URL", "http://localhost:8001")
         st.markdown(
-            f"<div style='font-family:\"DM Sans\",sans-serif;font-size:0.88rem;"
+            f'<div style=\'font-family:"DM Sans",sans-serif;font-size:0.88rem;'
             f"line-height:1.9;color:#1a1a1a;'>"
             f"<span style='color:#6b6b6b;'>API URL&emsp;</span>"
             f"<span style='font-family:\"DM Mono\",monospace;'>{api_url}</span><br>"
@@ -176,8 +212,9 @@ def main() -> None:
         )
     with s2:
         import streamlit as _st
+
         st.markdown(
-            f"<div style='font-family:\"DM Sans\",sans-serif;font-size:0.88rem;"
+            f'<div style=\'font-family:"DM Sans",sans-serif;font-size:0.88rem;'
             f"line-height:1.9;color:#1a1a1a;'>"
             f"<span style='color:#6b6b6b;'>Streamlit&emsp;</span>"
             f"<span style='font-family:\"DM Mono\",monospace;'>"

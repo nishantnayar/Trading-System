@@ -5,15 +5,16 @@ SQLAlchemy models for the pairs trading strategy engine.
 All models live in the 'strategy_engine' schema.
 
 Models:
-    PairRegistry     — validated pair definitions
-    PairSpread       — hourly spread/z-score time series
-    PairSignal       — generated trading signals
-    PairTrade        — open and closed trades
-    PairPerformance  — daily cumulative metrics
-    BacktestRun      — historical backtest results
+    PairRegistry         — validated pair definitions
+    PairSpread           — hourly spread/z-score time series
+    PairSignal           — generated trading signals
+    PairTrade            — open and closed trades
+    PairPerformance      — daily cumulative metrics
+    BacktestRun          — historical backtest results
+    PortfolioRiskState   — single-row portfolio risk state (circuit breaker, peak equity)
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
@@ -77,13 +78,28 @@ class PairRegistry(Base):
 
     # Strategy parameters (can be tuned after backtesting)
     z_score_window: Mapped[int] = mapped_column(Integer, nullable=False)
-    entry_threshold: Mapped[float] = mapped_column(Numeric(5, 2), default=2.0, nullable=False)
-    exit_threshold: Mapped[float] = mapped_column(Numeric(5, 2), default=0.5, nullable=False)
-    stop_loss_threshold: Mapped[float] = mapped_column(Numeric(5, 2), default=3.0, nullable=False)
-    max_hold_hours: Mapped[Optional[float]] = mapped_column(Numeric(8, 2))  # 3 × half_life_hours
+    entry_threshold: Mapped[float] = mapped_column(
+        Numeric(5, 2), default=2.0, nullable=False
+    )
+    exit_threshold: Mapped[float] = mapped_column(
+        Numeric(5, 2), default=0.5, nullable=False
+    )
+    stop_loss_threshold: Mapped[float] = mapped_column(
+        Numeric(5, 2), default=3.0, nullable=False
+    )
+    max_hold_hours: Mapped[Optional[float]] = mapped_column(
+        Numeric(8, 2)
+    )  # 3 × half_life_hours
 
     # Discovery rank — composite score: (1 - coint_pvalue) × liquidity × |correlation|
     rank_score: Mapped[Optional[float]] = mapped_column(Numeric(10, 6))
+
+    # Risk controls
+    max_allocation_pct: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 4),
+        comment="Optional per-pair max fraction of portfolio per leg. "
+        "Overrides Kelly if lower. NULL = use system default.",
+    )
 
     # Status
     is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -139,9 +155,16 @@ class PairRegistry(Base):
             "entry_threshold": float(self.entry_threshold),
             "exit_threshold": float(self.exit_threshold),
             "stop_loss_threshold": float(self.stop_loss_threshold),
-            "max_hold_hours": float(self.max_hold_hours) if self.max_hold_hours else None,
+            "max_hold_hours": (
+                float(self.max_hold_hours) if self.max_hold_hours else None
+            ),
+            "max_allocation_pct": (
+                float(self.max_allocation_pct) if self.max_allocation_pct else None
+            ),
             "is_active": self.is_active,
-            "last_validated": self.last_validated.isoformat() if self.last_validated else None,
+            "last_validated": (
+                self.last_validated.isoformat() if self.last_validated else None
+            ),
             "notes": self.notes,
         }
 
@@ -167,22 +190,28 @@ class PairSpread(Base):
         ForeignKey("strategy_engine.pair_registry.id", ondelete="CASCADE"),
         nullable=False,
     )
-    timestamp: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=False
+    )
 
     # Prices used
     price1: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
     price2: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
 
     # Spread metrics
-    spread: Mapped[Optional[float]] = mapped_column(Numeric(15, 8))       # log(P1) - β*log(P2)
-    z_score: Mapped[Optional[float]] = mapped_column(Numeric(10, 4))      # rolling z-score
+    spread: Mapped[Optional[float]] = mapped_column(
+        Numeric(15, 8)
+    )  # log(P1) - β*log(P2)
+    z_score: Mapped[Optional[float]] = mapped_column(Numeric(10, 4))  # rolling z-score
     hedge_ratio: Mapped[Optional[float]] = mapped_column(Numeric(10, 6))  # β used
 
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False
     )
 
-    pair: Mapped["PairRegistry"] = relationship("PairRegistry", back_populates="spreads")
+    pair: Mapped["PairRegistry"] = relationship(
+        "PairRegistry", back_populates="spreads"
+    )
 
     def __repr__(self) -> str:
         return f"<PairSpread(pair_id={self.pair_id}, ts={self.timestamp}, z={self.z_score})>"
@@ -225,7 +254,9 @@ class PairSignal(Base):
         ForeignKey("strategy_engine.pair_registry.id", ondelete="CASCADE"),
         nullable=False,
     )
-    timestamp: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=False
+    )
 
     signal_type: Mapped[str] = mapped_column(String(20), nullable=False)
     z_score: Mapped[Optional[float]] = mapped_column(Numeric(10, 4))
@@ -236,7 +267,9 @@ class PairSignal(Base):
         TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False
     )
 
-    pair: Mapped["PairRegistry"] = relationship("PairRegistry", back_populates="signals")
+    pair: Mapped["PairRegistry"] = relationship(
+        "PairRegistry", back_populates="signals"
+    )
 
     def __repr__(self) -> str:
         return (
@@ -282,11 +315,15 @@ class PairTrade(Base):
     )
 
     # Entry
-    entry_time: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    entry_time: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=False
+    )
     entry_z_score: Mapped[Optional[float]] = mapped_column(Numeric(10, 4))
-    side: Mapped[str] = mapped_column(String(20), nullable=False)  # LONG_SPREAD / SHORT_SPREAD
-    qty1: Mapped[int] = mapped_column(Integer, nullable=False)      # shares of symbol1
-    qty2: Mapped[int] = mapped_column(Integer, nullable=False)      # shares of symbol2
+    side: Mapped[str] = mapped_column(
+        String(20), nullable=False
+    )  # LONG_SPREAD / SHORT_SPREAD
+    qty1: Mapped[int] = mapped_column(Integer, nullable=False)  # shares of symbol1
+    qty2: Mapped[int] = mapped_column(Integer, nullable=False)  # shares of symbol2
     entry_price1: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
     entry_price2: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
 
@@ -299,7 +336,9 @@ class PairTrade(Base):
     exit_z_score: Mapped[Optional[float]] = mapped_column(Numeric(10, 4))
     exit_price1: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
     exit_price2: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
-    exit_reason: Mapped[Optional[str]] = mapped_column(String(50))  # EXIT / STOP_LOSS / EXPIRE
+    exit_reason: Mapped[Optional[str]] = mapped_column(
+        String(50)
+    )  # EXIT / STOP_LOSS / EXPIRE
 
     # P&L (calculated on close)
     pnl: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
@@ -375,11 +414,11 @@ class PairPerformance(Base):
     # Cumulative metrics
     total_trades: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     winning_trades: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    win_rate: Mapped[Optional[float]] = mapped_column(Numeric(5, 4))        # 0–1
+    win_rate: Mapped[Optional[float]] = mapped_column(Numeric(5, 4))  # 0–1
     avg_pnl: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
     total_pnl: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
     sharpe: Mapped[Optional[float]] = mapped_column(Numeric(8, 4))
-    max_drawdown: Mapped[Optional[float]] = mapped_column(Numeric(8, 4))    # 0–1
+    max_drawdown: Mapped[Optional[float]] = mapped_column(Numeric(8, 4))  # 0–1
     avg_hold_hours: Mapped[Optional[float]] = mapped_column(Numeric(8, 2))
     kelly_fraction: Mapped[Optional[float]] = mapped_column(Numeric(6, 4))  # half-Kelly
 
@@ -387,7 +426,9 @@ class PairPerformance(Base):
         TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False
     )
 
-    pair: Mapped["PairRegistry"] = relationship("PairRegistry", back_populates="performance")
+    pair: Mapped["PairRegistry"] = relationship(
+        "PairRegistry", back_populates="performance"
+    )
 
     def __repr__(self) -> str:
         return (
@@ -407,8 +448,12 @@ class PairPerformance(Base):
             "total_pnl": float(self.total_pnl) if self.total_pnl else None,
             "sharpe": float(self.sharpe) if self.sharpe else None,
             "max_drawdown": float(self.max_drawdown) if self.max_drawdown else None,
-            "avg_hold_hours": float(self.avg_hold_hours) if self.avg_hold_hours else None,
-            "kelly_fraction": float(self.kelly_fraction) if self.kelly_fraction else None,
+            "avg_hold_hours": (
+                float(self.avg_hold_hours) if self.avg_hold_hours else None
+            ),
+            "kelly_fraction": (
+                float(self.kelly_fraction) if self.kelly_fraction else None
+            ),
         }
 
 
@@ -448,6 +493,10 @@ class BacktestRun(Base):
     stop_loss_threshold: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
     z_score_window: Mapped[int] = mapped_column(Integer, nullable=False)
     initial_capital: Mapped[float] = mapped_column(Numeric(15, 2), nullable=False)
+    slippage_bps: Mapped[Optional[float]] = mapped_column(Numeric(6, 2), default=5.0)
+    commission_per_trade: Mapped[Optional[float]] = mapped_column(
+        Numeric(8, 2), default=0.0
+    )
 
     # Performance metrics
     total_return: Mapped[Optional[float]] = mapped_column(Numeric(10, 6))
@@ -464,12 +513,16 @@ class BacktestRun(Base):
     passed_gate: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Full results (JSON)
-    equity_curve: Mapped[Optional[dict]] = mapped_column(JSON)   # list of {timestamp, value}
-    trade_log: Mapped[Optional[dict]] = mapped_column(JSON)      # list of trade dicts
+    equity_curve: Mapped[Optional[dict]] = mapped_column(
+        JSON
+    )  # list of {timestamp, value}
+    trade_log: Mapped[Optional[dict]] = mapped_column(JSON)  # list of trade dicts
 
     notes: Mapped[Optional[str]] = mapped_column(Text)
 
-    pair: Mapped["PairRegistry"] = relationship("PairRegistry", back_populates="backtest_runs")
+    pair: Mapped["PairRegistry"] = relationship(
+        "PairRegistry", back_populates="backtest_runs"
+    )
 
     def __repr__(self) -> str:
         return (
@@ -489,17 +542,90 @@ class BacktestRun(Base):
             "stop_loss_threshold": float(self.stop_loss_threshold),
             "z_score_window": self.z_score_window,
             "initial_capital": float(self.initial_capital),
-            "total_return": float(self.total_return) if self.total_return is not None else None,
-            "annualized_return": float(self.annualized_return) if self.annualized_return is not None else None,
-            "sharpe_ratio": float(self.sharpe_ratio) if self.sharpe_ratio is not None else None,
-            "max_drawdown": float(self.max_drawdown) if self.max_drawdown is not None else None,
+            "total_return": (
+                float(self.total_return) if self.total_return is not None else None
+            ),
+            "annualized_return": (
+                float(self.annualized_return)
+                if self.annualized_return is not None
+                else None
+            ),
+            "sharpe_ratio": (
+                float(self.sharpe_ratio) if self.sharpe_ratio is not None else None
+            ),
+            "max_drawdown": (
+                float(self.max_drawdown) if self.max_drawdown is not None else None
+            ),
             "win_rate": float(self.win_rate) if self.win_rate is not None else None,
-            "profit_factor": float(self.profit_factor) if self.profit_factor is not None else None,
+            "profit_factor": (
+                float(self.profit_factor) if self.profit_factor is not None else None
+            ),
             "total_trades": self.total_trades,
-            "avg_hold_time_hours": float(self.avg_hold_time_hours) if self.avg_hold_time_hours else None,
-            "kelly_fraction": float(self.kelly_fraction) if self.kelly_fraction is not None else None,
+            "avg_hold_time_hours": (
+                float(self.avg_hold_time_hours) if self.avg_hold_time_hours else None
+            ),
+            "kelly_fraction": (
+                float(self.kelly_fraction) if self.kelly_fraction is not None else None
+            ),
             "passed_gate": self.passed_gate,
             "equity_curve": self.equity_curve,
             "trade_log": self.trade_log,
             "notes": self.notes,
+        }
+
+
+class PortfolioRiskState(Base):
+    """
+    Single-row table tracking portfolio-level risk state across Prefect flow runs.
+
+    id is always 1 — enforced by PRIMARY KEY constraint.
+    Seeded by migration 24_add_portfolio_risk_controls.sql.
+
+    peak_equity              — highest total portfolio equity seen; used to measure drawdown
+    circuit_breaker_active   — True = no new entries allowed until manually reset
+    circuit_breaker_triggered_at — when the circuit breaker last fired
+    drawdown_threshold       — fraction (e.g. 0.05 = 5%) below peak that triggers breaker
+    """
+
+    __tablename__ = "portfolio_risk_state"
+    __table_args__ = {"schema": "strategy_engine"}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    peak_equity: Mapped[float] = mapped_column(
+        Numeric(15, 2), nullable=False, default=0.0
+    )
+    circuit_breaker_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    circuit_breaker_triggered_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True)
+    )
+    drawdown_threshold: Mapped[float] = mapped_column(
+        Numeric(5, 4), nullable=False, default=0.05
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<PortfolioRiskState(peak={self.peak_equity}, "
+            f"cb_active={self.circuit_breaker_active}, "
+            f"threshold={self.drawdown_threshold})>"
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "peak_equity": float(self.peak_equity),
+            "circuit_breaker_active": self.circuit_breaker_active,
+            "circuit_breaker_triggered_at": (
+                self.circuit_breaker_triggered_at.isoformat()
+                if self.circuit_breaker_triggered_at
+                else None
+            ),
+            "drawdown_threshold": float(self.drawdown_threshold),
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
