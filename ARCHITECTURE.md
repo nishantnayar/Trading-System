@@ -97,8 +97,9 @@ The system is implemented as a **modular monolith** with clear service boundarie
 - Manage strategy state and parameters
 - Log strategy performance metrics
 
-**Implementation Status**: 🚧 Planned for v1.1.0  
-**Future Enhancements**: Automated backtesting workflows
+**Implementation Status**: ✅ Complete (v1.1.0)
+**Features**: Pairs trading (SpreadCalculator, SignalGenerator, KellySizer, PairExecutor, PairsStrategy), backtesting engine (bar-by-bar replay, Sharpe/drawdown/Kelly metrics), Prefect hourly flow, Streamlit backtest review UI
+**Future Enhancements**: Portfolio-level risk controls, slippage modeling, auto pair de-listing on correlation decay
 
 ### 3. Execution Module
 **Purpose**: Execute trades and manage orders via Alpaca API
@@ -167,19 +168,18 @@ The system is implemented as a **modular monolith** with clear service boundarie
 **Purpose**: Handle alerts and communications
 
 **Components**:
-- Email notification system (planned)
-- Dashboard notifications
+- Email notification service (`EmailNotifier` — async SMTP via stdlib)
 - Log aggregation (Loguru)
 
 **Responsibilities**:
-- Send trade notifications
-- Alert on system errors
-- Notify on risk violations
+- Send trade notifications (opened, closed, stop-loss, failed)
+- Alert on Prefect flow errors
+- Gracefully no-op when SMTP unconfigured
 - Aggregate and format logs
-- Manage notification preferences
 
-**Implementation Status**: 🚧 Planned for v1.1.0  
-**Future Enhancements**: Email/SMS alerts, automated daily summaries
+**Implementation Status**: ✅ Complete (v1.1.0)
+**Features**: Async email via SMTP (`send_trade_opened`, `send_trade_closed`, `send_stop_loss`, `send_trade_failed`, `send_flow_error`), HTML templates, paper/live mode indicator, singleton via `get_notifier()`
+**Future Enhancements**: SMS alerts, notification preferences per event type, daily P&L summaries
 
 ## Data Architecture
 

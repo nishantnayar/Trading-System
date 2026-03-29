@@ -152,7 +152,17 @@ class EmailNotifier:
         return f'<table style="width:100%;border-collapse:collapse;margin:12px 0">{rows}</table>'
 
     def _trade_opened_html(
-        self, pair, signal_type, direction, z_score, qty1, qty2, price1, price2, sym1, sym2
+        self,
+        pair: str,
+        signal_type: str,
+        direction: str,
+        z_score: float,
+        qty1: float,
+        qty2: float,
+        price1: float,
+        price2: float,
+        sym1: str,
+        sym2: str,
     ) -> str:
         color = "#1a6e3c" if direction == "LONG" else "#8b1a1a"
         notional = qty1 * price1 + qty2 * price2
@@ -170,7 +180,15 @@ class EmailNotifier:
             + self._table(rows),
         )
 
-    def _trade_closed_html(self, pair, exit_reason, z_score, pnl, pnl_pct, hold_hours) -> str:
+    def _trade_closed_html(
+        self,
+        pair: str,
+        exit_reason: str,
+        z_score: float,
+        pnl: float,
+        pnl_pct: float,
+        hold_hours: float,
+    ) -> str:
         pnl_color = "#1a6e3c" if pnl >= 0 else "#8b1a1a"
         rows = (
             self._row("Pair", pair)
@@ -184,7 +202,7 @@ class EmailNotifier:
             "<p>The open pair trade was closed.</p>" + self._table(rows),
         )
 
-    def _stop_loss_html(self, pair, z_score, pnl, pnl_pct) -> str:
+    def _stop_loss_html(self, pair: str, z_score: float, pnl: float, pnl_pct: float) -> str:
         rows = (
             self._row("Pair", pair)
             + self._row("Trigger", "STOP_LOSS", "#8b1a1a")
@@ -197,7 +215,7 @@ class EmailNotifier:
             + self._table(rows),
         )
 
-    def _trade_failed_html(self, pair, action, reason) -> str:
+    def _trade_failed_html(self, pair: str, action: str, reason: str) -> str:
         rows = (
             self._row("Pair", pair)
             + self._row("Failed Action", action, "#8b1a1a")
@@ -209,7 +227,7 @@ class EmailNotifier:
             + self._table(rows),
         )
 
-    def _flow_error_html(self, flow_name, error) -> str:
+    def _flow_error_html(self, flow_name: str, error: str) -> str:
         rows = (
             self._row("Flow", flow_name)
             + self._row("Time (UTC)", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"))

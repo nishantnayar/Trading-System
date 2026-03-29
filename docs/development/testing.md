@@ -73,9 +73,27 @@ python scripts/run_tests.py tests/unit/test_database_connections.py
 ### 1. Unit Tests (`tests/unit/`)
 - **Purpose**: Test individual components in isolation
 - **Scope**: Model validation, data formatting, business logic
-- **Execution**: Fast, no external dependencies
-- **Coverage**: Database models, data processing, logging systems
-- **Markers**: `@pytest.mark.unit`, `@pytest.mark.model`
+- **Execution**: Fast, no external dependencies (no DB or network)
+- **Coverage**: Database models, data processing, logging systems, strategy engine, notifications
+- **Markers**: `@pytest.mark.unit`, `@pytest.mark.trading`, `@pytest.mark.model`
+
+#### Strategy Engine & Notification Tests (added v1.1.1)
+
+| File | Component | Tests |
+|---|---|---|
+| `test_spread_calculator.py` | `SpreadCalculator` | 11 — log-spread formula, z-score, edge cases (empty, zero std, misaligned timestamps) |
+| `test_signal_generator.py` | `BacktestSignalGenerator` | 13 — all signal types (LONG/SHORT/EXIT/STOP_LOSS/EXPIRE), boundary conditions, priority |
+| `test_position_sizer.py` | `KellySizer` | 10 — bootstrap mode, Half-Kelly, max cap, min share floor, proportionality |
+| `test_email_notifier.py` | `EmailNotifier` | 10 — SMTP dispatch, unconfigured no-op, failure swallowing, paper/live mode, singleton |
+
+Run just these tests (no DB required):
+```bash
+pytest tests/unit/test_spread_calculator.py tests/unit/test_signal_generator.py \
+       tests/unit/test_position_sizer.py tests/unit/test_email_notifier.py -v
+
+# Or by marker
+pytest -m "unit and trading" -v
+```
 
 ### 2. Integration Tests (`tests/integration/`)
 - **Purpose**: Test component interactions and database schemas
