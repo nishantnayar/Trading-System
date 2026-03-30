@@ -185,6 +185,21 @@ class TradingSystemAPI:
         """Cancel an open order by ID."""
         return self._make_request("DELETE", f"/orders/{order_id}")
 
+    # Data Quality API
+    def get_data_quality_summary(self) -> Dict[str, Any]:
+        """Get overall data ingestion health summary."""
+        return self._make_request("GET", "/api/data-quality/summary")
+
+    def get_ingestion_status(self) -> List[Dict[str, Any]]:
+        """Get per-symbol ingestion status with staleness info."""
+        result = self._make_request("GET", "/api/data-quality/ingestion-status")
+        return result if isinstance(result, list) else []
+
+    def get_data_quality_alerts(self) -> List[Dict[str, Any]]:
+        """Get stale or failed ingestion entries only."""
+        result = self._make_request("GET", "/api/data-quality/alerts")
+        return result if isinstance(result, list) else []
+
     # Key Statistics API
     @st.cache_data(ttl=3600)  # Cache for 1 hour
     def get_key_statistics(_self, symbol: str) -> Dict[str, Any]:

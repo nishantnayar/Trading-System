@@ -79,6 +79,7 @@ async def load_yahoo_market_data_task(
             f"Loaded {records_count} unadjusted + {records_count_adjusted} adjusted "
             f"market data records for {symbol}"
         )
+        await loader._update_symbol_status(symbol, "success")
         return {
             "symbol": symbol,
             "records_count": records_count,
@@ -89,6 +90,7 @@ async def load_yahoo_market_data_task(
         # No data available is a valid state (symbol might be delisted, etc.)
         # Don't treat this as a fatal error that needs retries
         logger.warning(f"No data available for {symbol}: {e}")
+        await loader._update_symbol_status(symbol, "no_data", str(e))
         return {
             "symbol": symbol,
             "records_count": 0,
@@ -98,6 +100,7 @@ async def load_yahoo_market_data_task(
     except Exception as e:
         # Other errors (network, API issues) should be retried
         logger.error(f"Failed to load Yahoo market data for {symbol}: {e}")
+        await loader._update_symbol_status(symbol, "failed", str(e))
         raise
 
 
@@ -179,5 +182,3 @@ async def load_yahoo_key_statistics_task(symbol: str) -> dict:
         # Other errors (network, API issues) should be retried
         logger.error(f"Failed to load key statistics for {symbol}: {e}")
         raise
-
-

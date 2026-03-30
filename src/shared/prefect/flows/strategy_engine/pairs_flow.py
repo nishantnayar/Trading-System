@@ -30,10 +30,13 @@ from prefect import flow, task
 from src.services.alpaca.client import AlpacaClient
 from src.services.notification.email_notifier import get_notifier
 from src.services.strategy_engine.pairs.strategy import PairsStrategy
+from src.shared.database.base import db_readonly_session, db_transaction
+from src.shared.database.models.strategy_models import PairRegistry, PairTrade
 
 # ---------------------------------------------------------------------------
 # Run name helper
 # ---------------------------------------------------------------------------
+
 
 def _flow_run_name() -> str:
     return f"Pairs Trading Cycle - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -42,6 +45,7 @@ def _flow_run_name() -> str:
 # ---------------------------------------------------------------------------
 # Tasks
 # ---------------------------------------------------------------------------
+
 
 @task(
     name="check-market-open",
@@ -91,9 +95,96 @@ async def run_pairs_strategy_task(alpaca: AlpacaClient) -> dict:
     return summary
 
 
+# Degradation thresholds for auto-disabling pairs
+_MIN_TRADES_TO_EVALUATE = 5  # skip pairs with fewer closed trades
+_EVAL_WINDOW = 10  # look at the most recent N closed trades
+_FAIL_WIN_RATE = 0.35  # deactivate if win rate falls below this
+# (also requires avg_pnl < 0 to avoid deactivating pairs on a cold streak)
+
+
+@task(
+    name="check-and-disable-failing-pairs",
+    retries=1,
+    retry_delay_seconds=15,
+    log_prints=True,
+)
+async def check_and_disable_failing_pairs_task() -> dict:
+    """
+    Evaluate recent trade performance for every active pair.
+    Deactivates pairs where the last _EVAL_WINDOW trades show:
+      - win rate < _FAIL_WIN_RATE, AND
+      - average P&L < 0
+    Sends an email alert for each deactivated pair.
+    """
+    with db_readonly_session() as session:
+        pairs = (
+            session.query(PairRegistry).filter(PairRegistry.is_active.is_(True)).all()
+        )
+        for p in pairs:
+            session.expunge(p)
+
+    deactivated = []
+
+    for pair in pairs:
+        with db_readonly_session() as session:
+            recent = (
+                session.query(PairTrade)
+                .filter(
+                    PairTrade.pair_id == pair.id,
+                    PairTrade.status.in_(["CLOSED", "STOPPED"]),
+                )
+                .order_by(PairTrade.exit_time.desc())
+                .limit(_EVAL_WINDOW)
+                .all()
+            )
+            for t in recent:
+                session.expunge(t)
+
+        if len(recent) < _MIN_TRADES_TO_EVALUATE:
+            continue
+
+        wins = sum(1 for t in recent if (t.pnl or 0) > 0)
+        win_rate = wins / len(recent)
+        avg_pnl = sum(t.pnl or 0 for t in recent) / len(recent)
+
+        if win_rate < _FAIL_WIN_RATE and avg_pnl < 0:
+            pair_label = f"{pair.symbol1}/{pair.symbol2}"
+            reason = (
+                f"Last {len(recent)} trades: "
+                f"win_rate={win_rate:.1%} (threshold {_FAIL_WIN_RATE:.0%}), "
+                f"avg_pnl=${avg_pnl:+.2f}"
+            )
+            logger.warning(f"Auto-deactivating {pair_label}: {reason}")
+
+            with db_transaction() as session:
+                db_pair = session.get(PairRegistry, pair.id)
+                if db_pair:
+                    db_pair.is_active = False
+                    db_pair.notes = f"Auto-deactivated {datetime.now().strftime('%Y-%m-%d')}: {reason}"
+
+            await get_notifier().send_pair_deactivated(
+                pair=pair_label,
+                reason=reason,
+                win_rate=win_rate,
+                avg_pnl=avg_pnl,
+                total_trades=len(recent),
+            )
+            deactivated.append(pair_label)
+
+    if deactivated:
+        logger.info(
+            f"Deactivated {len(deactivated)} failing pair(s): {', '.join(deactivated)}"
+        )
+    else:
+        logger.info("Performance check: no failing pairs detected")
+
+    return {"deactivated": deactivated, "count": len(deactivated)}
+
+
 # ---------------------------------------------------------------------------
 # Flow
 # ---------------------------------------------------------------------------
+
 
 @flow(
     name="intraday-pairs-trading",
@@ -125,6 +216,8 @@ async def intraday_pairs_flow(skip_market_check: bool = False) -> dict:
 
     try:
         summary = await run_pairs_strategy_task(alpaca)
+        deactivation = await check_and_disable_failing_pairs_task()
+        summary["deactivated_pairs"] = deactivation["deactivated"]
     except Exception as exc:
         err_msg = str(exc)
         logger.error(f"Unhandled flow error: {err_msg}")
@@ -133,7 +226,8 @@ async def intraday_pairs_flow(skip_market_check: bool = False) -> dict:
 
     logger.info(
         f"Flow complete: {summary['total_pairs']} pairs, "
-        f"{summary['with_signal']} signals, {summary['errors']} errors"
+        f"{summary['with_signal']} signals, {summary['errors']} errors, "
+        f"{len(summary.get('deactivated_pairs', []))} deactivated"
     )
     return {"status": "OK", **summary}
 
@@ -141,6 +235,7 @@ async def intraday_pairs_flow(skip_market_check: bool = False) -> dict:
 # ---------------------------------------------------------------------------
 # Deployment helper (run from CLI)
 # ---------------------------------------------------------------------------
+
 
 async def deploy_pairs_flow() -> None:
     """Register the intraday pairs trading flow as a Prefect deployment."""

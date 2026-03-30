@@ -26,6 +26,7 @@ from src.shared.logging.correlation import (  # noqa: E402
 from src.web.api.alpaca_routes import router as alpaca_router  # noqa: E402
 from src.web.api.company_info import router as company_info_router  # noqa: E402
 from src.web.api.company_officers import router as company_officers_router  # noqa: E402
+from src.web.api.data_quality import router as data_quality_router  # noqa: E402
 from src.web.api.financial_statements import (  # noqa: E402
     router as financial_statements_router,
 )
@@ -88,6 +89,7 @@ app.include_router(financial_statements_router)
 app.include_router(institutional_holders_router)
 app.include_router(key_statistics_router)
 app.include_router(pairs_trading_router)
+app.include_router(data_quality_router)
 
 
 if __name__ == "__main__":

@@ -21,7 +21,8 @@ Yahoo Finance provides comprehensive company fundamentals, financial statements,
 ### Market Data (OHLCV)
 
 - **Dual series**: The loader stores both unadjusted (`data_source='yahoo'`) and adjusted (`data_source='yahoo_adjusted'`) OHLCV. Adjusted prices are corrected for splits and dividends (suitable for backtesting total return).
-- **Prefect task**: `load_yahoo_market_data_task` loads both and returns `records_count` and `records_count_adjusted`.
+- **Prefect task**: `load_yahoo_market_data_task` loads both series and returns `records_count` and `records_count_adjusted`. It also writes a `symbol_data_status` row for each symbol after every attempt (`"success"`, `"no_data"`, or `"failed"`).
+- **Status tracking**: `symbol_data_status` is populated automatically by the Prefect task — no manual call to `update_symbol_data_status()` is needed in the flow.
 - **Backpopulate**: For historical backfill of adjusted only, run `python scripts/backpopulate_yahoo_adjusted.py --all-symbols --days 365` (default interval 1h to match scheduled flow).
 
 ### Integration Details
@@ -430,43 +431,24 @@ print(f"By Exchange: {stats['by_exchange']}")
 
 ### Integration with Data Ingestion Flows
 
-The `SymbolService` is designed to integrate seamlessly with Prefect data ingestion flows:
+`symbol_data_status` is written automatically by `load_yahoo_market_data_task` — you do not need to call `update_symbol_data_status()` manually in Prefect flows. The task covers all three outcomes:
+
+| Outcome | Status written |
+|---|---|
+| Both `load_market_data()` calls succeed | `"success"` |
+| `YahooDataError` (no data / delisted) | `"no_data"` |
+| Any other exception (retried by Prefect) | `"failed"` |
+
+To query which symbols still need data for a given date (e.g. for a backfill job), use `SymbolService.get_symbols_needing_data()`:
 
 ```python
-from prefect import flow
-from datetime import date
+from datetime import date, timedelta
 from src.services.data_ingestion.symbols import SymbolService
 
-@flow(name="daily_data_ingestion")
-async def daily_data_ingestion_flow():
-    service = SymbolService()
-    
-    # Get symbols that need data for today
-    target_date = date.today()
-    symbols_needing_data = await service.get_symbols_needing_data(target_date, data_source="yahoo")
-    
-    # Process each symbol
-    for symbol in symbols_needing_data:
-        try:
-            # Fetch and ingest data
-            # ... data ingestion logic ...
-            
-            # Update status on success
-            await service.update_symbol_data_status(
-                symbol=symbol.symbol,
-                date=target_date,
-                data_source="yahoo",
-                status="success"
-            )
-        except Exception as e:
-            # Update status on failure
-            await service.update_symbol_data_status(
-                symbol=symbol.symbol,
-                date=target_date,
-                data_source="yahoo",
-                status="failed",
-                error_message=str(e)
-            )
+service = SymbolService()
+yesterday = date.today() - timedelta(days=1)
+missing = await service.get_symbols_needing_data(yesterday, data_source="yahoo")
+print(f"{len(missing)} symbols need data for {yesterday}")
 ```
 
 ### Database Models
@@ -559,7 +541,7 @@ stats = await service.get_symbol_statistics()
 ## Best Practices
 
 1. **Data Source Tagging**: Always tag Yahoo Finance data with `data_source='yahoo'`
-2. **Status Tracking**: Update `SymbolDataStatus` after each data ingestion attempt
+2. **Status Tracking**: `symbol_data_status` is updated automatically by `load_yahoo_market_data_task` for all outcomes (`"success"`, `"no_data"`, `"failed"`). Do not add manual `update_symbol_data_status()` calls in Prefect flows — this would create duplicate writes.
 3. **Error Handling**: Handle missing data gracefully (Yahoo Finance may not have data for all symbols)
 4. **Rate Limiting**: Yahoo Finance has implicit rate limits; implement delays between requests
 5. **Data Validation**: Validate all Yahoo Finance data before storage

@@ -45,14 +45,16 @@ class EmailNotifier:
 
     @property
     def _configured(self) -> bool:
-        return all([
-            self._host,
-            self._port,
-            self._username,
-            self._password,
-            self._from_email,
-            self._to_email,
-        ])
+        return all(
+            [
+                self._host,
+                self._port,
+                self._username,
+                self._password,
+                self._from_email,
+                self._to_email,
+            ]
+        )
 
     # ------------------------------------------------------------------
     # Public event methods
@@ -73,7 +75,16 @@ class EmailNotifier:
         direction = "LONG" if signal_type == "LONG_SPREAD" else "SHORT"
         subject = f"[{self._mode}] Trade Opened — {pair} ({direction})"
         body = self._trade_opened_html(
-            pair, signal_type, direction, z_score, qty1, qty2, price1, price2, sym1, sym2
+            pair,
+            signal_type,
+            direction,
+            z_score,
+            qty1,
+            qty2,
+            price1,
+            price2,
+            sym1,
+            sym2,
         )
         await self._send(subject, body)
 
@@ -88,7 +99,9 @@ class EmailNotifier:
     ) -> None:
         emoji = "✅" if pnl >= 0 else "❌"
         subject = f"[{self._mode}] Trade Closed — {pair} {emoji} ${pnl:+.2f}"
-        body = self._trade_closed_html(pair, exit_reason, z_score, pnl, pnl_pct, hold_hours)
+        body = self._trade_closed_html(
+            pair, exit_reason, z_score, pnl, pnl_pct, hold_hours
+        )
         await self._send(subject, body)
 
     async def send_stop_loss(
@@ -119,6 +132,29 @@ class EmailNotifier:
     ) -> None:
         subject = f"[{self._mode}] 🚨 Flow Error — {flow_name}"
         body = self._flow_error_html(flow_name, error)
+        await self._send(subject, body)
+
+    async def send_pair_deactivated(
+        self,
+        pair: str,
+        reason: str,
+        win_rate: float,
+        avg_pnl: float,
+        total_trades: int,
+    ) -> None:
+        subject = f"[{self._mode}] Pair Deactivated — {pair}"
+        body = self._pair_deactivated_html(
+            pair, reason, win_rate, avg_pnl, total_trades
+        )
+        await self._send(subject, body)
+
+    async def send_discovery_summary(
+        self,
+        pairs_found: int,
+        pairs_upserted: list,
+    ) -> None:
+        subject = f"[{self._mode}] Weekly Discovery — {pairs_found} pair(s) found"
+        body = self._discovery_summary_html(pairs_found, pairs_upserted)
         await self._send(subject, body)
 
     # ------------------------------------------------------------------
@@ -176,7 +212,7 @@ class EmailNotifier:
         )
         return self._base_html(
             f"Trade Opened — {pair}",
-            f'<p>A <strong>{direction} SPREAD</strong> signal was generated and a two-legged trade was submitted to Alpaca.</p>'
+            f"<p>A <strong>{direction} SPREAD</strong> signal was generated and a two-legged trade was submitted to Alpaca.</p>"
             + self._table(rows),
         )
 
@@ -202,7 +238,9 @@ class EmailNotifier:
             "<p>The open pair trade was closed.</p>" + self._table(rows),
         )
 
-    def _stop_loss_html(self, pair: str, z_score: float, pnl: float, pnl_pct: float) -> str:
+    def _stop_loss_html(
+        self, pair: str, z_score: float, pnl: float, pnl_pct: float
+    ) -> str:
         rows = (
             self._row("Pair", pair)
             + self._row("Trigger", "STOP_LOSS", "#8b1a1a")
@@ -227,10 +265,49 @@ class EmailNotifier:
             + self._table(rows),
         )
 
+    def _pair_deactivated_html(
+        self,
+        pair: str,
+        reason: str,
+        win_rate: float,
+        avg_pnl: float,
+        total_trades: int,
+    ) -> str:
+        rows = (
+            self._row("Pair", pair)
+            + self._row("Deactivation Reason", reason, "#8b1a1a")
+            + self._row("Trades Evaluated", str(total_trades))
+            + self._row("Win Rate", f"{win_rate:.1%}", "#8b1a1a")
+            + self._row("Avg P&L per Trade", f"${avg_pnl:+.2f}", "#8b1a1a")
+        )
+        return self._base_html(
+            f"Pair Deactivated — {pair}",
+            "<p>This pair was automatically deactivated due to sustained poor performance. "
+            "It remains in the registry with <code>is_active=False</code>. "
+            "Run a fresh backtest before reactivating.</p>" + self._table(rows),
+        )
+
+    def _discovery_summary_html(self, pairs_found: int, pairs_upserted: list) -> str:
+        if not pairs_upserted:
+            content = "<p>No pairs matched discovery criteria this week.</p>"
+        else:
+            pair_rows = "".join(
+                self._row(f"#{i + 1}", f"{s1}/{s2}  (id={pid})")
+                for i, (pid, s1, s2) in enumerate(pairs_upserted)
+            )
+            content = (
+                f"<p>{pairs_found} pair(s) upserted to the registry with "
+                f"<code>is_active=False</code>. Run backtests before activating.</p>"
+                + self._table(pair_rows)
+            )
+        return self._base_html("Weekly Pair Discovery Summary", content)
+
     def _flow_error_html(self, flow_name: str, error: str) -> str:
         rows = (
             self._row("Flow", flow_name)
-            + self._row("Time (UTC)", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"))
+            + self._row(
+                "Time (UTC)", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+            )
             + self._row("Error", f"<code>{error[:500]}</code>")
         )
         return self._base_html(

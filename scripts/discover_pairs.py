@@ -42,6 +42,7 @@ from src.shared.database.models.symbols import Symbol
 # Data loading
 # ---------------------------------------------------------------------------
 
+
 def get_active_symbols() -> List[Dict]:
     """Fetch all active symbols with sector info from DB."""
     with db_readonly_session() as session:
@@ -93,7 +94,9 @@ def get_hourly_closes(
     df["close"] = df["close"].astype(float)
 
     # Pivot: rows = timestamp, columns = symbol
-    pivot = df.pivot_table(index="timestamp", columns="symbol", values="close", aggfunc="last")
+    pivot = df.pivot_table(
+        index="timestamp", columns="symbol", values="close", aggfunc="last"
+    )
     pivot.index = pd.to_datetime(pivot.index, utc=True)
     pivot.sort_index(inplace=True)
 
@@ -103,6 +106,7 @@ def get_hourly_closes(
 # ---------------------------------------------------------------------------
 # Statistical tests
 # ---------------------------------------------------------------------------
+
 
 def compute_log_returns(prices: pd.Series) -> pd.Series:
     """Compute log returns from a price series."""
@@ -215,6 +219,7 @@ def compute_spread_stats(
 # Pair discovery
 # ---------------------------------------------------------------------------
 
+
 def discover_pairs(
     price_df: pd.DataFrame,
     symbols_meta: Dict[str, Dict],
@@ -230,13 +235,12 @@ def discover_pairs(
     Run the full pair discovery pipeline and return a ranked DataFrame.
     """
     symbols = list(price_df.columns)
-    results = []
+    results: List[Dict] = []
 
     # Group by sector if requested
     if sector_filter:
         symbols = [
-            s for s in symbols
-            if symbols_meta.get(s, {}).get("sector") == sector_filter
+            s for s in symbols if symbols_meta.get(s, {}).get("sector") == sector_filter
         ]
         logger.info(f"Filtered to {len(symbols)} symbols in sector: {sector_filter}")
 
@@ -245,10 +249,12 @@ def discover_pairs(
 
     checked = 0
     for i, sym1 in enumerate(symbols):
-        for sym2 in symbols[i + 1:]:
+        for sym2 in symbols[i + 1 :]:
             checked += 1
             if checked % 50 == 0:
-                logger.info(f"  Progress: {checked}/{total_pairs} pairs checked, {len(results)} candidates so far")
+                logger.info(
+                    f"  Progress: {checked}/{total_pairs} pairs checked, {len(results)} candidates so far"
+                )
 
             s1 = price_df[sym1].dropna()
             s2 = price_df[sym2].dropna()
@@ -283,7 +289,9 @@ def discover_pairs(
 
             # Step 4: Z-score window = 2× half-life
             z_window = max(10, int(2 * half_life))
-            spread_stats = compute_spread_stats(s1_aligned, s2_aligned, hedge_ratio, z_window)
+            spread_stats = compute_spread_stats(
+                s1_aligned, s2_aligned, hedge_ratio, z_window
+            )
 
             # Step 5: Liquidity score (avg volume proxy — use bar count as proxy if no volume)
             avg_vol_s1 = price_df[sym1].count() / overlap_days
@@ -294,21 +302,23 @@ def discover_pairs(
             coint_strength = 1 - p_value  # higher is better
             rank_score = coint_strength * min(liquidity_score, 1.0) * abs(corr)
 
-            results.append({
-                "symbol1": sym1,
-                "symbol2": sym2,
-                "sector": symbols_meta.get(sym1, {}).get("sector", "Unknown"),
-                "correlation": round(corr, 4),
-                "coint_pvalue": round(p_value, 4),
-                "hedge_ratio": round(hedge_ratio, 4),
-                "half_life_hours": round(half_life, 1),
-                "z_score_window": z_window,
-                "current_z_score": round(spread_stats["current_z_score"], 3),
-                "overlap_days": round(overlap_days, 0),
-                "rank_score": round(rank_score, 4),
-                "name1": symbols_meta.get(sym1, {}).get("name", ""),
-                "name2": symbols_meta.get(sym2, {}).get("name", ""),
-            })
+            results.append(
+                {
+                    "symbol1": sym1,
+                    "symbol2": sym2,
+                    "sector": symbols_meta.get(sym1, {}).get("sector", "Unknown"),
+                    "correlation": round(corr, 4),
+                    "coint_pvalue": round(p_value, 4),
+                    "hedge_ratio": round(hedge_ratio, 4),
+                    "half_life_hours": round(half_life, 1),
+                    "z_score_window": z_window,
+                    "current_z_score": round(spread_stats["current_z_score"], 3),
+                    "overlap_days": round(overlap_days, 0),
+                    "rank_score": round(rank_score, 4),
+                    "name1": symbols_meta.get(sym1, {}).get("name", ""),
+                    "name2": symbols_meta.get(sym2, {}).get("name", ""),
+                }
+            )
 
     if not results:
         logger.warning("No pairs passed all filters.")
@@ -325,23 +335,63 @@ def discover_pairs(
 # CLI
 # ---------------------------------------------------------------------------
 
+
 @click.command()
-@click.option("--min-correlation", default=0.70, type=float, show_default=True,
-              help="Minimum Pearson correlation on log returns")
-@click.option("--max-pvalue", default=0.05, type=float, show_default=True,
-              help="Maximum Engle-Granger cointegration p-value")
-@click.option("--min-half-life", default=5.0, type=float, show_default=True,
-              help="Minimum mean-reversion half-life in hours")
-@click.option("--max-half-life", default=72.0, type=float, show_default=True,
-              help="Maximum mean-reversion half-life in hours")
-@click.option("--sector", default=None, type=str,
-              help="Filter to a specific sector (e.g. Technology)")
-@click.option("--top", "top_n", default=5, type=int, show_default=True,
-              help="Number of top pairs to display")
-@click.option("--days-back", default=252, type=int, show_default=True,
-              help="Days of hourly history to pull (default: 252 = 1 trading year)")
-@click.option("--data-source", default="yahoo_adjusted", show_default=True,
-              help="Data source in market_data table")
+@click.option(
+    "--min-correlation",
+    default=0.70,
+    type=float,
+    show_default=True,
+    help="Minimum Pearson correlation on log returns",
+)
+@click.option(
+    "--max-pvalue",
+    default=0.05,
+    type=float,
+    show_default=True,
+    help="Maximum Engle-Granger cointegration p-value",
+)
+@click.option(
+    "--min-half-life",
+    default=5.0,
+    type=float,
+    show_default=True,
+    help="Minimum mean-reversion half-life in hours",
+)
+@click.option(
+    "--max-half-life",
+    default=72.0,
+    type=float,
+    show_default=True,
+    help="Maximum mean-reversion half-life in hours",
+)
+@click.option(
+    "--sector",
+    default=None,
+    type=str,
+    help="Filter to a specific sector (e.g. Technology)",
+)
+@click.option(
+    "--top",
+    "top_n",
+    default=5,
+    type=int,
+    show_default=True,
+    help="Number of top pairs to display",
+)
+@click.option(
+    "--days-back",
+    default=252,
+    type=int,
+    show_default=True,
+    help="Days of hourly history to pull (default: 252 = 1 trading year)",
+)
+@click.option(
+    "--data-source",
+    default="yahoo_adjusted",
+    show_default=True,
+    help="Data source in market_data table",
+)
 def main(
     min_correlation: float,
     max_pvalue: float,
@@ -351,7 +401,7 @@ def main(
     top_n: int,
     days_back: int,
     data_source: str,
-):
+) -> None:
     """
     Discover statistically validated pairs for intraday pairs trading.
 
@@ -381,16 +431,18 @@ def main(
         level="INFO",
     )
 
-    asyncio.run(run_discovery(
-        min_correlation=min_correlation,
-        max_pvalue=max_pvalue,
-        min_half_life=min_half_life,
-        max_half_life=max_half_life,
-        sector_filter=sector,
-        top_n=top_n,
-        days_back=days_back,
-        data_source=data_source,
-    ))
+    asyncio.run(
+        run_discovery(
+            min_correlation=min_correlation,
+            max_pvalue=max_pvalue,
+            min_half_life=min_half_life,
+            max_half_life=max_half_life,
+            sector_filter=sector,
+            top_n=top_n,
+            days_back=days_back,
+            data_source=data_source,
+        )
+    )
 
 
 async def run_discovery(
@@ -402,20 +454,22 @@ async def run_discovery(
     top_n: int,
     days_back: int,
     data_source: str,
-) -> None:
+) -> List[Tuple[int, str, str]]:
     end_date = date.today()
     start_date = end_date - timedelta(days=days_back)
 
     logger.info(f"Pair Discovery — {start_date} to {end_date} ({days_back} days)")
-    logger.info(f"Filters: correlation >= {min_correlation}, p-value <= {max_pvalue}, "
-                f"half-life {min_half_life}–{max_half_life}h")
+    logger.info(
+        f"Filters: correlation >= {min_correlation}, p-value <= {max_pvalue}, "
+        f"half-life {min_half_life}–{max_half_life}h"
+    )
 
     # Load symbols
     logger.info("Loading active symbols...")
     symbols_list = get_active_symbols()
     if not symbols_list:
         logger.error("No active symbols found in DB.")
-        return
+        return []
 
     symbols = [s["symbol"] for s in symbols_list]
     symbols_meta = {s["symbol"]: s for s in symbols_list}
@@ -427,16 +481,20 @@ async def run_discovery(
         logger.info(f"Sector filter '{sector_filter}': {len(symbols)} symbols")
         if len(symbols) < 2:
             logger.error("Need at least 2 symbols in sector to find pairs.")
-            return
+            return []
 
     # Load prices
     logger.info(f"Loading hourly close prices for {len(symbols)} symbols...")
     price_df = get_hourly_closes(symbols, start_date, end_date, data_source)
 
     if price_df.empty:
-        logger.error(f"No price data found for data_source='{data_source}' in date range.")
-        logger.info("Tip: Check that yahoo_flows.py has run and populated data_ingestion.market_data")
-        return
+        logger.error(
+            f"No price data found for data_source='{data_source}' in date range."
+        )
+        logger.info(
+            "Tip: Check that yahoo_flows.py has run and populated data_ingestion.market_data"
+        )
+        return []
 
     # Drop symbols with too little data (< 30 days worth of bars)
     min_bars = 30 * 7
@@ -448,7 +506,7 @@ async def run_discovery(
 
     if len(symbols_with_data) < 2:
         logger.error("Need at least 2 symbols with sufficient data.")
-        return
+        return []
 
     # Run discovery
     results_df = discover_pairs(
@@ -465,18 +523,30 @@ async def run_discovery(
 
     if results_df.empty:
         logger.warning("\nNo pairs found matching all criteria.")
-        logger.info("Try relaxing filters: --min-correlation 0.60 --max-pvalue 0.10 --max-half-life 120")
-        return
+        logger.info(
+            "Try relaxing filters: --min-correlation 0.60 --max-pvalue 0.10 --max-half-life 120"
+        )
+        return []
 
     # Print results table
     print("\n" + "=" * 90)
-    print(f"  TOP {len(results_df)} PAIRS — Ranked by cointegration strength × correlation")
+    print(
+        f"  TOP {len(results_df)} PAIRS — Ranked by cointegration strength × correlation"
+    )
     print("=" * 90)
 
     display_cols = [
-        "symbol1", "symbol2", "sector", "correlation", "coint_pvalue",
-        "hedge_ratio", "half_life_hours", "z_score_window",
-        "current_z_score", "overlap_days", "rank_score",
+        "symbol1",
+        "symbol2",
+        "sector",
+        "correlation",
+        "coint_pvalue",
+        "hedge_ratio",
+        "half_life_hours",
+        "z_score_window",
+        "current_z_score",
+        "overlap_days",
+        "rank_score",
     ]
 
     pd.set_option("display.float_format", "{:.4f}".format)
@@ -493,9 +563,15 @@ async def run_discovery(
         print(f"       {row['name1']} / {row['name2']}")
         print(f"       Sector:       {row['sector']}")
         print(f"       Correlation:  {row['correlation']:.4f}")
-        print(f"       Coint p-val:  {row['coint_pvalue']:.4f}  {'✓ STRONG' if row['coint_pvalue'] < 0.01 else '✓ OK'}")
-        print(f"       Hedge ratio:  {row['hedge_ratio']:.4f}  (spread = log({row['symbol1']}) - {row['hedge_ratio']:.4f} × log({row['symbol2']}))")
-        print(f"       Half-life:    {row['half_life_hours']:.1f} hours  (~{row['half_life_hours']/7:.1f} trading days)")
+        print(
+            f"       Coint p-val:  {row['coint_pvalue']:.4f}  {'✓ STRONG' if row['coint_pvalue'] < 0.01 else '✓ OK'}"
+        )
+        print(
+            f"       Hedge ratio:  {row['hedge_ratio']:.4f}  (spread = log({row['symbol1']}) - {row['hedge_ratio']:.4f} × log({row['symbol2']}))"
+        )
+        print(
+            f"       Half-life:    {row['half_life_hours']:.1f} hours  (~{row['half_life_hours']/7:.1f} trading days)"
+        )
         print(f"       Z-window:     {row['z_score_window']} bars  (2 × half-life)")
         print(f"       Current Z:    {row['current_z_score']:.3f}")
         print(f"       Data overlap: {int(row['overlap_days'])} days")
@@ -541,7 +617,9 @@ async def run_discovery(
             upserted.append((pair_id, row["symbol1"], row["symbol2"]))
 
     print("\n" + "=" * 90)
-    print(f"  SAVED {len(upserted)} pairs to strategy_engine.pair_registry (is_active=False)")
+    print(
+        f"  SAVED {len(upserted)} pairs to strategy_engine.pair_registry (is_active=False)"
+    )
     for pair_id, s1, s2 in upserted:
         print(f"    id={pair_id}  {s1}/{s2}")
     print()
@@ -550,6 +628,8 @@ async def run_discovery(
     print("    2. Run a backtest for each pair — look for Sharpe > 0.5, drawdown < 15%")
     print("    3. Use the 'Activate' toggle on passing pairs to enable live trading")
     print("=" * 90 + "\n")
+
+    return upserted
 
 
 if __name__ == "__main__":
