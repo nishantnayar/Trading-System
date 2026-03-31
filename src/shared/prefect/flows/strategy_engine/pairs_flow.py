@@ -2,7 +2,7 @@
 Intraday Pairs Trading Flow
 
 Scheduled to run hourly during market hours:
-    Cron: 0 14-21 * * 1-5  (UTC = 9 AM – 5 PM ET, Mon–Fri)
+    Cron: 0 14-21 * * 1-5  (UTC = 9 AM - 5 PM ET, Mon-Fri)
 
 Each run:
     1. Check market is open (Alpaca clock)
@@ -27,6 +27,7 @@ if __file__ and Path(__file__).exists():
 from loguru import logger
 from prefect import flow, task
 
+from src.config.settings import get_settings
 from src.services.alpaca.client import AlpacaClient
 from src.services.notification.email_notifier import get_notifier
 from src.services.strategy_engine.pairs.strategy import PairsStrategy
@@ -59,9 +60,9 @@ async def check_market_open_task(alpaca: AlpacaClient) -> bool:
     is_open = clock.get("is_open", False)
     next_open = clock.get("next_open", "unknown")
     if is_open:
-        logger.info("Market is OPEN — proceeding with strategy cycle")
+        logger.info("Market is OPEN  -  proceeding with strategy cycle")
     else:
-        logger.info(f"Market is CLOSED — next open: {next_open}")
+        logger.info(f"Market is CLOSED  -  next open: {next_open}")
     return bool(is_open)
 
 
@@ -207,7 +208,12 @@ async def intraday_pairs_flow(skip_market_check: bool = False) -> dict:
     """
     logger.info("Starting intraday pairs trading flow")
 
-    alpaca = AlpacaClient(is_paper=True)
+    settings = get_settings()
+    alpaca = AlpacaClient(
+        api_key=settings.alpaca_api_key,
+        secret_key=settings.alpaca_secret_key,
+        is_paper=True,
+    )
 
     if not skip_market_check:
         is_open = await check_market_open_task(alpaca)
@@ -255,10 +261,10 @@ async def deploy_pairs_flow() -> None:
     await deployment.deploy(
         name="Intraday Pairs Trading",
         work_pool_name=PrefectConfig.get_work_pool_name(),
-        cron="0 14-21 * * 1-5",  # hourly 9 AM–5 PM ET (14–21 UTC), Mon–Fri
+        cron="0 14-21 * * 1-5",  # hourly 9 AM-5 PM ET (14-21 UTC), Mon-Fri
         parameters={"skip_market_check": False},
         tags=["strategy-engine", "pairs-trading", "scheduled"],
-        description="Hourly intraday pairs trading strategy — evaluates z-scores and places paper orders via Alpaca",
+        description="Hourly intraday pairs trading strategy  -  evaluates z-scores and places paper orders via Alpaca",
         ignore_warnings=True,
     )
     logger.info("Pairs trading flow deployed successfully!")
