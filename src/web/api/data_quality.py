@@ -1,5 +1,5 @@
 """
-Data Quality API — ingestion timestamps, staleness, and alert endpoints.
+Data Quality API  -  ingestion timestamps, staleness, and alert endpoints.
 
 Source of truth: data_ingestion.market_data (yahoo only).
 symbol_data_status is not reliably updated so is not used here.
@@ -56,13 +56,15 @@ async def get_data_quality_summary() -> DataQualitySummary:
 
             total = len(rows)
             stale = sum(
-                1 for r in rows
+                1
+                for r in rows
                 if (today - r.last_ts.date()).days > STALE_DAYS_THRESHOLD
             )
 
             last_ingestion = session.scalar(
-                select(func.max(MarketData.created_at))
-                .where(MarketData.data_source == DATA_SOURCE)
+                select(func.max(MarketData.created_at)).where(
+                    MarketData.data_source == DATA_SOURCE
+                )
             )
 
             return DataQualitySummary(

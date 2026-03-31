@@ -17,7 +17,7 @@ import asyncio
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
 import click
 import numpy as np
@@ -100,7 +100,7 @@ def get_hourly_closes(
     pivot.index = pd.to_datetime(pivot.index, utc=True)
     pivot.sort_index(inplace=True)
 
-    return pivot
+    return cast(pd.DataFrame, pivot)
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +110,7 @@ def get_hourly_closes(
 
 def compute_log_returns(prices: pd.Series) -> pd.Series:
     """Compute log returns from a price series."""
-    return np.log(prices).diff().dropna()
+    return cast(pd.Series, np.log(prices).diff().dropna())
 
 
 def pearson_correlation(s1: pd.Series, s2: pd.Series) -> float:
@@ -328,7 +328,7 @@ def discover_pairs(
     df.sort_values("rank_score", ascending=False, inplace=True)
     df.reset_index(drop=True, inplace=True)
 
-    return df.head(top_n)
+    return cast(pd.DataFrame, df.head(top_n))
 
 
 # ---------------------------------------------------------------------------
@@ -559,7 +559,7 @@ async def run_discovery(
     print("  DETAILS")
     print("=" * 90)
     for i, row in results_df.iterrows():
-        print(f"\n  #{i + 1}  {row['symbol1']} / {row['symbol2']}")
+        print(f"\n  #{int(i) + 1}  {row['symbol1']} / {row['symbol2']}")
         print(f"       {row['name1']} / {row['name2']}")
         print(f"       Sector:       {row['sector']}")
         print(f"       Correlation:  {row['correlation']:.4f}")
