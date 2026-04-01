@@ -558,8 +558,8 @@ async def run_discovery(
     print("\n" + "=" * 90)
     print("  DETAILS")
     print("=" * 90)
-    for i, row in results_df.iterrows():
-        print(f"\n  #{int(i) + 1}  {row['symbol1']} / {row['symbol2']}")
+    for i, (_, row) in enumerate(results_df.iterrows()):
+        print(f"\n  #{i + 1}  {row['symbol1']} / {row['symbol2']}")
         print(f"       {row['name1']} / {row['name2']}")
         print(f"       Sector:       {row['sector']}")
         print(f"       Correlation:  {row['correlation']:.4f}")
