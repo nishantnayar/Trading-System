@@ -417,7 +417,7 @@ async def deploy_all_flows() -> None:
     await market_data_deployment.deploy(
         name="Daily Market Data Update",
         work_pool_name=PrefectConfig.get_work_pool_name(),
-        cron="15 22 * * 1-5",  # 22:15 UTC Mon–Fri (~after US market close; adjust in UI)
+        cron="15 22 * * 1-5",  # 22:15 UTC Mon-Fri (~after US market close; adjust in UI)
         parameters={
             "days_back": 7,  # Look back 7 days to ensure we get weekday data
             "interval": "1h",
@@ -491,7 +491,7 @@ async def deploy_indicator_flow() -> None:
     await indicators_deployment.deploy(
         name="Daily Technical Indicators Calculation",
         work_pool_name=PrefectConfig.get_work_pool_name(),
-        cron="30 22 * * 1-5",  # 22:30 UTC Mon–Fri (trading days only, 15 min after data ingestion)
+        cron="30 22 * * 1-5",  # 22:30 UTC Mon-Fri (trading days only, 15 min after data ingestion)
         parameters={
             "days_back": 300,  # Need enough history from DB to calculate indicators (SMA_200 needs 200 days)
         },
@@ -539,7 +539,7 @@ async def deploy_all_flows_with_indicators() -> None:
     """
     await deploy_all_flows()
     await deploy_backup_flow()
-    logger.info("✅ All flows (including backup) deployed successfully!")
+    logger.info("All flows (including backup) deployed successfully [OK]")
 
 
 if __name__ == "__main__":

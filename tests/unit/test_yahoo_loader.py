@@ -447,7 +447,7 @@ class TestYahooDataLoader:
         def mock_get_financial_statements(symbol, stmt_type, period_type):
             """Mock function that returns appropriate data based on parameters"""
             # Only return data for income statements to avoid duplicates
-            # The method calls this 6 times (3 statement types × 2 period types)
+            # The method calls this 6 times (3 statement types x 2 period types)
             if stmt_type == "income":
                 return mock_financial_statements
             else:
@@ -483,7 +483,7 @@ class TestYahooDataLoader:
             result = await loader.load_financial_statements("AAPL")
 
             # The method calls get_financial_statements for income statements twice (annual and quarterly)
-            # So we expect the mock data to be duplicated (2 statements × 2 calls = 4 total)
+            # So we expect the mock data to be duplicated (2 statements x 2 calls = 4 total)
             expected_count = (
                 len(mock_financial_statements) * 2
             )  # Annual + Quarterly calls
@@ -836,7 +836,7 @@ class TestYahooDataLoader:
             assert result["total_symbols"] == 2
             assert result["successful"] == 2
             assert result["failed"] == 0
-            assert result["total_records"] == 40  # 2 symbols × (10 + 10) unadjusted + adjusted
+            assert result["total_records"] == 40  # 2 symbols x (10 + 10) unadjusted + adjusted
             assert mock_market_data.call_count == 4  # 2 calls per symbol
 
     @pytest.mark.asyncio
@@ -868,7 +868,7 @@ class TestYahooDataLoader:
             assert result["total_symbols"] == 1
             assert result["successful"] == 1
             assert result["failed"] == 0
-            assert result["total_records"] == 30  # 1 symbol × (15 + 15) unadjusted + adjusted
+            assert result["total_records"] == 30  # 1 symbol x (15 + 15) unadjusted + adjusted
             assert mock_market_data.call_count == 2
             assert mock_key_stats.call_count == 1
             assert mock_holders.call_count == 1

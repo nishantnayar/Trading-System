@@ -199,7 +199,7 @@ class MetricsCalculator:
 def _sharpe_ratio(equity_curve: List[dict]) -> float:
     """
     Annualized Sharpe ratio from equity curve (risk-free = 0).
-    Uses hourly bar returns, annualized assuming ~6.5 trading hours/day × 252 days.
+    Uses hourly bar returns, annualized assuming ~6.5 trading hours/day x 252 days.
     """
     if len(equity_curve) < 2:
         return 0.0
@@ -210,7 +210,7 @@ def _sharpe_ratio(equity_curve: List[dict]) -> float:
     if len(returns) == 0 or np.std(returns) == 0:
         return 0.0
 
-    # Annualize: sqrt(trading hours per year) = sqrt(252 * 6.5) ≈ sqrt(1638)
+    # Annualize: sqrt(trading hours per year) = sqrt(252 * 6.5) ~ sqrt(1638)
     ann_factor = np.sqrt(252 * 6.5)
     return float(np.mean(returns) / np.std(returns) * ann_factor)
 

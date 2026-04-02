@@ -6,7 +6,7 @@ Computes log spread and rolling z-score for a pair of price series.
 Spread formula:  spread = log(P1) - hedge_ratio * log(P2)
 Z-score:         z = (spread - rolling_mean) / rolling_std
 
-The z-score window is typically 2× the half-life of mean reversion (in hours).
+The z-score window is typically 2x the half-life of mean reversion (in hours).
 """
 
 from datetime import datetime
@@ -25,15 +25,15 @@ class SpreadCalculator:
         calc = SpreadCalculator(hedge_ratio=0.85, z_score_window=40)
         spread_series, z_series, current_z = calc.calculate(prices1, prices2)
 
-    Usage (backtest — in-memory, no DB writes):
+    Usage (backtest - in-memory, no DB writes):
         result = calc.calculate(prices1, prices2)
     """
 
     def __init__(self, hedge_ratio: float, z_score_window: int):
         """
         Args:
-            hedge_ratio:    OLS beta — log(P1) - hedge_ratio * log(P2)
-            z_score_window: Rolling window size in bars (typically 2× half-life)
+            hedge_ratio:    OLS beta - log(P1) - hedge_ratio * log(P2)
+            z_score_window: Rolling window size in bars (typically 2x half-life)
         """
         self.hedge_ratio = hedge_ratio
         self.z_score_window = z_score_window

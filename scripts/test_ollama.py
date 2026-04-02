@@ -9,23 +9,15 @@ from typing import Optional
 
 import requests
 
-# Fix Windows encoding issues
-if sys.platform == 'win32':
-    os.system('chcp 65001 >nul 2>&1')  # Set UTF-8 encoding
-    # Use ASCII fallbacks for emojis
-    CHECK = "[OK]"
-    CROSS = "[X]"
-    WARN = "[!]"
-    INFO = "[i]"
-    TEST = "[TEST]"
-    PACKAGE = "[PKG]"
-else:
-    CHECK = "✅"
-    CROSS = "❌"
-    WARN = "⚠️"
-    INFO = "📦"
-    TEST = "🧪"
-    PACKAGE = "📦"
+# ASCII markers (project encoding rules)
+CHECK = "[OK]"
+CROSS = "[X]"
+WARN = "[!]"
+INFO = "[i]"
+TEST = "[TEST]"
+PACKAGE = "[PKG]"
+if sys.platform == "win32":
+    os.system("chcp 65001 >nul 2>&1")  # Set UTF-8 for console if needed
 
 
 def test_ollama_connection() -> bool:

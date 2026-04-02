@@ -57,7 +57,7 @@ class TestEmailNotifier:
     """Unit tests for EmailNotifier SMTP dispatch and configuration behaviour."""
 
     # ------------------------------------------------------------------
-    # Configured notifier — each send method should trigger SMTP once
+    # Configured notifier - each send method should trigger SMTP once
     # ------------------------------------------------------------------
 
     @pytest.mark.asyncio
@@ -142,12 +142,12 @@ class TestEmailNotifier:
         mock_server.sendmail.assert_called_once()
 
     # ------------------------------------------------------------------
-    # Unconfigured notifier — must be silent
+    # Unconfigured notifier - must be silent
     # ------------------------------------------------------------------
 
     @pytest.mark.asyncio
     async def test_unconfigured_notifier_no_ops(self):
-        """Missing SMTP settings → no SMTP call, no exception raised."""
+        """Missing SMTP settings -> no SMTP call, no exception raised."""
         notifier = _unconfigured_notifier()
         with patch("smtplib.SMTP") as mock_smtp_cls:
             await notifier.send_trade_opened(
@@ -165,7 +165,7 @@ class TestEmailNotifier:
 
     @pytest.mark.asyncio
     async def test_smtp_failure_logs_and_doesnt_raise(self):
-        """SMTP exception is swallowed — caller must not see it."""
+        """SMTP exception is swallowed - caller must not see it."""
         notifier = _configured_notifier()
         with patch("smtplib.SMTP") as mock_smtp_cls:
             mock_smtp_cls.side_effect = ConnectionRefusedError("cannot connect")

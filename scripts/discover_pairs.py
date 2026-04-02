@@ -287,20 +287,19 @@ def discover_pairs(
             if half_life < min_half_life_hours or half_life > max_half_life_hours:
                 continue
 
-            # Step 4: Z-score window = 2× half-life
-            z_window = max(10, int(2 * half_life))
+            # Step 4: Z-score window = 2x half-life, capped at 60 bars to avoid
+            # over-smoothing long half-life pairs (which compresses z-scores)
+            z_window = min(max(10, int(2 * half_life)), 60)
             spread_stats = compute_spread_stats(
                 s1_aligned, s2_aligned, hedge_ratio, z_window
             )
 
-            # Step 5: Liquidity score (avg volume proxy — use bar count as proxy if no volume)
-            avg_vol_s1 = price_df[sym1].count() / overlap_days
-            avg_vol_s2 = price_df[sym2].count() / overlap_days
-            liquidity_score = min(avg_vol_s1, avg_vol_s2)
-
-            # Step 6: Composite rank score = cointegration strength × liquidity
+            # Step 5: Composite rank score = cointegration strength x correlation x z volatility
+            # z_score_abs_mean measures how far the spread actually moves - pairs with low
+            # values are cointegrated but never cross entry thresholds, so they never trade.
             coint_strength = 1 - p_value  # higher is better
-            rank_score = coint_strength * min(liquidity_score, 1.0) * abs(corr)
+            z_abs_mean = spread_stats["z_score_abs_mean"]
+            rank_score = coint_strength * abs(corr) * z_abs_mean
 
             results.append(
                 {
@@ -314,6 +313,7 @@ def discover_pairs(
                     "z_score_window": z_window,
                     "current_z_score": round(spread_stats["current_z_score"], 3),
                     "overlap_days": round(overlap_days, 0),
+                    "z_score_abs_mean": round(z_abs_mean, 4),
                     "rank_score": round(rank_score, 4),
                     "name1": symbols_meta.get(sym1, {}).get("name", ""),
                     "name2": symbols_meta.get(sym2, {}).get("name", ""),
@@ -458,10 +458,10 @@ async def run_discovery(
     end_date = date.today()
     start_date = end_date - timedelta(days=days_back)
 
-    logger.info(f"Pair Discovery — {start_date} to {end_date} ({days_back} days)")
+    logger.info(f"Pair Discovery - {start_date} to {end_date} ({days_back} days)")
     logger.info(
         f"Filters: correlation >= {min_correlation}, p-value <= {max_pvalue}, "
-        f"half-life {min_half_life}–{max_half_life}h"
+        f"half-life {min_half_life}-{max_half_life}h"
     )
 
     # Load symbols
@@ -531,7 +531,7 @@ async def run_discovery(
     # Print results table
     print("\n" + "=" * 90)
     print(
-        f"  TOP {len(results_df)} PAIRS — Ranked by cointegration strength × correlation"
+        f"  TOP {len(results_df)} PAIRS - Ranked by cointegration strength x correlation"
     )
     print("=" * 90)
 
@@ -544,6 +544,7 @@ async def run_discovery(
         "hedge_ratio",
         "half_life_hours",
         "z_score_window",
+        "z_score_abs_mean",
         "current_z_score",
         "overlap_days",
         "rank_score",
@@ -564,19 +565,26 @@ async def run_discovery(
         print(f"       Sector:       {row['sector']}")
         print(f"       Correlation:  {row['correlation']:.4f}")
         print(
-            f"       Coint p-val:  {row['coint_pvalue']:.4f}  {'✓ STRONG' if row['coint_pvalue'] < 0.01 else '✓ OK'}"
+            f"       Coint p-val:  {row['coint_pvalue']:.4f}  "
+            f"{'[STRONG]' if row['coint_pvalue'] < 0.01 else '[OK]'}"
         )
         print(
-            f"       Hedge ratio:  {row['hedge_ratio']:.4f}  (spread = log({row['symbol1']}) - {row['hedge_ratio']:.4f} × log({row['symbol2']}))"
+            f"       Hedge ratio:  {row['hedge_ratio']:.4f}  "
+            f"(spread = log({row['symbol1']}) - {row['hedge_ratio']:.4f} x log({row['symbol2']}))"
         )
         print(
             f"       Half-life:    {row['half_life_hours']:.1f} hours  (~{row['half_life_hours']/7:.1f} trading days)"
         )
-        print(f"       Z-window:     {row['z_score_window']} bars  (2 × half-life)")
+        print(
+            f"       Z-window:     {row['z_score_window']} bars  (2 x half-life, max 60)"
+        )
+        print(
+            f"       Z abs mean:   {row['z_score_abs_mean']:.4f}  (tradeability signal)"
+        )
         print(f"       Current Z:    {row['current_z_score']:.3f}")
         print(f"       Data overlap: {int(row['overlap_days'])} days")
 
-    # ---- Upsert into pair_registry (is_active=False — activate from UI after backtest) ----
+    # ---- Upsert into pair_registry (is_active=False - activate from UI after backtest) ----
     upserted = []
     now = datetime.now(tz=timezone.utc)
     with db_transaction() as session:
@@ -593,6 +601,7 @@ async def run_discovery(
                     correlation=float(row["correlation"]),
                     coint_pvalue=float(row["coint_pvalue"]),
                     z_score_window=int(row["z_score_window"]),
+                    z_score_abs_mean=float(row["z_score_abs_mean"]),
                     rank_score=float(row["rank_score"]),
                     is_active=False,
                     last_validated=now,
@@ -605,6 +614,7 @@ async def run_discovery(
                         "correlation": float(row["correlation"]),
                         "coint_pvalue": float(row["coint_pvalue"]),
                         "z_score_window": int(row["z_score_window"]),
+                        "z_score_abs_mean": float(row["z_score_abs_mean"]),
                         "rank_score": float(row["rank_score"]),
                         "last_validated": now,
                         "updated_at": now,
@@ -625,7 +635,7 @@ async def run_discovery(
     print()
     print("  NEXT STEP:")
     print("    1. Open the Backtest Review page in Streamlit")
-    print("    2. Run a backtest for each pair — look for Sharpe > 0.5, drawdown < 15%")
+    print("    2. Run a backtest for each pair - look for Sharpe > 0.5, drawdown < 15%")
     print("    3. Use the 'Activate' toggle on passing pairs to enable live trading")
     print("=" * 90 + "\n")
 

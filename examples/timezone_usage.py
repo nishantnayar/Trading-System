@@ -85,7 +85,7 @@ def example_trading_operations():
 
     # Check if market is open
     if is_market_hours(utc_now):
-        print("✅ Market is open - can execute trades")
+        print("[OK] Market is open - can execute trades")
 
         # Simulate trade execution
         trade_data = {
@@ -98,7 +98,7 @@ def example_trading_operations():
 
         print(f"Trade executed at: {format_trading_time(trade_data['executed_at'])}")
     else:
-        print("❌ Market is closed - no trading")
+        print("[FAIL] Market is closed - no trading")
 
     print()
 
@@ -249,36 +249,36 @@ def example_error_handling():
         utc_time = now_utc()
         central_time = to_central(utc_time)
         print(
-            f"✅ Conversion successful: {central_time.strftime('%Y-%m-%d %H:%M:%S %Z')}"
+            f"[OK] Conversion successful: {central_time.strftime('%Y-%m-%d %H:%M:%S %Z')}"
         )
 
     except Exception as e:
-        print(f"❌ Conversion failed: {e}")
+        print(f"[FAIL] Conversion failed: {e}")
 
     try:
         # This might fail with invalid timezone
         invalid_timezone = None
         result = to_utc(datetime.now(), invalid_timezone)
-        print(f"✅ Fallback successful: {result}")
+        print(f"[OK] Fallback successful: {result}")
 
     except Exception as e:
-        print(f"❌ Conversion failed: {e}")
+        print(f"[FAIL] Conversion failed: {e}")
 
     # Test vendor data with invalid timestamp
     try:
         invalid_timestamp = "invalid-timestamp-format"
         normalized = normalize_vendor_timestamp(invalid_timestamp)
-        print(f"✅ Normalization successful: {normalized}")
+        print(f"[OK] Normalization successful: {normalized}")
 
     except Exception as e:
-        print(f"❌ Normalization failed: {e}")
+        print(f"[FAIL] Normalization failed: {e}")
 
     print()
 
 
 def main():
     """Run all examples"""
-    print("🕐 Trading System Timezone Usage Examples")
+    print("Trading System Timezone Usage Examples")
     print("=" * 50)
     print()
 
@@ -290,7 +290,7 @@ def main():
     example_api_responses()
     example_error_handling()
 
-    print("✅ All examples completed successfully!")
+    print("[OK] All examples completed successfully!")
     print("\nKey Takeaways:")
     print("1. Always store timestamps in UTC in the database")
     print("2. Convert to user timezone (Central) for UI display")

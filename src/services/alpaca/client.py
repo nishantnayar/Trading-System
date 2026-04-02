@@ -256,7 +256,7 @@ class AlpacaClient:
         Fetch the last `limit` hourly bars for a symbol.
 
         Returns a pd.Series of close prices indexed by UTC timestamp.
-        Uses Alpaca's market data API — includes today's intraday bars,
+        Uses Alpaca's market data API - includes today's intraday bars,
         unlike the DB which is end-of-day only.
         """
         try:

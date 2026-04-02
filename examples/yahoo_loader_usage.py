@@ -26,7 +26,7 @@ async def example_1_basic_usage() -> None:
         symbol="AAPL", start_date=start_date, end_date=end_date, interval="1d"
     )
 
-    print(f"✅ Loaded {count} records for AAPL")
+    print(f"[OK] Loaded {count} records for AAPL")
 
 
 async def example_2_multiple_symbols() -> None:
@@ -48,10 +48,10 @@ async def example_2_multiple_symbols() -> None:
                 start_date=start_date,
                 end_date=end_date,
             )
-            print(f"✅ {symbol}: {count} records")
+            print(f"[OK] {symbol}: {count} records")
             await asyncio.sleep(0.5)  # Be polite to Yahoo
         except Exception as e:
-            print(f"❌ {symbol}: {e}")
+            print(f"[FAIL] {symbol}: {e}")
 
 
 async def example_3_all_symbols() -> None:
@@ -71,7 +71,7 @@ async def example_3_all_symbols() -> None:
         max_symbols=5,  # Limit for demo
     )
 
-    print(f"\n📊 Loading Statistics:")
+    print(f"\nLoading Statistics:")
     print(f"   Total symbols processed: {stats['total_symbols']}")
     print(f"   Successful: {stats['successful']}")
     print(f"   Failed: {stats['failed']}")
@@ -96,7 +96,7 @@ async def example_4_intraday_data() -> None:
         interval="1h",  # Hourly data
     )
 
-    print(f"✅ Loaded {count} hourly records for AAPL")
+    print(f"[OK] Loaded {count} hourly records for AAPL")
 
 
 async def example_5_health_check() -> None:
@@ -110,9 +110,9 @@ async def example_5_health_check() -> None:
     healthy = await loader.health_check()
 
     if healthy:
-        print("✅ Yahoo Finance API is accessible")
+        print("[OK] Yahoo Finance API is accessible")
     else:
-        print("❌ Yahoo Finance API is not accessible")
+        print("[FAIL] Yahoo Finance API is not accessible")
 
 
 async def example_6_comprehensive_load() -> None:
@@ -135,7 +135,7 @@ async def example_6_comprehensive_load() -> None:
         include_splits=True,  # Not yet implemented
     )
 
-    print(f"\n📊 Loading Results:")
+    print(f"\nLoading Results:")
     print(f"   Market data records: {results['market_data']}")
     print(f"   Company info: {results['company_info']}")
     print(f"   Dividends: {results['dividends']}")

@@ -83,15 +83,15 @@ Rules:
    "Industrials", "Basic Materials", "Real Estate",
    "Communication Services", "Utilities"
 2. For "highest RSI" / "top RSI" / "most overbought"
-   → sort_by = "rsi_desc", leave rsi_min/rsi_max null
+   -> sort_by = "rsi_desc", leave rsi_min/rsi_max null
 3. For "lowest RSI" / "most oversold"
-   → sort_by = "rsi_asc", leave rsi_min/rsi_max null
+   -> sort_by = "rsi_asc", leave rsi_min/rsi_max null
 4. For "best performers" / "highest gain"
-   → sort_by = "price_change_desc"
+   -> sort_by = "price_change_desc"
 5. For "worst performers" / "biggest losers"
-   → sort_by = "price_change_asc"
+   -> sort_by = "price_change_asc"
 6. For "largest companies" / "biggest market cap"
-   → sort_by = "market_cap_desc"
+   -> sort_by = "market_cap_desc"
 7. Do NOT put sector names or sorting terms in keywords
 8. keywords is ONLY for company name or ticker symbol searches
 
@@ -149,7 +149,7 @@ Query: "best performing healthcare stocks this month"
                 if not criteria["keywords"]:
                     del criteria["keywords"]
 
-            logger.info(f"Parsed query '{query}' → criteria: {criteria}")
+            logger.info(f"Parsed query '{query}' -> criteria: {criteria}")
             return criteria
 
         except Exception as e:
@@ -169,8 +169,8 @@ Query: "best performing healthcare stocks this month"
         """
         q = query.lower()
 
-        # Patterns: "rsi < 30", "rsi below 30", "rsi under 30"  → rsi_max
-        #           "rsi > 70", "rsi above 70", "rsi over 70"   → rsi_min
+        # Patterns: "rsi < 30", "rsi below 30", "rsi under 30"  -> rsi_max
+        #           "rsi > 70", "rsi above 70", "rsi over 70"   -> rsi_min
         rsi_upper = re.search(
             r'\brsi\b\s*(?:<|<=|below|under|less\s+than)\s*(\d+(?:\.\d+)?)', q
         )
@@ -187,7 +187,7 @@ Query: "best performing healthcare stocks this month"
             criteria.pop("rsi_max", None)
             criteria["rsi_min"] = val
 
-        # price < X → max_price; price > X → min_price
+        # price < X -> max_price; price > X -> min_price
         price_upper = re.search(
             r'\bprice\b\s*(?:<|<=|below|under|less\s+than)\s*(\d+(?:\.\d+)?)', q
         )
@@ -286,7 +286,7 @@ Query: "best performing healthcare stocks this month"
                 s.get("sector", ""), price_label,
                 rsi_label, chg_label, macd_dir, bb_label,
             ]
-            stock_lines.append("  • " + " | ".join(p for p in raw if p))
+            stock_lines.append("  - " + " | ".join(p for p in raw if p))
 
         stock_block = "\n".join(stock_lines)
 
@@ -304,7 +304,7 @@ Provide a focused analysis (3-4 sentences) that:
 1. References specific stocks by ticker/name from the data above
 2. Highlights notable RSI levels, MACD signals, or price trends
 3. Identifies the most interesting opportunity or risk in the set
-4. Is concise and professional — no generic filler
+4. Is concise and professional - no generic filler
 
 Do not repeat the data back. Provide genuine interpretation.
 """

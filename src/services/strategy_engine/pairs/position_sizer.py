@@ -1,11 +1,11 @@
 """
-Position Sizer — Kelly Criterion
+Position Sizer - Kelly Criterion
 
 Determines the number of shares to trade for each leg of a pair.
 
 Two-phase approach:
     Bootstrap (< 20 closed trades): Fixed 2% of portfolio per leg
-    Full Kelly  (≥ 20 closed trades): Half-Kelly based on historical win rate
+    Full Kelly  (>= 20 closed trades): Half-Kelly based on historical win rate
 
 Half-Kelly formula:
     win_rate  = winning_trades / total_trades
@@ -71,7 +71,7 @@ class KellySizer:
             price2:           Current price of symbol2
 
         Returns:
-            (qty1, qty2) — integer share counts, each >= 1
+            (qty1, qty2) - integer share counts, each >= 1
         """
         fraction = self._compute_fraction()
         per_leg_capital = fraction * portfolio_equity / 2
@@ -106,7 +106,7 @@ class KellySizer:
 
         if total < BOOTSTRAP_TRADES:
             logger.debug(
-                f"Bootstrap mode: {total}/{BOOTSTRAP_TRADES} trades — "
+                f"Bootstrap mode: {total}/{BOOTSTRAP_TRADES} trades - "
                 f"using fixed {BOOTSTRAP_FRACTION*100:.0f}%"
             )
             return BOOTSTRAP_FRACTION
@@ -115,7 +115,7 @@ class KellySizer:
         losses = [t for t in trades if (t.pnl_pct or 0) <= 0]
 
         if not wins or not losses:
-            logger.debug("No wins or losses yet — using bootstrap fraction")
+            logger.debug("No wins or losses yet - using bootstrap fraction")
             return BOOTSTRAP_FRACTION
 
         win_rate = len(wins) / total
@@ -137,11 +137,11 @@ class KellySizer:
             if half_kelly > cap:
                 logger.debug(
                     f"Per-pair allocation cap applied: "
-                    f"half_kelly={half_kelly:.4f} → {cap:.4f}"
+                    f"half_kelly={half_kelly:.4f} -> {cap:.4f}"
                 )
                 half_kelly = cap
 
-        # Clamp: minimum 1%, maximum (2 × MAX_LEG_FRACTION) across both legs combined
+        # Clamp: minimum 1%, maximum (2 x MAX_LEG_FRACTION) across both legs combined
         half_kelly = max(0.01, min(MAX_LEG_FRACTION * 2, half_kelly))
 
         logger.debug(

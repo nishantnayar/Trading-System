@@ -7,10 +7,10 @@ Each call to PairsStrategy.run_cycle() performs one full evaluation loop:
     1. Load active pairs from PairRegistry
     2. For each pair:
         a. Fetch latest N hourly bars from data_ingestion.market_data
-        b. SpreadCalculator.calculate() → spread, z_score
+        b. SpreadCalculator.calculate() -> spread, z_score
         c. Store spread/z-score to PairSpread table
-        d. SignalGenerator.generate() → signal or None
-        e. If entry signal: KellySizer.calculate_size() → qty1, qty2
+        d. SignalGenerator.generate() -> signal or None
+        e. If entry signal: KellySizer.calculate_size() -> qty1, qty2
         f. PairExecutor.open_pair_trade() or close_pair_trade() / emergency_stop()
     3. Update PairPerformance table
 
@@ -50,7 +50,7 @@ class PairsStrategy:
     """
 
     # How many hourly bars to fetch for spread calculation
-    # Needs to be at least z_score_window; we use 3× for buffer
+    # Needs to be at least z_score_window; we use 3x for buffer
     PRICE_LOOKBACK_BARS = 500
 
     def __init__(self, alpaca: AlpacaClient):
@@ -93,7 +93,7 @@ class PairsStrategy:
         open_trades = self._load_all_open_trades(pairs)
         active_open_pairs = [p for p in pairs if open_trades.get(p.id)]
 
-        # Portfolio risk controls — run once per cycle
+        # Portfolio risk controls - run once per cycle
         risk_mgr = PortfolioRiskManager()
         unrealized_pnl = PortfolioRiskManager.compute_unrealized_pnl(
             list(open_trades.values()), prices_cache
@@ -103,7 +103,7 @@ class PairsStrategy:
 
         if circuit_breaker_active:
             logger.warning(
-                "Circuit breaker ACTIVE — new entries blocked this cycle"
+                "Circuit breaker ACTIVE - new entries blocked this cycle"
             )
 
         results = []
@@ -150,7 +150,7 @@ class PairsStrategy:
         prices1 = prices_cache.get(sym1, pd.Series(dtype=float))
         prices2 = prices_cache.get(sym2, pd.Series(dtype=float))
         if prices1.empty or prices2.empty:
-            logger.warning(f"No price data for {sym1}/{sym2} — skipping")
+            logger.warning(f"No price data for {sym1}/{sym2} - skipping")
             return {"pair": f"{sym1}/{sym2}", "status": "NO_DATA"}
 
         # 2. Calculate spread + z-score
@@ -192,7 +192,7 @@ class PairsStrategy:
             if p1 is None or p2 is None:
                 return {"pair": pair_label, "status": "NO_PRICE"}
 
-            # Control B — circuit breaker
+            # Control B - circuit breaker
             if circuit_breaker_active:
                 logger.warning(
                     f"Entry blocked by circuit breaker: {pair_label}"
@@ -204,7 +204,7 @@ class PairsStrategy:
                     "signal": signal.signal_type,
                 }
 
-            # Control A — correlation guard
+            # Control A - correlation guard
             # Exclude this pair from the active_open_pairs list so it
             # doesn't block itself (it has no open trade yet at this point).
             other_open = [p for p in active_open_pairs if p.id != pair.id]
@@ -213,7 +213,7 @@ class PairsStrategy:
             )
             if not allowed:
                 logger.warning(
-                    f"Entry blocked by correlation guard: {pair_label} — {reason}"
+                    f"Entry blocked by correlation guard: {pair_label} - {reason}"
                 )
                 return {
                     "pair": pair_label,
@@ -324,7 +324,7 @@ class PairsStrategy:
         Fetch the last PRICE_LOOKBACK_BARS hourly closes from Alpaca.
 
         Using Alpaca instead of the DB because the DB is populated end-of-day
-        by the Yahoo flow — it has no data for today during market hours.
+        by the Yahoo flow - it has no data for today during market hours.
         Alpaca returns live intraday bars including the current incomplete bar.
         """
         sym1, sym2 = pair.symbol1, pair.symbol2

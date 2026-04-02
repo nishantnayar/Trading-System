@@ -17,10 +17,7 @@ from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.shared.logging import setup_logging, shutdown_logging
-from src.shared.logging.correlation import (
-    correlation_context,
-    generate_correlation_id,
-)
+from src.shared.logging.correlation import correlation_context, generate_correlation_id
 from src.web.api.alpaca_routes import router as alpaca_router
 from src.web.api.company_info import router as company_info_router
 from src.web.api.company_officers import router as company_officers_router

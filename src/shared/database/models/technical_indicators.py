@@ -8,15 +8,7 @@ Stores calculated/derived metrics from market data (Yahoo Finance only).
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import (
-    TIMESTAMP,
-    BigInteger,
-    Date,
-    ForeignKey,
-    Index,
-    Numeric,
-    String,
-)
+from sqlalchemy import TIMESTAMP, BigInteger, Date, ForeignKey, Index, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.shared.database.base import Base

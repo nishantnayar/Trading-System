@@ -10,7 +10,7 @@ Responsibilities:
     - Create PairTrade records on open; update on close
     - Store Alpaca order IDs in PairTrade for reconciliation
 
-Signal → Order mapping:
+Signal -> Order mapping:
     LONG_SPREAD:  buy symbol1 (qty1),  sell short symbol2 (qty2)
     SHORT_SPREAD: sell short symbol1 (qty1), buy symbol2 (qty2)
 """

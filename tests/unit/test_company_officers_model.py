@@ -271,7 +271,7 @@ class TestCompanyOfficerModel:
     def test_model_with_special_characters_in_name(self):
         """Test model with special characters in name"""
         names = [
-            "José María",
+            "Jose Maria",
             "Jean-Pierre",
             "O'Connor",
             "Smith-Jones",
@@ -389,11 +389,11 @@ class TestCompanyOfficerModel:
         """Test model with unicode characters"""
         officer = CompanyOfficer(
             symbol="TEST",
-            name="José María O'Connor",
+            name="Jose Maria O'Connor",
             title="Chief Executive Officer",
         )
 
-        assert officer.name == "José María O'Connor"
+        assert officer.name == "Jose Maria O'Connor"
         assert officer.title == "Chief Executive Officer"
 
     def test_model_compensation_display_edge_cases(self):

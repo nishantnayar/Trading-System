@@ -11,11 +11,7 @@ import pandas as pd
 import yfinance as yf
 from loguru import logger
 
-from .exceptions import (
-    YahooAPIError,
-    YahooDataError,
-    YahooSymbolNotFoundError,
-)
+from .exceptions import YahooAPIError, YahooDataError, YahooSymbolNotFoundError
 from .models import (
     AnalystRecommendation,
     CompanyInfo,

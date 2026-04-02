@@ -139,14 +139,10 @@ class InstitutionalHolder(Base):
             return "N/A"
         change_val = float(self.percent_change) * 100  # Convert to percentage
         if change_val > 0:
-            arrow = "↑"
-            return f"{arrow} {abs(change_val):.2f}%"
-        elif change_val < 0:
-            arrow = "↓"
-            return f"{arrow} {abs(change_val):.2f}%"
-        else:
-            arrow = "→"
-            return f"{arrow} {abs(change_val):.2f}%"
+            return f"+ {abs(change_val):.2f}%"
+        if change_val < 0:
+            return f"- {abs(change_val):.2f}%"
+        return f"= {abs(change_val):.2f}%"
 
     def to_dict(self) -> dict:
         """Convert to dictionary for API responses"""

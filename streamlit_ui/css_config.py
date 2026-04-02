@@ -1,13 +1,13 @@
 """
 CSS Configuration for Trading System Streamlit UI
 Design system consistent with nishantnayar.vercel.app
-  — Playfair Display: page titles & section headings
-  — DM Sans: body, labels, UI text
-  — DM Mono: ALL financial numbers (prices, P&L, volumes, %)
-  — Paper-white background, ink text, flat cards with subtle borders
+  - Playfair Display: page titles & section headings
+  - DM Sans: body, labels, UI text
+  - DM Mono: ALL financial numbers (prices, P&L, volumes, %)
+  - Paper-white background, ink text, flat cards with subtle borders
 """
 
-# Color palette — matches portfolio site with trader-specific additions
+# Color palette - matches portfolio site with trader-specific additions
 COLORS = {
     # Base palette (portfolio site)
     "ink": "#1a1a1a",                   # Primary text
@@ -16,18 +16,18 @@ COLORS = {
     "paper": "#FAFAF8",                 # Page background (warm white)
     "paper_warm": "#F5F4F0",            # Card hover / secondary bg
     "border": "rgba(26,26,26,0.08)",    # Subtle ink border (10% opacity)
-    "accent": "#1a1a1a",                # Accent — same as ink
+    "accent": "#1a1a1a",                # Accent - same as ink
 
-    # Trader-specific (deviation from portfolio site — required for trading)
-    "profit": "#2A7A4B",                # Positive P&L — green
-    "loss": "#C0392B",                  # Negative P&L — red
+    # Trader-specific (deviation from portfolio site - required for trading)
+    "profit": "#2A7A4B",                # Positive P&L - green
+    "loss": "#C0392B",                  # Negative P&L - red
     "market_open": "#2A7A4B",           # Market open status
     "market_closed": "#C0392B",         # Market closed status
-    "market_prepost": "#D97706",        # Pre/after-hours — amber
+    "market_prepost": "#D97706",        # Pre/after-hours - amber
     "neutral": "#6b6b6b",               # Flat / no change
 }
 
-# Typography — direct match to portfolio site
+# Typography - direct match to portfolio site
 FONTS = {
     "display": "'Playfair Display', Georgia, 'Times New Roman', serif",
     "body": "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
@@ -44,7 +44,7 @@ SPACING = {
     "xxlarge": "3rem",
 }
 
-# Border radius — portfolio site uses rounded-sm (4px)
+# Border radius - portfolio site uses rounded-sm (4px)
 BORDER_RADIUS = {
     "small": "2px",
     "medium": "4px",
@@ -52,7 +52,7 @@ BORDER_RADIUS = {
     "xlarge": "8px",
 }
 
-# Flat design — minimal shadows (portfolio site uses none; we allow one subtle level)
+# Flat design - minimal shadows (portfolio site uses none; we allow one subtle level)
 SHADOWS = {
     "none": "none",
     "subtle": "0 1px 3px rgba(26,26,26,0.06)",
@@ -95,7 +95,7 @@ def generate_css_variables() -> str:
 def get_theme_css() -> str:
     """Return theme-level CSS rules using the design variables."""
     return """
-    /* ── Typography ─────────────────────────────────────────── */
+    /* -- Typography ------------------------------------------- */
     .main h1, .main h2 {
         font-family: var(--font-display) !important;
         font-weight: 500;
@@ -127,7 +127,7 @@ def get_theme_css() -> str:
         margin-bottom: 0.4rem;
     }
 
-    /* ── Metric values use DM Mono ───────────────────────────── */
+    /* -- Metric values use DM Mono ----------------------------- */
     [data-testid="stMetricValue"],
     [data-testid="stMetricDelta"] {
         font-family: var(--font-mono) !important;
@@ -137,7 +137,7 @@ def get_theme_css() -> str:
         color: var(--color-ink) !important;
     }
 
-    /* ── Cards ───────────────────────────────────────────────── */
+    /* -- Cards ------------------------------------------------- */
     .card {
         background: #ffffff;
         border: 1px solid var(--color-border);
@@ -150,7 +150,7 @@ def get_theme_css() -> str:
         background: var(--color-paper_warm);
     }
 
-    /* ── Market status banner ────────────────────────────────── */
+    /* -- Market status banner ---------------------------------- */
     .market-banner {
         border-radius: var(--radius-medium);
         padding: 0.6rem 1.2rem;
@@ -182,12 +182,12 @@ def get_theme_css() -> str:
         color: var(--color-market_prepost);
     }
 
-    /* ── P&L color helpers ───────────────────────────────────── */
+    /* -- P&L color helpers ------------------------------------- */
     .pnl-positive { color: var(--color-profit) !important; font-family: var(--font-mono); }
     .pnl-negative { color: var(--color-loss) !important;   font-family: var(--font-mono); }
     .pnl-neutral  { color: var(--color-neutral) !important; font-family: var(--font-mono); }
 
-    /* ── Dataframe / table numbers ───────────────────────────── */
+    /* -- Dataframe / table numbers ----------------------------- */
     .dataframe td, .dataframe th {
         font-family: var(--font-mono) !important;
         font-size: 0.82rem;
@@ -202,7 +202,7 @@ def get_theme_css() -> str:
         background: var(--color-paper_warm) !important;
     }
 
-    /* ── Metric container ────────────────────────────────────── */
+    /* -- Metric container -------------------------------------- */
     .metric-container {
         background: #ffffff;
         border: 1px solid var(--color-border);

@@ -543,7 +543,7 @@ def create_candlestick_chart_with_overlays(
                     x=df.index,
                     y=upper_series,
                     mode="lines",
-                    name=f"BB Upper ({bb_period}, {bb_std}σ)",
+                    name=f"BB Upper ({bb_period}, {bb_std}sigma)",
                     line=dict(color="rgba(33, 150, 243, 0.3)", width=1, dash="dot"),
                     hovertemplate=f"<b>BB Upper</b><br>Date: %{{x}}<br>Price: $%{{y:.2f}}<extra></extra>",
                     showlegend=True,
@@ -569,7 +569,7 @@ def create_candlestick_chart_with_overlays(
                     x=df.index,
                     y=lower_series,
                     mode="lines",
-                    name=f"BB Lower ({bb_period}, {bb_std}σ)",
+                    name=f"BB Lower ({bb_period}, {bb_std}sigma)",
                     line=dict(color="rgba(33, 150, 243, 0.3)", width=1, dash="dot"),
                     hovertemplate=f"<b>BB Lower</b><br>Date: %{{x}}<br>Price: $%{{y:.2f}}<extra></extra>",
                     showlegend=True,
@@ -1092,14 +1092,15 @@ def handle_api_error(error: Exception, context: str = "") -> None:
 
     if "ConnectionError" in error_msg:
         st.error(
-            "❌ Cannot connect to API server. Please ensure the API is running on port 8001."
+            "[Error] Cannot connect to API server. "
+            "Please ensure the API is running on port 8001."
         )
     elif "TimeoutError" in error_msg:
-        st.error("⏰ Request timed out. Please try again.")
+        st.error("[Error] Request timed out. Please try again.")
     elif "HTTPError" in error_msg:
-        st.error(f"🌐 API Error: {error_msg}")
+        st.error(f"[Error] API Error: {error_msg}")
     else:
-        st.error(f"❌ Unexpected error: {error_msg}")
+        st.error(f"[Error] Unexpected error: {error_msg}")
 
     if context:
         st.info(f"Context: {context}")
@@ -1122,7 +1123,7 @@ def show_success_message(message: str) -> None:
     Args:
         message: Success message
     """
-    st.success(f"✅ {message}")
+    st.success(message)
 
 
 def show_warning_message(message: str) -> None:
@@ -1132,7 +1133,7 @@ def show_warning_message(message: str) -> None:
     Args:
         message: Warning message
     """
-    st.warning(f"⚠️ {message}")
+    st.warning(message)
 
 
 def show_error_message(message: str) -> None:
@@ -1142,7 +1143,7 @@ def show_error_message(message: str) -> None:
     Args:
         message: Error message
     """
-    st.error(f"❌ {message}")
+    st.error(message)
 
 
 def show_info_message(message: str) -> None:
@@ -1152,7 +1153,7 @@ def show_info_message(message: str) -> None:
     Args:
         message: Info message
     """
-    st.info(f"ℹ️ {message}")
+    st.info(message)
 
 
 # ============================================================================
@@ -1964,7 +1965,7 @@ def _process_holder_data(holder: Dict[str, Any]) -> Dict[str, Any]:
         # Store sign for color coding: 1 (positive), -1 (negative), 0 (neutral)
         change_sign = 1 if change_pct > 0 else (-1 if change_pct < 0 else 0)
         # Direction text
-        direction = "Up" if change_pct > 0 else ("Down" if change_pct < 0 else "—")
+        direction = "Up" if change_pct > 0 else ("Down" if change_pct < 0 else "-")
     else:
         change_numeric = None
         change_sign = None
@@ -2123,7 +2124,7 @@ def display_institutional_holders_grid(
 
     Features:
     - Numeric, sortable % Change column (absolute value, no +/- signs, displays with %)
-    - Direction column (Up/Down/—) indicating change direction
+    - Direction column (Up/Down/-) indicating change direction
     - Color-coded cells: green (positive), red (negative), gray (neutral)
     - All columns sortable and resizable
     - Summary metrics displayed between header and table
@@ -2177,7 +2178,7 @@ def display_institutional_holders_grid(
 
     except ImportError:
         # Fallback if ag-grid is not available
-        st.warning("⚠️ ag-grid not available. Using standard dataframe display.")
+        st.warning("[WARN] ag-grid not available. Using standard dataframe display.")
         _display_fallback_dataframe(holders)
 
     except Exception as e:
@@ -2186,7 +2187,7 @@ def display_institutional_holders_grid(
         _display_fallback_dataframe(holders)
 
 
-# ── Market status banner ──────────────────────────────────────────────────────
+# -- Market status banner ------------------------------------------------------
 
 
 def _parse_market_dt(s: str) -> "datetime | None":
@@ -2215,7 +2216,7 @@ def render_market_banner(clock: dict) -> None:
 
     if is_open:
         css_class = "market-open-banner"
-        dot = "●"
+        dot = "*"
         status = "Market Open"
         if next_close:
             try:
@@ -2227,7 +2228,7 @@ def render_market_banner(clock: dict) -> None:
             detail = ""
     else:
         css_class = "market-closed-banner"
-        dot = "○"
+        dot = "o"
         status = "Market Closed"
         if next_open:
             try:

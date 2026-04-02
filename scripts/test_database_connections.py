@@ -32,11 +32,11 @@ def test_trading_database_connection():
                 text("SELECT 1 as test, current_database() as db_name")
             )
             row = result.fetchone()
-            logger.info(f"✓ Trading database connection successful")
+            logger.info("Trading database connection successful [OK]")
             logger.info(f"  Database: {row.db_name}")
             return True
     except Exception as e:
-        logger.error(f"✗ Trading database connection failed: {e}")
+        logger.error(f"Trading database connection failed [FAIL]: {e}")
         return False
 
 
@@ -51,11 +51,11 @@ def test_prefect_database_connection():
                 text("SELECT 1 as test, current_database() as db_name")
             )
             row = result.fetchone()
-            logger.info(f"✓ Prefect database connection successful")
+            logger.info("Prefect database connection successful [OK]")
             logger.info(f"  Database: {row.db_name}")
             return True
     except Exception as e:
-        logger.error(f"✗ Prefect database connection failed: {e}")
+        logger.error(f"Prefect database connection failed [FAIL]: {e}")
         return False
 
 
@@ -83,9 +83,9 @@ def test_schema_access():
             with engine.connect() as conn:
                 result = conn.execute(text("SELECT current_schema() as schema_name"))
                 row = result.fetchone()
-                logger.info(f"✓ Schema '{schema_name}' accessible: {row.schema_name}")
+                logger.info(f"Schema '{schema_name}' accessible [OK]: {row.schema_name}")
         except Exception as e:
-            logger.error(f"✗ Schema '{schema_name}' not accessible: {e}")
+            logger.error(f"Schema '{schema_name}' not accessible [FAIL]: {e}")
             all_schemas_accessible = False
 
     return all_schemas_accessible
@@ -100,10 +100,10 @@ def test_shared_engine():
         with engine.connect() as conn:
             result = conn.execute(text("SELECT current_schema() as schema_name"))
             row = result.fetchone()
-            logger.info(f"✓ Shared engine accessible: {row.schema_name}")
+            logger.info(f"Shared engine accessible [OK]: {row.schema_name}")
             return True
     except Exception as e:
-        logger.error(f"✗ Shared engine not accessible: {e}")
+        logger.error(f"Shared engine not accessible [FAIL]: {e}")
         return False
 
 
@@ -153,10 +153,10 @@ def main():
 
     logger.info("=" * 60)
     if all_passed:
-        logger.info("✓ All database connection tests PASSED!")
+        logger.info("All database connection tests PASSED [OK]")
         return 0
     else:
-        logger.error("✗ Some database connection tests FAILED!")
+        logger.error("Some database connection tests FAILED [FAIL]")
         return 1
 
 

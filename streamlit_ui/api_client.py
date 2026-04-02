@@ -29,13 +29,16 @@ class TradingSystemAPI:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.ConnectionError:
-            st.error("❌ Cannot connect to API server. Please ensure the API is running on port 8001.")
+            st.error(
+                "[Error] Cannot connect to API server. "
+                "Please ensure the API is running on port 8001."
+            )
             return {"error": "Connection failed"}
         except requests.exceptions.HTTPError as e:
-            st.error(f"❌ API Error: {e}")
+            st.error(f"[Error] API Error: {e}")
             return {"error": f"HTTP {e.response.status_code}"}
         except Exception as e:
-            st.error(f"❌ Unexpected error: {e}")
+            st.error(f"[Error] Unexpected error: {e}")
             return {"error": str(e)}
     
     def health_check(self) -> Dict[str, Any]:
@@ -131,7 +134,7 @@ class TradingSystemAPI:
         """Get symbols filtered by both industry and sector"""
         return self.get_symbols_by_filter(sector=sector, industry=industry)
     
-    # ── Alpaca Trading API (live data — no caching) ───────────────────────────
+    # --- Alpaca Trading API (live data - no caching) ---
 
     def get_market_clock(self) -> Dict[str, Any]:
         """Get current market clock (open/closed, next open/close times)."""

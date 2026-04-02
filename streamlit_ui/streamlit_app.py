@@ -1,5 +1,5 @@
 """
-Trading System — Home Dashboard
+Trading System - Home Dashboard
 Real-time account overview, market status, and positions summary.
 """
 
@@ -19,13 +19,13 @@ setup_logging(service_name="streamlit_ui")
 
 st.set_page_config(
     page_title="Trading System",
-    page_icon="📈",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 
-# ── CSS ───────────────────────────────────────────────────────────────────────
+# --- CSS ---
 
 
 def load_css() -> None:
@@ -43,7 +43,7 @@ def load_css() -> None:
         pass
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# --- Helpers ---
 
 
 def _fmt_dollar(v) -> str:
@@ -51,7 +51,7 @@ def _fmt_dollar(v) -> str:
         v = float(v)
         return f"${v:,.2f}"
     except Exception:
-        return "—"
+        return "-"
 
 
 def _fmt_pct(v) -> str:
@@ -60,7 +60,7 @@ def _fmt_pct(v) -> str:
         sign = "+" if v >= 0 else ""
         return f"{sign}{v:.2f}%"
     except Exception:
-        return "—"
+        return "-"
 
 
 def _pnl_color(v) -> str:
@@ -70,7 +70,7 @@ def _pnl_color(v) -> str:
         return "#6b6b6b"
 
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# --- Sidebar ---
 
 
 def render_sidebar(account: dict, positions: list) -> None:
@@ -110,7 +110,7 @@ def render_sidebar(account: dict, positions: list) -> None:
     )
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# --- Main ---
 
 
 def main() -> None:
@@ -128,7 +128,7 @@ def main() -> None:
 
     render_sidebar(account, positions)
 
-    # ── Greeting + title ──
+    # --- Greeting + title ---
     from datetime import datetime as _dt
 
     hour = _dt.now().hour
@@ -151,11 +151,11 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    # ── Market clock ──
+    # --- Market clock ---
     if "error" not in clock:
         render_market_banner(clock)
 
-    # ── Account metrics ──
+    # --- Account metrics ---
     if "error" not in account:
         equity = float(account.get("equity", 0))
         last_equity = float(account.get("last_equity", equity))
@@ -174,11 +174,13 @@ def main() -> None:
         c3.metric("Buying Power", _fmt_dollar(buying_power))
         c4.metric("Open Positions", len(positions))
     else:
-        st.error("Could not load account data — is the API running on port 8001?")
+        st.error(
+            "Could not load account data - is the API running on port 8001?"
+        )
 
     st.markdown("---")
 
-    # ── Positions ──
+    # --- Positions ---
     col_left, col_right = st.columns([3, 1])
 
     with col_left:
@@ -238,12 +240,12 @@ def main() -> None:
                     f'font-family:"DM Sans",sans-serif;font-weight:500;'
                     f"text-transform:uppercase;'>{side}</span><br>"
                     f'<span style=\'font-family:"DM Mono",monospace;font-size:0.78rem;'
-                    f"color:#6b6b6b;'>{qty} shares · {otype}</span>"
+                    f"color:#6b6b6b;'>{qty} shares | {otype}</span>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )
             if len(orders) > 8:
-                st.caption(f"+{len(orders) - 8} more — see Portfolio page")
+                st.caption(f"+{len(orders) - 8} more - see Portfolio page")
         else:
             st.markdown(
                 '<p style=\'color:#9e9e9e;font-family:"DM Sans",sans-serif;'
@@ -251,14 +253,14 @@ def main() -> None:
                 unsafe_allow_html=True,
             )
 
-    # ── Refresh ──
+    # --- Refresh ---
     st.markdown("---")
     st.markdown(
         '<p style=\'font-family:"DM Sans",sans-serif;font-size:0.75rem;'
         "color:#9e9e9e;'>Data refreshes on page reload.</p>",
         unsafe_allow_html=True,
     )
-    if st.button("↻ Refresh", key="home_refresh"):
+    if st.button("Refresh", key="home_refresh"):
         st.cache_data.clear()
         st.rerun()
 

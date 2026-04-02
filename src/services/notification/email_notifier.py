@@ -29,7 +29,7 @@ class EmailNotifier:
     """
     Thin email wrapper for trading event notifications.
 
-    All public methods are async — SMTP is dispatched via asyncio.to_thread
+    All public methods are async - SMTP is dispatched via asyncio.to_thread
     so it never blocks the Prefect event loop.
     """
 
@@ -73,7 +73,7 @@ class EmailNotifier:
         sym2: str,
     ) -> None:
         direction = "LONG" if signal_type == "LONG_SPREAD" else "SHORT"
-        subject = f"[{self._mode}] Trade Opened — {pair} ({direction})"
+        subject = f"[{self._mode}] Trade Opened - {pair} ({direction})"
         body = self._trade_opened_html(
             pair,
             signal_type,
@@ -97,8 +97,8 @@ class EmailNotifier:
         pnl_pct: float,
         hold_hours: float,
     ) -> None:
-        emoji = "✅" if pnl >= 0 else "❌"
-        subject = f"[{self._mode}] Trade Closed — {pair} {emoji} ${pnl:+.2f}"
+        pnl_tag = "[+PNL]" if pnl >= 0 else "[-PNL]"
+        subject = f"[{self._mode}] Trade Closed - {pair} {pnl_tag} ${pnl:+.2f}"
         body = self._trade_closed_html(
             pair, exit_reason, z_score, pnl, pnl_pct, hold_hours
         )
@@ -111,7 +111,7 @@ class EmailNotifier:
         pnl: float,
         pnl_pct: float,
     ) -> None:
-        subject = f"[{self._mode}] ⚠️ STOP-LOSS — {pair} ${pnl:+.2f}"
+        subject = f"[{self._mode}] [WARN] STOP-LOSS - {pair} ${pnl:+.2f}"
         body = self._stop_loss_html(pair, z_score, pnl, pnl_pct)
         await self._send(subject, body)
 
@@ -121,7 +121,7 @@ class EmailNotifier:
         action: str,
         reason: str,
     ) -> None:
-        subject = f"[{self._mode}] ⚠️ Trade Failed — {pair} ({action})"
+        subject = f"[{self._mode}] [WARN] Trade Failed - {pair} ({action})"
         body = self._trade_failed_html(pair, action, reason)
         await self._send(subject, body)
 
@@ -130,7 +130,7 @@ class EmailNotifier:
         error: str,
         flow_name: str = "intraday-pairs-trading",
     ) -> None:
-        subject = f"[{self._mode}] 🚨 Flow Error — {flow_name}"
+        subject = f"[{self._mode}] [ALERT] Flow Error - {flow_name}"
         body = self._flow_error_html(flow_name, error)
         await self._send(subject, body)
 
@@ -142,7 +142,7 @@ class EmailNotifier:
         avg_pnl: float,
         total_trades: int,
     ) -> None:
-        subject = f"[{self._mode}] Pair Deactivated — {pair}"
+        subject = f"[{self._mode}] Pair Deactivated - {pair}"
         body = self._pair_deactivated_html(
             pair, reason, win_rate, avg_pnl, total_trades
         )
@@ -153,7 +153,7 @@ class EmailNotifier:
         pairs_found: int,
         pairs_upserted: list,
     ) -> None:
-        subject = f"[{self._mode}] Weekly Discovery — {pairs_found} pair(s) found"
+        subject = f"[{self._mode}] Weekly Discovery - {pairs_found} pair(s) found"
         body = self._discovery_summary_html(pairs_found, pairs_upserted)
         await self._send(subject, body)
 
@@ -211,7 +211,7 @@ class EmailNotifier:
             + self._row("Est. Notional", f"${notional:,.2f}")
         )
         return self._base_html(
-            f"Trade Opened — {pair}",
+            f"Trade Opened - {pair}",
             f"<p>A <strong>{direction} SPREAD</strong> signal was generated and a two-legged trade was submitted to Alpaca.</p>"
             + self._table(rows),
         )
@@ -234,7 +234,7 @@ class EmailNotifier:
             + self._row("P&L", f"${pnl:+.2f}  ({pnl_pct:+.2f}%)", pnl_color)
         )
         return self._base_html(
-            f"Trade Closed — {pair}",
+            f"Trade Closed - {pair}",
             "<p>The open pair trade was closed.</p>" + self._table(rows),
         )
 
@@ -248,7 +248,7 @@ class EmailNotifier:
             + self._row("Realised P&L", f"${pnl:+.2f}  ({pnl_pct:+.2f}%)", "#8b1a1a")
         )
         return self._base_html(
-            f"⚠️ Stop-Loss Triggered — {pair}",
+            f"[WARN] Stop-Loss Triggered - {pair}",
             "<p><strong>The z-score exceeded the stop-loss threshold.</strong> Both legs were market-closed immediately.</p>"
             + self._table(rows),
         )
@@ -260,7 +260,7 @@ class EmailNotifier:
             + self._row("Reason", reason)
         )
         return self._base_html(
-            f"⚠️ Trade Execution Failed — {pair}",
+            f"[WARN] Trade Execution Failed - {pair}",
             "<p>An Alpaca order submission failed. Manual review may be required.</p>"
             + self._table(rows),
         )
@@ -281,7 +281,7 @@ class EmailNotifier:
             + self._row("Avg P&L per Trade", f"${avg_pnl:+.2f}", "#8b1a1a")
         )
         return self._base_html(
-            f"Pair Deactivated — {pair}",
+            f"Pair Deactivated - {pair}",
             "<p>This pair was automatically deactivated due to sustained poor performance. "
             "It remains in the registry with <code>is_active=False</code>. "
             "Run a fresh backtest before reactivating.</p>" + self._table(rows),
@@ -311,7 +311,7 @@ class EmailNotifier:
             + self._row("Error", f"<code>{error[:500]}</code>")
         )
         return self._base_html(
-            f"🚨 Prefect Flow Error — {flow_name}",
+            f"[ALERT] Prefect Flow Error - {flow_name}",
             "<p>The pairs trading Prefect flow encountered an unhandled error.</p>"
             + self._table(rows),
         )
@@ -322,7 +322,7 @@ class EmailNotifier:
 
     async def _send(self, subject: str, html_body: str) -> None:
         if not self._configured:
-            logger.debug("Email not configured — skipping notification: {}", subject)
+            logger.debug("Email not configured - skipping notification: {}", subject)
             return
         try:
             await asyncio.to_thread(self._send_sync, subject, html_body)
@@ -345,7 +345,7 @@ class EmailNotifier:
             server.sendmail(self._from_email, self._to_email, msg.as_string())  # type: ignore[arg-type]
 
 
-# Module-level singleton — imported by strategy and flow
+# Module-level singleton - imported by strategy and flow
 _notifier: Optional[EmailNotifier] = None
 
 

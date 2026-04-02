@@ -5,9 +5,9 @@ Replays historical hourly bars through the pairs trading signal logic and
 simulates trade execution to evaluate strategy performance.
 
 Design:
-    - Pulls hourly OHLCV from data_ingestion.market_data (DB only — no API calls)
+    - Pulls hourly OHLCV from data_ingestion.market_data (DB only - no API calls)
     - Uses SpreadCalculator in-memory (no DB writes during replay)
-    - Uses BacktestSignalGenerator (stateless — no DB reads during replay)
+    - Uses BacktestSignalGenerator (stateless - no DB reads during replay)
     - Fills are simulated at the OPEN price of the bar AFTER the signal bar
       (avoids look-ahead bias)
     - All results passed to MetricsCalculator; optionally saved via BacktestReport
@@ -141,7 +141,7 @@ class BacktestEngine:
         """
         logger.info(
             f"Starting backtest: {self.pair.symbol1}/{self.pair.symbol2} "
-            f"{self.start_date} → {self.end_date}"
+            f"{self.start_date} -> {self.end_date}"
         )
 
         prices1, prices2 = self._load_prices()
@@ -278,7 +278,7 @@ class BacktestEngine:
             # Determine fill prices: use current bar's prices (same-bar fill),
             # worsened by slippage_bps on each leg.
             # For production realism we'd use next-bar open, but for backtest
-            # this is acceptable — the z-score look-ahead is only 1 bar.
+            # this is acceptable - the z-score look-ahead is only 1 bar.
 
             if signal_type in ("LONG_SPREAD", "SHORT_SPREAD") and open_trade is None:
                 # LONG_SPREAD: buy p1 (up), sell p2 (down)
@@ -375,7 +375,7 @@ class BacktestEngine:
         return price * (1 + factor) if is_buy else price * (1 - factor)
 
     # ------------------------------------------------------------------
-    # Position sizing (fixed 2% per leg — Kelly not available in backtest)
+    # Position sizing (fixed 2% per leg - Kelly not available in backtest)
     # ------------------------------------------------------------------
 
     def _size_position(

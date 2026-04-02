@@ -21,9 +21,9 @@ async def load_single_symbol(symbol: str) -> None:
     success = await loader.load_key_statistics(symbol)
 
     if success:
-        logger.info(f"✓ Successfully loaded key statistics for {symbol}")
+        logger.info(f"Successfully loaded key statistics for {symbol} [OK]")
     else:
-        logger.error(f"✗ Failed to load key statistics for {symbol}")
+        logger.error(f"Failed to load key statistics for {symbol} [FAIL]")
 
 
 async def load_multiple_symbols(symbols: list[str]) -> None:
@@ -40,10 +40,10 @@ async def load_multiple_symbols(symbols: list[str]) -> None:
             success = await loader.load_key_statistics(symbol)
             if success:
                 successful += 1
-                logger.info(f"✓ {symbol}")
+                logger.info(f"[OK] {symbol}")
             else:
                 failed += 1
-                logger.error(f"✗ {symbol}")
+                logger.error(f"[FAIL] {symbol}")
 
             # Rate limiting
             if i < len(symbols):
@@ -51,7 +51,7 @@ async def load_multiple_symbols(symbols: list[str]) -> None:
 
         except Exception as e:
             failed += 1
-            logger.error(f"✗ {symbol}: {e}")
+            logger.error(f"[FAIL] {symbol}: {e}")
 
     logger.info(f"\nCompleted: {successful} successful, {failed} failed")
 

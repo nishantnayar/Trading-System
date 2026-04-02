@@ -96,9 +96,9 @@ async def example_batch_loading():
             records_count = await loader.load_symbol_data(
                 symbol=symbol, days_back=7, timespan="day", multiplier=1
             )
-            print(f"✓ Loaded {records_count} daily records for {symbol}")
+            print(f"[OK] Loaded {records_count} daily records for {symbol}")
         except Exception as e:
-            print(f"✗ Error loading {symbol} data: {e}")
+            print(f"[FAIL] Error loading {symbol} data: {e}")
 
 
 async def example_incremental_loading():
@@ -113,9 +113,9 @@ async def example_incremental_loading():
         records_count = await loader.load_symbol_data(
             symbol="AAPL", days_back=30, incremental=False
         )
-        print(f"✓ Full load: {records_count} records loaded")
+        print(f"[OK] Full load: {records_count} records loaded")
     except Exception as e:
-        print(f"✗ Error in full load: {e}")
+        print(f"[FAIL] Error in full load: {e}")
 
     # Second load - incremental (should load only new data)
     print("\nSecond load (incremental): Loading only new data...")
@@ -123,9 +123,9 @@ async def example_incremental_loading():
         records_count = await loader.load_symbol_data(
             symbol="AAPL", days_back=1, incremental=True
         )
-        print(f"✓ Incremental load: {records_count} records loaded")
+        print(f"[OK] Incremental load: {records_count} records loaded")
     except Exception as e:
-        print(f"✗ Error in incremental load: {e}")
+        print(f"[FAIL] Error in incremental load: {e}")
 
 
 async def main():

@@ -13,7 +13,7 @@ Three controls applied before every new trade entry:
        all new entries until manually reset via the API.
 
     C. Per-pair Allocation Cap
-       Applied inside KellySizer via pair.max_allocation_pct — not implemented here.
+       Applied inside KellySizer via pair.max_allocation_pct - not implemented here.
        This class exposes helper methods used by the strategy and the API.
 
 Usage (inside PairsStrategy.run_cycle):
@@ -30,10 +30,7 @@ import pandas as pd
 from loguru import logger
 
 from src.shared.database.base import db_transaction
-from src.shared.database.models.strategy_models import (
-    PairRegistry,
-    PortfolioRiskState,
-)
+from src.shared.database.models.strategy_models import PairRegistry, PortfolioRiskState
 
 # Minimum bars required to trust a Pearson correlation estimate
 _MIN_CORRELATION_BARS = 30
@@ -43,7 +40,7 @@ DEFAULT_CORRELATION_THRESHOLD = 0.85
 
 class PortfolioRiskManager:
     """
-    Stateless helper — all state is persisted in portfolio_risk_state (single DB row).
+    Stateless helper - all state is persisted in portfolio_risk_state (single DB row).
 
     Instantiate once per Prefect flow cycle; methods read/write the DB row directly.
     """
@@ -67,8 +64,8 @@ class PortfolioRiskManager:
             (candidate.sym2, active.sym1), (candidate.sym2, active.sym2)
 
         Returns:
-            (True, "")            — safe to enter
-            (False, reason_str)   — blocked; reason_str explains which pair/leg caused it
+            (True, "")            - safe to enter
+            (False, reason_str)   - blocked; reason_str explains which pair/leg caused it
         """
         if not active_open_pairs:
             return True, ""
@@ -87,7 +84,7 @@ class PortfolioRiskManager:
                         prices_cache.get(c_sym), prices_cache.get(a_sym)
                     )
                     if corr is None:
-                        # Insufficient data — fail open (allow trade)
+                        # Insufficient data - fail open (allow trade)
                         logger.debug(
                             f"Correlation guard: insufficient data for "
                             f"{c_sym}/{a_sym}, allowing entry"
@@ -131,9 +128,9 @@ class PortfolioRiskManager:
         """
         Update peak equity and check whether the circuit breaker should fire.
 
-        - If current_equity > peak → update peak, ensure circuit breaker is OFF.
-        - If current_equity < peak × (1 - threshold) → activate circuit breaker.
-        - If circuit breaker is already active → keep it active (manual reset required).
+        - If current_equity > peak -> update peak, ensure circuit breaker is OFF.
+        - If current_equity < peak x (1 - threshold) -> activate circuit breaker.
+        - If circuit breaker is already active -> keep it active (manual reset required).
 
         Returns True if new entries should be blocked (circuit breaker active).
         """
@@ -162,7 +159,7 @@ class PortfolioRiskManager:
 
             if state.circuit_breaker_active:
                 logger.warning(
-                    f"Circuit breaker ACTIVE — blocking new entries "
+                    f"Circuit breaker ACTIVE - blocking new entries "
                     f"(equity ${current_equity:,.2f}, peak ${peak:,.2f})"
                 )
                 return True
@@ -173,7 +170,7 @@ class PortfolioRiskManager:
                 state.circuit_breaker_triggered_at = datetime.now(timezone.utc)
                 state.updated_at = datetime.now(timezone.utc)
                 logger.error(
-                    f"Circuit breaker TRIGGERED — drawdown {drawdown:.1%} "
+                    f"Circuit breaker TRIGGERED - drawdown {drawdown:.1%} "
                     f"exceeds threshold {threshold:.1%} "
                     f"(equity ${current_equity:,.2f}, peak ${peak:,.2f})"
                 )

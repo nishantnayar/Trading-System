@@ -4,11 +4,11 @@ Signal Generator
 Generates trading signals for a pair based on z-score thresholds.
 
 Signal types:
-    LONG_SPREAD:  z_score < -entry_threshold  → long symbol1, short symbol2
-    SHORT_SPREAD: z_score > +entry_threshold  → short symbol1, long symbol2
+    LONG_SPREAD:  z_score < -entry_threshold  -> long symbol1, short symbol2
+    SHORT_SPREAD: z_score > +entry_threshold  -> short symbol1, long symbol2
     EXIT:         |z_score| < exit_threshold  (from open position)
     STOP_LOSS:    |z_score| > stop_loss_threshold
-    EXPIRE:       position held > max_hold_hours (3× half-life)
+    EXPIRE:       position held > max_hold_hours (3x half-life)
 
 Rules:
     - No new entry signal if an OPEN trade already exists for the pair
@@ -94,7 +94,7 @@ class SignalGenerator:
                 session.refresh(sig)
             logger.info(
                 f"Signal [{signal_type}] for pair {self.pair.symbol1}/{self.pair.symbol2} "
-                f"z={current_z:.3f} — {reason}"
+                f"z={current_z:.3f} - {reason}"
             )
 
         return sig
@@ -118,7 +118,7 @@ class SignalGenerator:
         entry_thr = float(self.pair.entry_threshold)
         exit_thr = float(self.pair.exit_threshold)
         stop_thr = float(self.pair.stop_loss_threshold)
-        max_hold = self.pair.max_hold_hours  # 3× half-life
+        max_hold = self.pair.max_hold_hours  # 3x half-life
 
         # ---- Exit conditions (only when a trade is open) ----
         if open_trade is not None:
@@ -142,20 +142,20 @@ class SignalGenerator:
                     f"|z|={abs(z):.3f} crossed below exit threshold {exit_thr}",
                 )
 
-            # No exit trigger — hold position
+            # No exit trigger - hold position
             return None, None
 
         # ---- Entry conditions (only when no open trade) ----
         if z < -entry_thr:
             return (
                 "LONG_SPREAD",
-                f"z={z:.3f} below -{entry_thr} → long {self.pair.symbol1}, short {self.pair.symbol2}",
+                f"z={z:.3f} below -{entry_thr} -> long {self.pair.symbol1}, short {self.pair.symbol2}",
             )
 
         if z > entry_thr:
             return (
                 "SHORT_SPREAD",
-                f"z={z:.3f} above +{entry_thr} → short {self.pair.symbol1}, long {self.pair.symbol2}",
+                f"z={z:.3f} above +{entry_thr} -> short {self.pair.symbol1}, long {self.pair.symbol2}",
             )
 
         return None, None
@@ -184,7 +184,7 @@ class SignalGenerator:
 
 class BacktestSignalGenerator:
     """
-    Stateless signal evaluator for backtesting — no DB reads or writes.
+    Stateless signal evaluator for backtesting - no DB reads or writes.
 
     The backtest engine passes the current open-trade state explicitly
     rather than querying the DB, keeping the engine fast and deterministic.

@@ -1,7 +1,7 @@
 """
 Weekly Pair Discovery Flow
 
-Scheduled to run every Sunday at 08:00 UTC (03:00 ET / 00:00 PT) —
+Scheduled to run every Sunday at 08:00 UTC (03:00 ET / 00:00 PT) -
 safely after the Friday close and before Monday pre-market.
 
 Each run:
@@ -40,7 +40,7 @@ from src.services.notification.email_notifier import get_notifier
 
 
 def _flow_run_name() -> str:
-    return f"Pair Discovery — {datetime.now().strftime('%Y-%m-%d')}"
+    return f"Pair Discovery - {datetime.now().strftime('%Y-%m-%d')}"
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +78,7 @@ async def run_pair_discovery_task(
     logger.info(
         f"Starting pair discovery: days_back={days_back}, "
         f"min_corr={min_correlation}, max_pvalue={max_pvalue}, "
-        f"half_life={min_half_life}–{max_half_life}h, top_n={top_n}"
+        f"half_life={min_half_life}-{max_half_life}h, top_n={top_n}"
     )
 
     upserted = await run_discovery(
@@ -205,7 +205,7 @@ async def deploy_pair_discovery_flow() -> None:
             "top_n": 5,
         },
         tags=["strategy-engine", "pairs-trading", "discovery", "scheduled"],
-        description="Weekly pair discovery — runs Engle-Granger cointegration on the full symbol universe and upserts candidates to pair_registry",
+        description="Weekly pair discovery - runs Engle-Granger cointegration on the full symbol universe and upserts candidates to pair_registry",
         ignore_warnings=True,
     )
     logger.info("Pair discovery flow deployed successfully!")

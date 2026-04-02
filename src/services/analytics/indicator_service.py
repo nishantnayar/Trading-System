@@ -119,7 +119,7 @@ class IndicatorService:
                 )
                 results[symbol] = success
                 if success:
-                    logger.debug(f"✓ Stored {symbol}")
+                    logger.debug(f"Stored {symbol} OK")
             else:
                 logger.warning(f"No indicators to store for {symbol}")
                 results[symbol] = False

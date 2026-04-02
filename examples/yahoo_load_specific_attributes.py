@@ -28,10 +28,10 @@ async def load_price_data_only(symbols: list[str]) -> None:
             count = await loader.load_market_data(
                 symbol=symbol, start_date=start_date, end_date=end_date, interval="1d"
             )
-            print(f"✓ {symbol}: Loaded {count} daily bars")
+            print(f"[OK] {symbol}: Loaded {count} daily bars")
             await asyncio.sleep(0.3)
         except Exception as e:
-            print(f"✗ {symbol}: {e}")
+            print(f"[FAIL] {symbol}: {e}")
 
 
 async def load_fundamental_ratios(symbols: list[str]) -> None:
@@ -63,7 +63,7 @@ async def load_fundamental_ratios(symbols: list[str]) -> None:
 
             await asyncio.sleep(0.3)
         except Exception as e:
-            print(f"✗ {symbol}: {e}")
+            print(f"[FAIL] {symbol}: {e}")
 
     # Display results
     print(

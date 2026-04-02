@@ -1,7 +1,7 @@
 """
 Unit tests for PortfolioRiskManager.
 
-All DB access is mocked — no database connection required.
+All DB access is mocked - no database connection required.
 """
 
 from contextlib import contextmanager
@@ -101,7 +101,7 @@ class TestCorrelationGuard:
 
     def test_allows_when_correlation_below_threshold(self):
         rng = np.random.default_rng(0)
-        # Four fully independent series — all pairwise correlations will be near 0
+        # Four fully independent series - all pairwise correlations will be near 0
         s1 = pd.Series(rng.standard_normal(60))
         s2 = pd.Series(rng.standard_normal(60))
         s3 = pd.Series(rng.standard_normal(60))
@@ -117,7 +117,7 @@ class TestCorrelationGuard:
         assert allowed is True
 
     def test_fail_open_when_insufficient_bars(self):
-        # Only 10 bars — below _MIN_CORRELATION_BARS
+        # Only 10 bars - below _MIN_CORRELATION_BARS
         short = pd.Series(range(10), dtype=float)
         candidate = _make_pair(1, "A", "B")
         active = _make_pair(2, "C", "D")
@@ -178,14 +178,14 @@ class TestCircuitBreaker:
         assert state.circuit_breaker_active is False
 
     def test_returns_false_within_threshold(self):
-        # 2% drawdown, threshold 5% → no trigger
+        # 2% drawdown, threshold 5% -> no trigger
         state = _make_risk_state(peak=100_000.0, threshold=0.05)
         with self._patch_tx(state):
             result = self.mgr.update_and_check_drawdown(98_000.0)
         assert result is False
 
     def test_fires_when_drawdown_exceeds_threshold(self):
-        # 6% drawdown, threshold 5% → trigger
+        # 6% drawdown, threshold 5% -> trigger
         state = _make_risk_state(peak=100_000.0, cb_active=False, threshold=0.05)
         with self._patch_tx(state):
             result = self.mgr.update_and_check_drawdown(94_000.0)
@@ -251,14 +251,14 @@ class TestUnrealizedPnl:
     def test_long_spread_profit(self):
         trade = self._make_trade("LONG_SPREAD", ep1=100.0, ep2=50.0, qty1=10, qty2=5)
         prices = {"A": pd.Series([110.0]), "B": pd.Series([55.0])}
-        # long A: +10*(110-100) = +100, short B: -5*(55-50) = -25 → net +75
+        # long A: +10*(110-100) = +100, short B: -5*(55-50) = -25 -> net +75
         pnl = PortfolioRiskManager.compute_unrealized_pnl([trade], prices)
         assert abs(pnl - 75.0) < 1e-6
 
     def test_short_spread_profit(self):
         trade = self._make_trade("SHORT_SPREAD", ep1=100.0, ep2=50.0, qty1=10, qty2=5)
         prices = {"A": pd.Series([95.0]), "B": pd.Series([48.0])}
-        # short A: -10*(95-100) = +50, long B: +5*(48-50) = -10 → net +40
+        # short A: -10*(95-100) = +50, long B: +5*(48-50) = -10 -> net +40
         pnl = PortfolioRiskManager.compute_unrealized_pnl([trade], prices)
         assert abs(pnl - 40.0) < 1e-6
 
@@ -273,9 +273,9 @@ class TestUnrealizedPnl:
         t2 = self._make_trade("SHORT_SPREAD", 200.0, 100.0, 3, 6, sym1="C", sym2="D")
         prices = {
             "A": pd.Series([110.0]),  # +100 on long leg
-            "B": pd.Series([55.0]),   # -25 on short leg → +75
+            "B": pd.Series([55.0]),   # -25 on short leg -> +75
             "C": pd.Series([195.0]),  # -3*(-5) = +15 on short side
-            "D": pd.Series([98.0]),   # +6*(-2) = -12 on long side → +3
+            "D": pd.Series([98.0]),   # +6*(-2) = -12 on long side -> +3
         }
         pnl = PortfolioRiskManager.compute_unrealized_pnl([t1, t2], prices)
         assert abs(pnl - 78.0) < 1e-6

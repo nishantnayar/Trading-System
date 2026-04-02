@@ -60,7 +60,7 @@ class TestSpreadCalculator:
         assert not math.isnan(current_z)
 
     def test_empty_prices1_returns_none(self):
-        """Empty prices1 → all outputs empty, current_z is None."""
+        """Empty prices1 -> all outputs empty, current_z is None."""
         calc = SpreadCalculator(hedge_ratio=1.0, z_score_window=10)
         spread, z, current_z = calc.calculate(
             pd.Series(dtype=float), _make_prices([100.0] * 20)
@@ -70,7 +70,7 @@ class TestSpreadCalculator:
         assert current_z is None
 
     def test_empty_prices2_returns_none(self):
-        """Empty prices2 → all outputs empty, current_z is None."""
+        """Empty prices2 -> all outputs empty, current_z is None."""
         calc = SpreadCalculator(hedge_ratio=1.0, z_score_window=10)
         spread, z, current_z = calc.calculate(
             _make_prices([100.0] * 20), pd.Series(dtype=float)
@@ -80,7 +80,7 @@ class TestSpreadCalculator:
         assert current_z is None
 
     def test_insufficient_window_returns_none(self):
-        """Fewer bars than z_score_window → returns empty series and None."""
+        """Fewer bars than z_score_window -> returns empty series and None."""
         p1 = _make_prices([100.0] * 5)
         p2 = _make_prices([50.0] * 5)
         calc = SpreadCalculator(hedge_ratio=1.0, z_score_window=10)
@@ -90,9 +90,9 @@ class TestSpreadCalculator:
         assert current_z is None
 
     def test_zero_std_returns_none(self):
-        """Constant spread (zero rolling std) → current_z is None, no ZeroDivisionError."""
+        """Constant spread (zero rolling std) -> current_z is None, no ZeroDivisionError."""
         p1 = _make_prices([100.0] * 50)
-        p2 = _make_prices([100.0] * 50)  # spread is always 0 — std = 0
+        p2 = _make_prices([100.0] * 50)  # spread is always 0 - std = 0
         calc = SpreadCalculator(hedge_ratio=1.0, z_score_window=20)
         _, _, current_z = calc.calculate(p1, p2)
         assert current_z is None
@@ -121,13 +121,13 @@ class TestSpreadCalculator:
         assert p2 is None
 
     def test_misaligned_timestamps_aligned(self):
-        """Series with different timestamps → only common timestamps used, no KeyError."""
+        """Series with different timestamps -> only common timestamps used, no KeyError."""
         idx1 = pd.date_range("2024-01-01", periods=40, freq="h")
         idx2 = pd.date_range("2024-01-01 10:00", periods=40, freq="h")  # offset by 10h
         p1 = pd.Series([100.0] * 40, index=idx1)
         p2 = pd.Series([50.0] * 40, index=idx2)
         calc = SpreadCalculator(hedge_ratio=1.0, z_score_window=10)
         spread, z, current_z = calc.calculate(p1, p2)
-        # 30 common timestamps → enough for window=10
+        # 30 common timestamps -> enough for window=10
         assert not spread.empty
         assert len(spread) == 30

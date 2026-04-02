@@ -37,7 +37,7 @@ try:
     from prefect import flow, get_client, task
     from prefect.settings import PREFECT_API_URL, temporary_settings
 except ImportError as e:
-    print(f"❌ Error importing Prefect: {e}")
+    print(f"[FAIL] Error importing Prefect: {e}")
     print("Please install Prefect: pip install prefect>=3.4.14")
     sys.exit(1)
 
@@ -124,10 +124,10 @@ def test_retry_flow(should_fail: bool = False) -> str:
     
     try:
         result = potentially_failing_task(should_fail)
-        logger.info(f"✅ {result}")
+        logger.info(f"[OK] {result}")
         return result
     except Exception as e:
-        logger.error(f"❌ Task failed after retries: {e}")
+        logger.error(f"[FAIL] Task failed after retries: {e}")
         raise
 
 
@@ -142,10 +142,10 @@ def test_prefect_imports() -> bool:
         except ImportError:
             # Prefect 3.x may have different import path
             from prefect.schedules import CronSchedule
-        logger.info("✅ Prefect 3.4.14 imports successful")
+        logger.info("Prefect 3.4.14 imports successful [OK]")
         return True
     except ImportError as e:
-        logger.error(f"❌ Prefect import failed: {e}")
+        logger.error(f"[FAIL] Prefect import failed: {e}")
         return False
 
 
@@ -158,18 +158,20 @@ def check_prefect_server() -> bool:
         api_url = "http://localhost:4200/api"
         response = requests.get(f"{api_url}/health", timeout=2)
         if response.status_code == 200:
-            logger.info("✅ Prefect 3.4.14 server is running at http://localhost:4200")
+            logger.info("Prefect 3.4.14 server is running at http://localhost:4200 [OK]")
             logger.info(f"   Using PREFECT_API_URL={api_url}")
             return True
         else:
-            logger.warning(f"⚠️  Prefect server responded with status {response.status_code}")
+            logger.warning(
+                f"[WARN] Prefect server responded with status {response.status_code}"
+            )
             return False
     except ImportError:
-        logger.warning("⚠️  'requests' library not available, skipping server check")
+        logger.warning("[WARN] 'requests' library not available, skipping server check")
         logger.info("   Install with: pip install requests")
         return False
     except Exception as e:
-        logger.warning(f"⚠️  Prefect server not accessible: {e}")
+        logger.warning(f"[WARN] Prefect server not accessible: {e}")
         return False
 
 
@@ -205,35 +207,35 @@ Examples:
     )
     args = parser.parse_args()
     
-    logger.info("🚀 Starting Prefect 3.4.14 Test Script")
+    logger.info("Starting Prefect 3.4.14 Test Script")
     logger.info("=" * 60)
     
     # Test 1: Import check
-    logger.info("\n📦 Test 1: Checking Prefect imports...")
+    logger.info("\nTest 1: Checking Prefect imports...")
     if not test_prefect_imports():
-        logger.error("❌ Prefect imports failed. Please check installation.")
+        logger.error("[FAIL] Prefect imports failed. Please check installation.")
         return 1
     
     # If check-only, exit here
     if args.check_only:
-        logger.info("\n✅ Prefect is properly installed!")
+        logger.info("\nPrefect is properly installed [OK]")
         logger.info("   To run flows, start Prefect server: prefect server start")
         return 0
     
     # Test 2: Check Prefect server
-    logger.info("\n🌐 Test 2: Checking Prefect server...")
+    logger.info("\nTest 2: Checking Prefect server...")
     current_api_url = os.environ.get("PREFECT_API_URL", "http://localhost:4200/api")
     logger.info(f"   Current PREFECT_API_URL={current_api_url}")
     
     server_available = check_prefect_server()
     
     if not server_available:
-        logger.warning("\n⚠️  Prefect server health check failed")
+        logger.warning("\n[WARN] Prefect server health check failed")
         logger.info("   Will attempt to connect anyway using current PREFECT_API_URL")
         logger.info(f"   If connection fails, try: set PREFECT_API_URL=http://localhost:4200/api")
     
     # Test 3: Simple flow execution
-    logger.info("\n⚡ Test 3: Running simple math flow...")
+    logger.info("\nTest 3: Running simple math flow...")
     try:
         # Use temporary settings to ensure API URL is set correctly
         api_url = os.environ.get("PREFECT_API_URL", "http://localhost:4200/api")
@@ -243,11 +245,11 @@ Examples:
         with temporary_settings({PREFECT_API_URL: api_url}):
             result = simple_math_flow(x=10, y=4)
         
-        logger.info(f"✅ Flow executed successfully!")
+        logger.info("Flow executed successfully [OK]")
         logger.info(f"   Result: {result['calculation']}")
     except Exception as e:
-        logger.error(f"❌ Flow execution failed: {e}")
-        logger.info(f"\n💡 Troubleshooting:")
+        logger.error(f"[FAIL] Flow execution failed: {e}")
+        logger.info("\nTroubleshooting:")
         logger.info(f"   1. Verify server is running: prefect server start")
         logger.info(f"   2. Check API URL is set: echo $env:PREFECT_API_URL")
         logger.info(f"   3. Set explicitly: $env:PREFECT_API_URL='http://localhost:4200/api'")
@@ -255,18 +257,18 @@ Examples:
     
     # Test 4: Retry logic (optional)
     if args.retry:
-        logger.info("\n🔄 Test 4: Testing retry logic...")
+        logger.info("\nTest 4: Testing retry logic...")
         try:
             result = test_retry_flow(should_fail=False)
-            logger.info(f"✅ Retry test passed: {result}")
+            logger.info(f"Retry test passed [OK]: {result}")
         except Exception as e:
-            logger.error(f"❌ Retry test failed: {e}")
+            logger.error(f"[FAIL] Retry test failed: {e}")
             return 1
     
     logger.info("\n" + "=" * 60)
-    logger.info("✅ All tests completed successfully!")
+    logger.info("All tests completed successfully [OK]")
     logger.info("=" * 60)
-    logger.info("\n💡 Next steps:")
+    logger.info("\nNext steps:")
     logger.info("   - View flows in Prefect UI: http://localhost:4200")
     logger.info("   - Deploy flows using: prefect deployment build")
     logger.info("   - See implementation plan: docs/development/architecture.md")

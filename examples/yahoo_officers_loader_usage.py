@@ -100,13 +100,13 @@ async def demo_multiple_symbols_officers() -> None:
                 # Find highest paid officer
                 top_officer = max(officers, key=lambda x: x.total_pay or 0)
                 pay_str = f"${top_officer.total_pay:,}" if top_officer.total_pay else "N/A"
-                print(f"  ✓ {len(officers)} officers loaded")
+                print(f"  [OK] {len(officers)} officers loaded")
                 print(f"  Top paid: {top_officer.name} ({top_officer.title}) - {pay_str}")
             else:
-                print(f"  ⚠ No officers data available")
+                print(f"  [WARN] No officers data available")
                 
         except Exception as e:
-            print(f"  ✗ Error loading {symbol}: {e}")
+            print(f"  [FAIL] Error loading {symbol}: {e}")
             results[symbol] = 0
 
     # Summary
@@ -115,7 +115,7 @@ async def demo_multiple_symbols_officers() -> None:
     total_officers = sum(results.values())
     print(f"Total officers loaded: {total_officers}")
     for symbol, count in results.items():
-        status = "✓" if count > 0 else "✗"
+        status = "[OK]" if count > 0 else "[FAIL]"
         print(f"  {status} {symbol}: {count} officers")
 
 
@@ -305,10 +305,10 @@ async def main() -> None:
         print("# OFFICERS DEMO COMPLETED!")
         print("#" * 80)
         print("\nSUMMARY:")
-        print("✓ Single symbol officers loading")
-        print("✓ Multiple symbols batch loading")
-        print("✓ Officers data analysis and patterns")
-        print("✓ API endpoints overview")
+        print("[OK] Single symbol officers loading")
+        print("[OK] Multiple symbols batch loading")
+        print("[OK] Officers data analysis and patterns")
+        print("[OK] API endpoints overview")
         print("\nThe officers data is now available in the database and via API endpoints.")
         print("You can use this data for:")
         print("- Executive compensation analysis")

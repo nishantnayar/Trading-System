@@ -1,7 +1,7 @@
 """
 Unit tests for slippage and commission modeling in BacktestEngine.
 
-All tests are fully in-memory — no DB required.
+All tests are fully in-memory - no DB required.
 The DB-loading methods are mocked so BacktestEngine can be exercised
 with synthetic price series.
 """
@@ -112,7 +112,7 @@ class TestSlippedPrice:
         assert engine._slipped_price(150.0, is_buy=False) == 150.0
 
     def test_five_bps_buy(self):
-        """5 bps = 0.05% — default production setting."""
+        """5 bps = 0.05% - default production setting."""
         engine = _make_engine(slippage_bps=5)
         expected = 200.0 * (1 + 5 / 10_000)
         assert abs(engine._slipped_price(200.0, is_buy=True) - expected) < 1e-9
@@ -232,7 +232,7 @@ class TestSlippageEndToEnd:
         and one EXIT, then return total P&L.
         """
         # 50 bars: prices constant at 100, then sym1 drops and sym2 rises
-        # so spread reverts → exit signal fires
+        # so spread reverts -> exit signal fires
         # Use a simple controlled series to guarantee exactly one trade
         idx = pd.date_range("2024-01-02", periods=50, freq="h", tz="UTC")
         # sym1 starts at 100, drops to 95 at bar 20, returns to 100 at bar 40
