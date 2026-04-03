@@ -21,19 +21,19 @@
 
 ## Overview
 
-A production-grade algorithmic trading platform designed for equities trading with comprehensive market data integration, automated workflow orchestration, and enterprise-level risk management capabilities. The system supports paper trading through Alpaca Markets API and is built on a modular architecture optimized for scalability and maintainability.
+A production-grade algorithmic trading platform designed for equities trading with comprehensive market data integration, automated workflow orchestration, and risk controls around pairs trading. The system supports **paper trading** through the Alpaca Markets API and is built on a modular architecture optimized for scalability and maintainability.
 
 ## Key Features
 
 ### Trading & Execution
-- **Paper Trading Integration**: ✅ Safe testing environment via Alpaca paper trading API
-- **Account Management**: ✅ View account balance, buying power, and portfolio value
-- **Position Management**: ✅ Track positions, unrealized P&L, and close positions
-- **Order Management**: ✅ View, place, and cancel orders; monitor order status
-- **Pairs Trading Strategy**: ✅ Statistical arbitrage with cointegration-based pair discovery, z-score signals, Kelly criterion sizing, and two-legged Alpaca execution
-- **Backtesting Engine**: ✅ Historical strategy validation with look-ahead-bias-free replay; Sharpe, drawdown, win rate, profit factor metrics
-- **Live Trading Support**: 🚧 Production-ready execution infrastructure (planned)
-- **Risk Management**: 🚧 Portfolio-level drawdown limits and compliance checks (planned)
+- **Paper Trading Integration**: Safe testing environment via Alpaca paper trading API
+- **Account Management**: View account balance, buying power, and portfolio value
+- **Position Management**: Track positions, unrealized P&L, and close positions
+- **Order Management**: View, place, and cancel orders; monitor order status
+- **Pairs Trading Strategy**: Statistical arbitrage with cointegration-based pair discovery, z-score signals, Kelly criterion sizing, and two-legged Alpaca execution
+- **Backtesting Engine**: Historical strategy validation with look-ahead-bias-free replay; Sharpe, drawdown, win rate, profit factor metrics
+- **Live Trading Support**: Production-ready execution infrastructure exists but is configured for **paper** only by default
+- **Risk Management**: Portfolio drawdown circuit breaker, cross-pair correlation guard, per-pair allocation caps in the strategy layer; REST endpoints under `/api/strategies/pairs/risk` for circuit breaker state and thresholds
 
 ### Data Management
 - **Multi-Source Data Integration**: Polygon.io, Yahoo Finance, and Alpaca market data

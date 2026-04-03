@@ -4,6 +4,7 @@ Alpaca Trading API Client
 
 import logging
 import os
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -258,11 +259,22 @@ class AlpacaClient:
         Returns a pd.Series of close prices indexed by UTC timestamp.
         Uses Alpaca's market data API - includes today's intraday bars,
         unlike the DB which is end-of-day only.
+
+        A start date is required: without it the Alpaca v2 API returns only
+        the current day's bars regardless of the limit value.
+        We request enough calendar days to cover `limit` hourly bars
+        (assuming ~7 market hours/day, 5 days/week -> ~3.5 bars/calendar day).
         """
+        # 4 calendar days per bar is conservative enough to always cover limit
+        lookback_days = max(7, (limit * 4) // 7)
+        start = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).strftime(
+            "%Y-%m-%d"
+        )
         try:
             bars = self.client.get_bars(
                 symbol,
                 TimeFrame.Hour,
+                start=start,
                 limit=limit,
                 adjustment=adjustment,
             )

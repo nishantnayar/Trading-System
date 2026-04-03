@@ -1,11 +1,11 @@
 # Trading System UI Architecture
 
-> **Status**: ✅ Fully Implemented (v1.1.0)
+> **Status**: Fully implemented (v1.1.0). Python under `streamlit_ui/` except `pages/` is ASCII-only (shared helpers, `css_config.py`, `api_client.py`); Unicode allowed for display text in `streamlit_ui/pages/` only.
 
 ## Design Philosophy
 
 ### Core Principles
-1. **Trader-First Workflow**: Page order mirrors how a professional uses the system — Dashboard → Portfolio → Analysis → Screener → Pairs Trading → Backtest Review → Settings
+1. **Trader-First Workflow**: Page order mirrors typical use: Dashboard, Portfolio, Analysis, Screener, Pairs Trading, Backtest Review, Pair Scanner, Settings, About, Data Quality Monitor (see numbered `pages/` modules).
 2. **Real Data Only**: No hardcoded values, simulated data, or placeholder content anywhere in the UI. Every metric is sourced from the live Alpaca paper trading account or the PostgreSQL database.
 3. **Consistent Design System**: All pages share the same paper/ink aesthetic — fonts, colors, chart styling, and component patterns are defined centrally in `css_config.py` and `styles.css`.
 4. **Reactive Updates**: Streamlit's reactive framework provides live updates; each page fetches fresh data on load with `@st.cache_data(ttl=...)` for performance.
@@ -73,7 +73,7 @@ Stock screening with two modes:
 Live strategy monitoring:
 - Strategy status metrics (active/inactive, total pairs, active pairs, total P&L)
 - Start / Stop / Emergency Stop controls
-- Active pairs table with z-score color coding (red > 2.0σ, orange > 1.5σ)
+- Active pairs table with z-score color coding (red > 2.0 sigma, orange > 1.5 sigma)
 - Z-score chart with entry/exit threshold lines and configurable history window
 - Performance summary (Sharpe, max drawdown, win rate, average hold time)
 - Per-pair details expander (hedge ratio, half-life, cointegration p-value, open trade, last signal)
@@ -87,17 +87,23 @@ Backtest execution and analysis:
 - Run history comparison
 - Stock Analysis expander: Risk Flags (7 checks), Fundamentals, Price Chart (normalised + z-score overlay), Correlation (rolling Pearson with stability verdict)
 
-### 6. Settings — `pages/6_Settings.py`
+### 6. Pair Scanner — `pages/6_Pair_Scanner.py`
+Pair discovery and screening workflow (registry, filters, links to backtest).
+
+### 7. Settings — `pages/7_Settings.py`
 System configuration — no fake data, no hardcoded values:
 - **Connection Status**: Live checks of API server health, Alpaca account number, market open/closed
 - **Analysis Preferences**: Default symbol and timeframe (written to session state for use by Analysis page)
 - **System Info**: API base URL, session start time, Streamlit version, Python version
 
-### 7. About — `pages/7_About.py`
+### 8. About — `pages/8_About.py`
 Project and author information:
 - Author bio (Nishant Nayar, VP – Lead Solution Analyst, Greater Chicago Area)
 - Project features and technology stack
 - Contact links (LinkedIn, GitHub, Medium, Portfolio)
+
+### 9. Data Quality Monitor — `pages/9_Data_Quality_Monitor.py`
+Data ingestion health and quality checks (monitoring pipeline and coverage).
 
 ---
 

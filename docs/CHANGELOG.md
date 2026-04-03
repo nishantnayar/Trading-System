@@ -7,12 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- Aligned `CLAUDE.md`, `README.md`, `docs/development/architecture-ui.md`, `docs/CONTRIBUTING.md`, and `docs/streamlit-ui-utilities.md` with current Streamlit page numbering (through page 9), ASCII-only policy for Python outside `streamlit_ui/pages/`, and pairs risk API/circuit breaker behavior.
+- Standardized documentation **Last Updated** metadata to **4/3/2026** (ISO `2026-04-03` in MkDocs frontmatter where present).
+
+### Changed
+- README feature list: risk management and paper-vs-live wording updated to match implemented strategy and API behavior.
+
 ### Planned
-- Strategy engine framework implementation
-- Backtesting infrastructure
-- Risk management service
-- Order placement UI
-- Advanced analytics and reporting
+- Broader REST surface for advanced risk metrics (where not yet exposed)
+- Additional analytics and reporting
 
 ## [1.0.0] - 2025-12-XX
 

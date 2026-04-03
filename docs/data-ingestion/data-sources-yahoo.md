@@ -426,6 +426,6 @@ python scripts/load_yahoo_data.py --all-symbols --esg-scores
 
 ---
 
-**Last Updated**: February 2026  
+**Last Updated**: 4/3/2026  
 **Status**: ✅ Complete (10/10 data types; dual market data series: yahoo + yahoo_adjusted)
 

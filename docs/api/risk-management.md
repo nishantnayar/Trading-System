@@ -1,9 +1,8 @@
 # Risk Management API
 
-> **📋 Implementation Status**: 🚧 Planned for v1.1.0  
-> **Current Status**: Module structure exists, core implementation pending
+> **Implementation status (4/3/2026)**: Portfolio-level **drawdown circuit breaker** and **cross-pair correlation guard** are implemented in `PortfolioRiskManager` and enforced from the pairs strategy. HTTP endpoints on the pairs router expose **circuit breaker state**, **reset**, and **drawdown threshold** updates (`/api/strategies/pairs/risk`, see `pairs_trading.py`). Position sizing uses **Kelly / bootstrap** in `position_sizer.py`. Additional endpoints described below for VaR, sector exposure, and generic limit APIs may still be **aspirational** or partial — verify against `src/web/api/` before relying on them.
 
-This guide covers the risk management API endpoints for portfolio risk monitoring, position sizing, risk limit validation, and automated risk controls.
+This guide describes the intended risk management API surface for portfolio monitoring, position sizing, risk limit validation, and automated controls. Prefer reading the live OpenAPI docs at `/docs` for the exact routes shipped in your checkout.
 
 ## Overview
 
@@ -790,5 +789,5 @@ print(f"Position Value: ${size_data['position_value']:.2f}")
 
 ---
 
-**Last Updated**: December 2025  
+**Last Updated**: 4/3/2026  
 **Status**: 🚧 Planned for v1.1.0

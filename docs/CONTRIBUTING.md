@@ -126,7 +126,7 @@ docs(readme): update installation instructions
    flake8 .
    
    # Type check
-   mypy src/
+   mypy src/ --ignore-missing-imports
    
    # Run tests
    pytest
@@ -145,13 +145,19 @@ docs(readme): update installation instructions
    ```
 
 6. **PR Requirements**
-   - ✅ All tests pass
-   - ✅ Code follows style guidelines
-   - ✅ Documentation updated
-   - ✅ No merge conflicts
-   - ✅ Descriptive PR description
+   - All tests pass
+   - Code follows style guidelines (Black, isort, CI flake8/mypy as in `CLAUDE.md`)
+   - Documentation updated when behavior or public APIs change
+   - No merge conflicts
+   - Descriptive PR description
 
 ## Coding Standards
+
+### Python source encoding
+
+- All `.py` files outside `streamlit_ui/pages/` must be **ASCII-only** (no Unicode in code or docstrings except where noted).
+- **Exception**: `streamlit_ui/pages/` may use Unicode for user-visible labels and copy.
+- Substitutes: use `-` / ` - ` instead of en/em dashes; `->` instead of arrows in comments; see `CLAUDE.md` in the repo root for the full rule set and verification command.
 
 ### Python Style Guide
 
@@ -174,7 +180,7 @@ isort .
 flake8 .
 
 # Type checking
-mypy src/
+mypy src/ --ignore-missing-imports
 
 # Run tests with coverage
 pytest --cov=src --cov-report=html

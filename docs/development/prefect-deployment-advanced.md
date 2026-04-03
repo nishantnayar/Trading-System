@@ -60,6 +60,6 @@ Prefect 3.x introduces the `serve()` API, which is simpler than the older deploy
 
 ---
 
-**Last Updated**: December 2025  
+**Last Updated**: 4/3/2026  
 **Status**: 🚧 In Progress
 

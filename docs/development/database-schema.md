@@ -4,7 +4,7 @@
 
 This document provides detailed schema definitions for all database tables in the trading system. For architecture overview and setup, see [Database Overview](database-overview.md). For performance optimization and ORM patterns, see [Database Optimization](database-optimization.md).
 
-**Last Updated**: February 2026  
+**Last Updated**: 4/3/2026  
 **Status**: ✅ Core Schema Implemented (v1.0.0); market_data supports yahoo + yahoo_adjusted  
 **Author**: Nishant Nayar
 

@@ -1,9 +1,8 @@
 # Risk Management
 
-> **📋 Implementation Status**: 🚧 Planned for v1.1.0  
-> **Current Status**: Risk limits defined in strategy configuration, risk management module implementation pending
+> **Implementation status (4/3/2026)**: The pairs strategy uses **Kelly sizing with bootstrap** (`position_sizer.py`), a **portfolio drawdown circuit breaker**, and a **correlation guard** between pairs (`PortfolioRiskManager`). The Settings / Pairs UI and API can surface circuit breaker state and reset (see `/api/strategies/pairs/risk` in the FastAPI OpenAPI docs). Diagrams below include future/expanded capabilities (VaR, sector exposure APIs) that may not all be exposed yet.
 
-This guide covers risk management features, configuration, and best practices for the trading system.
+This guide covers risk concepts, configuration, and best practices for the trading system.
 
 ## Overview
 
@@ -520,5 +519,5 @@ print(f"Recommended Position Size: ${position_size:.2f}")
 
 ---
 
-**Last Updated**: December 2025  
+**Last Updated**: 4/3/2026  
 **Status**: 🚧 Planned for v1.1.0

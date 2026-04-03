@@ -3,6 +3,12 @@
 ## Overview
 The `utils.py` module provides common utilities for the Trading System Streamlit UI, including formatting, data processing, chart creation, and session state management.
 
+## Error handling and encoding
+
+- Shared helpers (`utils.py`, `api_client.py`, `streamlit_app.py`, `css_config.py`) use **ASCII-only** Python strings. User-visible errors typically use a `[Error]` or `[WARN]` text prefix instead of emoji.
+- **Multipage app content** in `streamlit_ui/pages/` may still use Unicode for labels and narrative text (project policy). Do not move display-only Unicode into shared modules if that would break the ASCII rule.
+- Functions such as `display_api_error`, `show_success_message`, and `show_error_message` centralize feedback; prefer them over ad hoc `st.error` strings for consistency.
+
 ## Formatting Utilities
 
 ### Currency Formatting

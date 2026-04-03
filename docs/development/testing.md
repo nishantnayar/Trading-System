@@ -2,6 +2,8 @@
 
 ## Overview
 
+Contributor checklist for Python changes is also in the repo root **`CLAUDE.md`** (encoding, Black/isort/mypy, SMTP/email notifier testing notes).
+
 The trading system uses a **comprehensive testing approach** with multiple layers:
 
 1. **Quick Verification Scripts** - For troubleshooting and quick checks

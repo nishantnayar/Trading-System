@@ -1,6 +1,6 @@
 # Security Guide
 
-> **Last Updated**: December 2025  
+> **Last Updated**: 4/3/2026  
 > **Status**: Security Best Practices
 
 This guide covers security best practices, API key management, and security considerations for the Trading System.

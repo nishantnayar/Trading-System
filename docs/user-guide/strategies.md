@@ -458,5 +458,5 @@ print(f"Max Drawdown: {performance['max_drawdown']:.2%}")
 
 ---
 
-**Last Updated**: December 2025  
+**Last Updated**: 4/3/2026  
 **Status**: 🚧 Planned for v1.1.0

@@ -38,6 +38,25 @@ from src.shared.database.models.strategy_models import (
     PairSpread,
     PairTrade,
 )
+from src.shared.redis.client import set_json
+
+
+def _cache_bars(symbol: str, prices: "pd.Series", ts: str) -> None:
+    """Store bar fetch metadata in Redis under pairs:bars:{symbol}."""
+    if prices.empty:
+        set_json(f"pairs:bars:{symbol}", {"symbol": symbol, "ts": ts, "count": 0})
+        return
+    set_json(
+        f"pairs:bars:{symbol}",
+        {
+            "symbol": symbol,
+            "ts": ts,
+            "count": len(prices),
+            "first": str(prices.index[0]),
+            "last": str(prices.index[-1]),
+            "last_close": round(float(prices.iloc[-1]), 4),
+        },
+    )
 
 
 class PairsStrategy:
@@ -102,9 +121,7 @@ class PairsStrategy:
         circuit_breaker_active = risk_mgr.update_and_check_drawdown(total_equity)
 
         if circuit_breaker_active:
-            logger.warning(
-                "Circuit breaker ACTIVE - new entries blocked this cycle"
-            )
+            logger.warning("Circuit breaker ACTIVE - new entries blocked this cycle")
 
         results = []
         for pair in pairs:
@@ -144,14 +161,23 @@ class PairsStrategy:
         risk_mgr: PortfolioRiskManager,
     ) -> Dict:
         sym1, sym2 = pair.symbol1, pair.symbol2
-        logger.info(f"Evaluating pair: {sym1}/{sym2}")
+        pair_label = f"{sym1}/{sym2}"
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        logger.info(f"Evaluating pair: {pair_label}")
 
         # 1. Use pre-fetched prices from cache (avoids duplicate Alpaca calls)
         prices1 = prices_cache.get(sym1, pd.Series(dtype=float))
         prices2 = prices_cache.get(sym2, pd.Series(dtype=float))
+
+        # Cache bar fetch metadata for debugging
+        _cache_bars(sym1, prices1, now_str)
+        _cache_bars(sym2, prices2, now_str)
+
         if prices1.empty or prices2.empty:
-            logger.warning(f"No price data for {sym1}/{sym2} - skipping")
-            return {"pair": f"{sym1}/{sym2}", "status": "NO_DATA"}
+            logger.warning(f"No price data for {pair_label} - skipping")
+            result: Dict = {"pair": pair_label, "status": "NO_DATA"}
+            set_json(f"pairs:cycle:{sym1}_{sym2}", {**result, "ts": now_str})
+            return result
 
         # 2. Calculate spread + z-score
         calc = SpreadCalculator(
@@ -161,8 +187,16 @@ class PairsStrategy:
         spread_series, z_series, current_z = calc.calculate(prices1, prices2)
 
         if current_z is None:
-            logger.warning(f"Insufficient data for z-score: {sym1}/{sym2}")
-            return {"pair": f"{sym1}/{sym2}", "status": "INSUFFICIENT_DATA"}
+            logger.warning(f"Insufficient data for z-score: {pair_label}")
+            result = {
+                "pair": pair_label,
+                "status": "INSUFFICIENT_DATA",
+                "bar_count_1": len(prices1),
+                "bar_count_2": len(prices2),
+                "z_score_window": int(pair.z_score_window),
+            }
+            set_json(f"pairs:cycle:{sym1}_{sym2}", {**result, "ts": now_str})
+            return result
 
         p1, p2 = calc.current_prices(prices1, prices2)
 
@@ -174,19 +208,31 @@ class PairsStrategy:
         signal = sig_gen.generate(current_z, persist=True)
 
         if signal is None:
-            return {
-                "pair": f"{sym1}/{sym2}",
+            result = {
+                "pair": pair_label,
                 "status": "NO_SIGNAL",
                 "z_score": round(current_z, 4),
             }
+            set_json(
+                f"pairs:cycle:{sym1}_{sym2}",
+                {
+                    **result,
+                    "ts": now_str,
+                    "bar_count_1": len(prices1),
+                    "bar_count_2": len(prices2),
+                    "entry_threshold": float(pair.entry_threshold),
+                },
+            )
+            return result
 
-        logger.info(f"Signal [{signal.signal_type}] for {sym1}/{sym2} z={current_z:.3f}")
+        logger.info(
+            f"Signal [{signal.signal_type}] for {sym1}/{sym2} z={current_z:.3f}"
+        )
 
         # 5. Execute
         executor = PairExecutor(pair, self.alpaca)
         notifier = get_notifier()
         action = "NONE"
-        pair_label = f"{sym1}/{sym2}"
 
         if signal.signal_type in ("LONG_SPREAD", "SHORT_SPREAD"):
             if p1 is None or p2 is None:
@@ -194,9 +240,7 @@ class PairsStrategy:
 
             # Control B - circuit breaker
             if circuit_breaker_active:
-                logger.warning(
-                    f"Entry blocked by circuit breaker: {pair_label}"
-                )
+                logger.warning(f"Entry blocked by circuit breaker: {pair_label}")
                 return {
                     "pair": pair_label,
                     "status": "BLOCKED_CIRCUIT_BREAKER",
@@ -226,8 +270,11 @@ class PairsStrategy:
             sizer = KellySizer(pair)
             qty1, qty2 = sizer.calculate_size(portfolio_equity, p1, p2)
             trade = await executor.open_pair_trade(
-                signal=signal, qty1=qty1, qty2=qty2,
-                current_price1=p1, current_price2=p2,
+                signal=signal,
+                qty1=qty1,
+                qty2=qty2,
+                current_price1=p1,
+                current_price2=p2,
             )
             if trade:
                 action = f"OPEN ({signal.signal_type})"
@@ -296,13 +343,24 @@ class PairsStrategy:
         # 6. Update performance metrics
         self._update_performance(pair)
 
-        return {
-            "pair": f"{sym1}/{sym2}",
+        result = {
+            "pair": pair_label,
             "status": "OK",
             "z_score": round(current_z, 4),
             "signal": signal.signal_type,
             "action": action,
         }
+        set_json(
+            f"pairs:cycle:{sym1}_{sym2}",
+            {
+                **result,
+                "ts": now_str,
+                "bar_count_1": len(prices1),
+                "bar_count_2": len(prices2),
+                "entry_threshold": float(pair.entry_threshold),
+            },
+        )
+        return result
 
     # ------------------------------------------------------------------
     # Data helpers
@@ -332,9 +390,7 @@ class PairsStrategy:
         p2 = await self.alpaca.get_bars(sym2, limit=self.PRICE_LOOKBACK_BARS)
         return p1, p2
 
-    def _load_all_open_trades(
-        self, pairs: List[PairRegistry]
-    ) -> Dict[int, PairTrade]:
+    def _load_all_open_trades(self, pairs: List[PairRegistry]) -> Dict[int, PairTrade]:
         """Return {pair_id: PairTrade} for all pairs that currently have an open trade."""
         pair_ids = [p.id for p in pairs]
         with db_readonly_session() as session:
@@ -349,7 +405,10 @@ class PairsStrategy:
             # Keep the most recent open trade per pair (there should only be one)
             result: Dict[int, PairTrade] = {}
             for t in trades:
-                if t.pair_id not in result or t.entry_time > result[t.pair_id].entry_time:
+                if (
+                    t.pair_id not in result
+                    or t.entry_time > result[t.pair_id].entry_time
+                ):
                     session.expunge(t)
                     result[t.pair_id] = t
             return result
@@ -430,13 +489,16 @@ class PairsStrategy:
                 for t in hold_times
             )
             / len(hold_times)
-            if hold_times else 0.0
+            if hold_times
+            else 0.0
         )
 
         with db_transaction() as session:
             perf = (
                 session.query(PairPerformance)
-                .filter(PairPerformance.pair_id == pair.id, PairPerformance.date == today)
+                .filter(
+                    PairPerformance.pair_id == pair.id, PairPerformance.date == today
+                )
                 .first()
             )
             if perf is None:

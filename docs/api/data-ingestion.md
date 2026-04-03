@@ -41,5 +41,5 @@ This document provides an index to the data ingestion architecture documentation
 
 ---
 
-**Last Updated**: December 2025  
+**Last Updated**: 4/3/2026  
 **Author**: Nishant Nayar

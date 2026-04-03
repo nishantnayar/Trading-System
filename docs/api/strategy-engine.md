@@ -358,5 +358,5 @@ python src/shared/prefect/flows/strategy_engine/pairs_flow.py --deploy
 
 ---
 
-**Last Updated**: 2026-03-28
+**Last Updated**: 4/3/2026
 **Status**: ✅ Live (paper trading) — QRVO/SWKS active pair
