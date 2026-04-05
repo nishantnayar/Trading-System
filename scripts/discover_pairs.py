@@ -100,7 +100,7 @@ def get_hourly_closes(
     pivot.index = pd.to_datetime(pivot.index, utc=True)
     pivot.sort_index(inplace=True)
 
-    return cast(pd.DataFrame, pivot)
+    return pivot
 
 
 # ---------------------------------------------------------------------------
@@ -328,7 +328,7 @@ def discover_pairs(
     df.sort_values("rank_score", ascending=False, inplace=True)
     df.reset_index(drop=True, inplace=True)
 
-    return cast(pd.DataFrame, df.head(top_n))
+    return df.head(top_n)
 
 
 # ---------------------------------------------------------------------------

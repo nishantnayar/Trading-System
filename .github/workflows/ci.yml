@@ -38,7 +38,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-test.txt
-        pip install flake8 black isort mypy bandit safety types-python-dateutil
+        pip install flake8 black isort mypy bandit safety types-python-dateutil types-redis
         
     - name: Code formatting check (Black)
       run: black --check --diff .

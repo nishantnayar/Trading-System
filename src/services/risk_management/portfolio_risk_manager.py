@@ -95,17 +95,13 @@ class PortfolioRiskManager:
                             f"{c_sym} vs {a_sym} (pair {active.symbol1}/{active.symbol2})"
                             f" r={corr:.3f} > threshold {threshold:.2f}"
                         )
-                        logger.warning(
-                            f"Correlation guard blocked {c1}/{c2}: {reason}"
-                        )
+                        logger.warning(f"Correlation guard blocked {c1}/{c2}: {reason}")
                         return False, reason
 
         return True, ""
 
     @staticmethod
-    def _pearson(
-        s1: Optional[pd.Series], s2: Optional[pd.Series]
-    ) -> Optional[float]:
+    def _pearson(s1: Optional[pd.Series], s2: Optional[pd.Series]) -> Optional[float]:
         """
         Compute Pearson correlation on the aligned tail of two price series.
         Returns None if either series is missing or has too few overlapping bars.
@@ -117,7 +113,9 @@ class PortfolioRiskManager:
         if len(aligned) < _MIN_CORRELATION_BARS:
             return None
 
-        corr_matrix = np.corrcoef(aligned["a"].values, aligned["b"].values)
+        a = np.asarray(aligned["a"].to_numpy(), dtype=np.float64)
+        b = np.asarray(aligned["b"].to_numpy(), dtype=np.float64)
+        corr_matrix = np.corrcoef(a, b)
         return float(corr_matrix[0, 1])
 
     # ------------------------------------------------------------------

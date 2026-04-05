@@ -249,11 +249,14 @@ class BacktestEngine:
 
         bars = aligned[(aligned.index >= start_dt) & (aligned.index < end_dt)]
 
-        for i, (ts, row) in enumerate(bars.iterrows()):
-            if ts not in z_series.index or pd.isna(z_series[ts]):
+        for ts in bars.index:
+            row = bars.loc[ts]
+            if ts not in z_series.index:
                 continue
-
-            z = float(z_series[ts])
+            z_raw = z_series.loc[ts]
+            if pd.isna(z_raw):
+                continue
+            z = float(z_raw)
             p1 = float(row["p1"])
             p2 = float(row["p2"])
 
@@ -344,7 +347,7 @@ class BacktestEngine:
             )
             open_trade.exit_time = last_ts.to_pydatetime()
             open_trade.exit_z = (
-                float(z_series[last_ts]) if last_ts in z_series.index else None
+                float(z_series.loc[last_ts]) if last_ts in z_series.index else None
             )
             open_trade.exit_price1 = last_p1
             open_trade.exit_price2 = last_p2
