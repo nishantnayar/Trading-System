@@ -100,6 +100,8 @@ def get_hourly_closes(
     pivot.index = pd.to_datetime(pivot.index, utc=True)
     pivot.sort_index(inplace=True)
 
+    if not isinstance(pivot, pd.DataFrame):
+        raise TypeError("internal: pivot_table must return DataFrame")
     return pivot
 
 
@@ -328,7 +330,10 @@ def discover_pairs(
     df.sort_values("rank_score", ascending=False, inplace=True)
     df.reset_index(drop=True, inplace=True)
 
-    return df.head(top_n)
+    ranked = df.head(top_n)
+    if not isinstance(ranked, pd.DataFrame):
+        raise TypeError("internal: DataFrame.head must return DataFrame")
+    return ranked
 
 
 # ---------------------------------------------------------------------------
