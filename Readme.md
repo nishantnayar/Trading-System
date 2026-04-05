@@ -270,15 +270,15 @@ The system includes Prefect-powered workflow orchestration for automated data in
    - Scope: All active symbols
 
 2. **Weekly Company Information Update**
-   - Schedule: Sunday at 02:00 UTC
+   - Schedule: Friday at 23:00 UTC (after US close and daily Yahoo)
    - Function: Updates company metadata and information
 
 3. **Weekly Key Statistics Update**
-   - Schedule: Sunday at 03:00 UTC
+   - Schedule: Not deployed by default (use combined Weekly Company Data Update)
    - Function: Updates financial statistics
 
 4. **Weekly Company Data Update** (Combined)
-   - Schedule: Sunday at 02:00 UTC
+   - Schedule: Saturday 01:30 UTC (Friday evening US; staggered after company-only job)
    - Function: Sequential execution of company info and key statistics updates
 
 ### Prefect Setup
@@ -331,10 +331,11 @@ The system uses Prefect 3.4+ for workflow orchestration. Prefect is **optional**
 
 **✅ Implemented:**
 - **Daily Market Data Update**: Runs daily at 22:15 UTC (Mon-Fri) — Fetches hourly market data from Yahoo (unadjusted and adjusted, `data_source='yahoo'` and `data_source='yahoo_adjusted'`), then triggers **Technical Indicators** as a sub-flow (no standalone cron to avoid race conditions on Prefect restart)
-- **Weekly Company Information Update**: Runs Sunday at 02:00 UTC
-- **Weekly Key Statistics Update**: Runs Sunday at 03:00 UTC
-- **Weekly Company Data Update**: Combined flow running Sunday at 02:00 UTC
-- **Weekly Database Backup**: Runs Sunday at 04:00 UTC — Backs up `data_ingestion` and `analytics` schemas to `backups/` via pg_dump
+- **Weekly Company Information Update**: Runs Friday at 23:00 UTC (after US close)
+- **Weekly Key Statistics Update**: Covered by combined flow; standalone not deployed by default
+- **Weekly Company Data Update**: Combined flow Saturday 01:30 UTC (staggered Yahoo load)
+- **Weekly Pair Discovery**: Saturday 03:30 UTC (after weekly Yahoo; DB reads `market_data`)
+- **Weekly Database Backup**: Saturday 05:00 UTC — Backs up `data_ingestion` and `analytics` schemas to `backups/` via pg_dump
 
 **Scripts:** To backfill adjusted prices historically, run `python scripts/backpopulate_yahoo_adjusted.py --all-symbols --days 365` (see [Data Sources: Yahoo](docs/data-ingestion/data-sources-yahoo.md)). For manual backup, run `python scripts/backup_trading_db.py`.
 

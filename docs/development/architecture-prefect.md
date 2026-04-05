@@ -718,7 +718,7 @@ def create_prefect_engine():
 
 #### **Trading System Database Backup**
 
-The trading database (`data_ingestion`, `analytics` schemas) is backed up weekly via Prefect at 4 AM UTC Sunday, after weekend data ingestion jobs. Backups are written to `backups/trading_backup_YYYYMMDD.dump`.
+The trading database (`data_ingestion`, `analytics` schemas) is backed up weekly via Prefect at 5 AM UTC Saturday, after Friday-after-close weekly jobs. Backups are written to `backups/trading_backup_YYYYMMDD.dump`.
 
 - **Automated**: Prefect flow `Weekly Database Backup` (scheduled)
 - **Manual**: `python scripts/backup_trading_db.py`
@@ -918,9 +918,11 @@ scripts/
 
 **Schedules:**
 - **Market Data (Daily End-of-Day)**: `15 22 * * 1-5` (22:15 UTC Mon-Fri, after US market close) - Fetches hourly bars
-- **Company Info (Weekly)**: `0 2 * * 0` (2 AM UTC Sunday) - Weekly updates
-- **Key Statistics (Weekly)**: `0 3 * * 0` (3 AM UTC Sunday)
-- **Company Data Combined (Weekly)**: `0 2 * * 0` (2 AM UTC Sunday) - Runs company info first, then key statistics
+- **Company Info (Weekly)**: `0 23 * * 5` (11 PM UTC Friday) - Staggered after daily EOD Yahoo
+- **Key Statistics (Weekly)**: Prefer combined flow; standalone (not deployed in repo) example `0 2 * * 6` if ever split out
+- **Company Data Combined (Weekly)**: `30 1 * * 6` (1:30 AM UTC Saturday, Fri evening US) - Runs company info first, then key statistics; spaced from standalone company job to limit Yahoo burst
+- **Pair Discovery (Weekly)**: `30 3 * * 6` (3:30 AM UTC Saturday) - After weekly Yahoo; reads `market_data` in DB
+- **Database Backup (Weekly)**: `0 5 * * 6` (5 AM UTC Saturday) - pg_dump after discovery window
 - **Financial Statements (Quarterly)**: `0 9 1 * *` (9 AM CT, 1st of month) - After earnings
 - **Institutional Holders (Monthly)**: `0 9 1 * *` (9 AM CT, 1st of month)
 

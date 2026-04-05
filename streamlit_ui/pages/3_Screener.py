@@ -85,12 +85,14 @@ if "screener_chat_history" not in st.session_state:
 # CSS
 # ---------------------------------------------------------------------------
 
+
 def load_custom_css():
     css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
     try:
         with open(css_file, "r") as f:
             css_content = f.read()
         from streamlit_ui.css_config import generate_css_variables, get_theme_css
+
         full_css = generate_css_variables() + css_content + get_theme_css()
         st.markdown(f"<style>{full_css}</style>", unsafe_allow_html=True)
     except Exception as e:
@@ -100,6 +102,7 @@ def load_custom_css():
 # ---------------------------------------------------------------------------
 # Data helpers
 # ---------------------------------------------------------------------------
+
 
 def get_indicators_for_symbol_from_db(
     symbol: str,
@@ -128,10 +131,7 @@ def get_indicators_for_symbol_from_db(
         "current_price": closing_prices[-1] if closing_prices else None,
         "sma_20": latest_indicators.get("sma_20"),
         "sma_50": latest_indicators.get("sma_50"),
-        "rsi": (
-            latest_indicators.get("rsi_14")
-            or latest_indicators.get("rsi")
-        ),
+        "rsi": (latest_indicators.get("rsi_14") or latest_indicators.get("rsi")),
         "price_change_1d": latest_indicators.get("price_change_1d"),
         "price_change_5d": latest_indicators.get("price_change_5d"),
         "price_change_30d": latest_indicators.get("price_change_30d"),
@@ -142,8 +142,7 @@ def get_indicators_for_symbol_from_db(
         "bb_position": latest_indicators.get("bb_position"),
         "avg_volume": latest_indicators.get("avg_volume_20"),
         "current_volume": (
-            volumes[-1] if volumes
-            else latest_indicators.get("current_volume")
+            volumes[-1] if volumes else latest_indicators.get("current_volume")
         ),
     }
 
@@ -186,20 +185,14 @@ def _format_criteria_readable(criteria: Dict[str, Any]) -> str:
         parts.append(f"industry: *{criteria['industry']}*")
     if criteria.get("min_price") or criteria.get("max_price"):
         lo = f"${criteria['min_price']:.0f}" if criteria.get("min_price") else "$0"
-        hi = (
-            f"${criteria['max_price']:.0f}"
-            if criteria.get("max_price")
-            else "any"
-        )
+        hi = f"${criteria['max_price']:.0f}" if criteria.get("max_price") else "any"
         parts.append(f"price {lo}–{hi}")
     if criteria.get("rsi_min") or criteria.get("rsi_max"):
         lo = criteria.get("rsi_min", 0)
         hi = criteria.get("rsi_max", 100)
         parts.append(f"RSI {lo:.0f}–{hi:.0f}")
     if criteria.get("min_volume"):
-        parts.append(
-            f"min vol {format_number(criteria['min_volume'])}"
-        )
+        parts.append(f"min vol {format_number(criteria['min_volume'])}")
     if criteria.get("min_market_cap"):
         parts.append(f"mkt cap ≥ ${criteria['min_market_cap']:.1f}B")
     sort_by = criteria.get("sort_by")
@@ -217,6 +210,7 @@ def _format_criteria_readable(criteria: Dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 # Core screening logic
 # ---------------------------------------------------------------------------
+
 
 def screen_stocks(
     api_client,
@@ -361,15 +355,9 @@ def screen_stocks(
             if matches:
                 bb = indicators.get("bb_position")
                 if bb is not None:
-                    if (
-                        criteria.get("bb_min") is not None
-                        and bb < criteria["bb_min"]
-                    ):
+                    if criteria.get("bb_min") is not None and bb < criteria["bb_min"]:
                         matches = False
-                    if (
-                        criteria.get("bb_max") is not None
-                        and bb > criteria["bb_max"]
-                    ):
+                    if criteria.get("bb_max") is not None and bb > criteria["bb_max"]:
                         matches = False
 
             # SMA crossover
@@ -421,9 +409,7 @@ def screen_stocks(
 
             if matches:
                 results.append(indicators)
-                logger.debug(
-                    f"Match: {symbol} - {indicators.get('name', 'N/A')}"
-                )
+                logger.debug(f"Match: {symbol} - {indicators.get('name', 'N/A')}")
 
         except Exception as e:
             logger.error(f"Error processing {symbol}: {e}")
@@ -460,6 +446,7 @@ def screen_stocks(
 # ---------------------------------------------------------------------------
 # Results display
 # ---------------------------------------------------------------------------
+
 
 def _build_results_df(results: List[Dict[str, Any]]) -> pd.DataFrame:
     """Build a DataFrame with numeric columns for proper AgGrid sorting."""
@@ -499,7 +486,8 @@ def _configure_aggrid(df: pd.DataFrame):
     )
 
     # RSI colour coding
-    rsi_style = JsCode("""
+    rsi_style = JsCode(
+        """
     function(params) {
         if (params.value == null) return {};
         if (params.value < 30)
@@ -508,16 +496,14 @@ def _configure_aggrid(df: pd.DataFrame):
             return {'backgroundColor': '#4b1a1a', 'color': '#f87171'};
         return {};
     }
-    """)
-    rsi_fmt = JsCode(
-        "function(p){return p.value==null?'N/A':p.value.toFixed(1);}"
+    """
     )
-    gb.configure_column(
-        "RSI", cellStyle=rsi_style, valueFormatter=rsi_fmt, width=80
-    )
+    rsi_fmt = JsCode("function(p){return p.value==null?'N/A':p.value.toFixed(1);}")
+    gb.configure_column("RSI", cellStyle=rsi_style, valueFormatter=rsi_fmt, width=80)
 
     # Signal badge colours
-    signal_style = JsCode("""
+    signal_style = JsCode(
+        """
     function(params) {
         const v = params.value;
         if (v === 'Oversold')  return {color:'#4ade80', fontWeight:'bold'};
@@ -526,7 +512,8 @@ def _configure_aggrid(df: pd.DataFrame):
         if (v === 'Bearish')   return {color:'#fb923c', fontWeight:'bold'};
         return {color:'#9ca3af'};
     }
-    """)
+    """
+    )
     gb.configure_column("Signal", cellStyle=signal_style, width=110)
 
     # Numeric formatters (keep values numeric so sorting works)
@@ -537,24 +524,26 @@ def _configure_aggrid(df: pd.DataFrame):
         "function(p){return p.value==null?'N/A':"
         "(p.value>=0?'+':'')+p.value.toFixed(1)+'%';}"
     )
-    mc_fmt = JsCode("""
+    mc_fmt = JsCode(
+        """
     function(p) {
         if (p.value == null) return 'N/A';
         const b = p.value / 1e9;
         return b >= 1 ? '$'+b.toFixed(1)+'B' : '$'+(p.value/1e6).toFixed(0)+'M';
     }
-    """)
-    vol_fmt = JsCode("""
+    """
+    )
+    vol_fmt = JsCode(
+        """
     function(p) {
         if (p.value == null) return 'N/A';
         if (p.value >= 1e6) return (p.value/1e6).toFixed(1)+'M';
         if (p.value >= 1e3) return (p.value/1e3).toFixed(0)+'K';
         return p.value.toFixed(0);
     }
-    """)
-    f2_fmt = JsCode(
-        "function(p){return p.value==null?'N/A':p.value.toFixed(2);}"
+    """
     )
+    f2_fmt = JsCode("function(p){return p.value==null?'N/A':p.value.toFixed(2);}")
 
     gb.configure_column("Price", valueFormatter=price_fmt, width=90)
     gb.configure_column("1d %", valueFormatter=pct_fmt, width=80)
@@ -589,9 +578,7 @@ def display_results(
     if llm_service and query:
         with st.expander("AI Analysis", expanded=True):
             with show_loading_spinner("Generating AI analysis..."):
-                analysis = llm_service.analyze_screened_results(
-                    results, query=query
-                )
+                analysis = llm_service.analyze_screened_results(results, query=query)
                 st.write(analysis)
 
     # Results table
@@ -611,9 +598,7 @@ def display_results(
     st.download_button(
         label="Download Results as CSV",
         data=csv,
-        file_name=(
-            f"screener_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        ),
+        file_name=(f"screener_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"),
         mime="text/csv",
     )
 
@@ -657,6 +642,7 @@ def display_results(
 # Main page
 # ---------------------------------------------------------------------------
 
+
 def screener_page():
     st.set_page_config(layout="wide", page_title="Stock Screener - AI Powered")
     load_custom_css()
@@ -672,9 +658,7 @@ def screener_page():
     with show_loading_spinner("Connecting to API..."):
         health = api_client.health_check()
         if "error" in health:
-            st.error(
-                "Failed to connect to API. Please check your connection."
-            )
+            st.error("Failed to connect to API. Please check your connection.")
             return
 
     # ---- Sidebar ----
@@ -699,35 +683,27 @@ def screener_page():
             selected_model = st.selectbox(
                 "Ollama model",
                 available,
-                index=available.index(default_model)
-                if default_model in available
-                else 0,
+                index=(
+                    available.index(default_model) if default_model in available else 0
+                ),
             )
         else:
-            selected_model = st.text_input(
-                "Ollama model (manual)", value="phi3"
-            )
+            selected_model = st.text_input("Ollama model (manual)", value="phi3")
 
         try:
             with show_loading_spinner("Initialising LLM..."):
                 llm_service = get_llm_service(model=selected_model)
             st.success(f"LLM ready ({selected_model})")
         except Exception as e:
-            st.warning(
-                f"LLM not available: {e}. Traditional filters still work."
-            )
+            st.warning(f"LLM not available: {e}. Traditional filters still work.")
 
     # ---- Tabs ----
-    tab1, tab2 = st.tabs(
-        ["Natural Language Query", "Traditional Filters"]
-    )
+    tab1, tab2 = st.tabs(["Natural Language Query", "Traditional Filters"])
 
     # ------------------------------------------------------------------ Tab 1
     with tab1:
         st.subheader("Ask in Natural Language")
-        st.caption(
-            "Example: 'Find oversold tech stocks with RSI < 30 and high volume'"
-        )
+        st.caption("Example: 'Find oversold tech stocks with RSI < 30 and high volume'")
 
         query = st.text_input(
             "Enter your screening query:",
@@ -737,13 +713,9 @@ def screener_page():
 
         col1, col2, _ = st.columns([1, 1, 3])
         with col1:
-            search_button = st.button(
-                "Search", type="primary", use_container_width=True
-            )
+            search_button = st.button("Search", type="primary", width="stretch")
         with col2:
-            clear_button = st.button(
-                "Clear", type="secondary", use_container_width=True
-            )
+            clear_button = st.button("Clear", type="secondary", width="stretch")
 
         if clear_button:
             st.session_state.screener_results = []
@@ -767,26 +739,20 @@ def screener_page():
                 readable = _format_criteria_readable(criteria)
                 st.info(readable)
             else:
-                st.warning(
-                    "LLM not available. Please use the Traditional Filters tab."
-                )
+                st.warning("LLM not available. Please use the Traditional Filters tab.")
 
             with show_loading_spinner("Loading symbols..."):
                 try:
                     all_syms = api_client.get_all_symbols()
                     if "error" not in all_syms and all_syms:
                         symbols = [
-                            s.get("symbol", "")
-                            for s in all_syms
-                            if s.get("symbol")
+                            s.get("symbol", "") for s in all_syms if s.get("symbol")
                         ]
                     else:
                         symbols = _fallback_symbols()
                 except Exception:
                     symbols = _fallback_symbols()
-                st.info(
-                    f"Screening {min(len(symbols), symbol_limit)} symbols..."
-                )
+                st.info(f"Screening {min(len(symbols), symbol_limit)} symbols...")
 
             with show_loading_spinner("Screening stocks..."):
                 try:
@@ -801,6 +767,7 @@ def screener_page():
                 except Exception as e:
                     st.error(f"Error during screening: {e}")
                     import traceback as tb
+
                     st.code(tb.format_exc())
                     results = []
 
@@ -827,9 +794,7 @@ def screener_page():
                 )
             else:
                 industries = (
-                    api_client.get_industries()
-                    if "error" not in health
-                    else []
+                    api_client.get_industries() if "error" not in health else []
                 )
             selected_industry = st.selectbox("Industry", ["All"] + industries)
 
@@ -864,9 +829,7 @@ def screener_page():
 
         with col4:
             st.write("**Advanced Filters**")
-            macd_signal_opt = st.selectbox(
-                "MACD Signal", ["Any", "Bullish", "Bearish"]
-            )
+            macd_signal_opt = st.selectbox("MACD Signal", ["Any", "Bullish", "Bearish"])
             sma_crossover_opt = st.selectbox(
                 "SMA Crossover",
                 [
@@ -877,17 +840,11 @@ def screener_page():
                     "Death Cross (SMA20<SMA50)",
                 ],
             )
-            bb_min = st.slider(
-                "BB Position Min", 0.0, 1.0, 0.0, step=0.05
-            )
-            bb_max = st.slider(
-                "BB Position Max", 0.0, 1.0, 1.0, step=0.05
-            )
+            bb_min = st.slider("BB Position Min", 0.0, 1.0, 0.0, step=0.05)
+            bb_max = st.slider("BB Position Max", 0.0, 1.0, 1.0, step=0.05)
             sort_opt = st.selectbox("Sort Results By", SORT_OPTIONS)
 
-        filter_button = st.button(
-            "Apply Filters", type="primary", use_container_width=True
-        )
+        filter_button = st.button("Apply Filters", type="primary", width="stretch")
 
         if filter_button:
             criteria = {}
@@ -933,15 +890,9 @@ def screener_page():
             with show_loading_spinner("Loading symbols..."):
                 if selected_sector != "All" or selected_industry != "All":
                     syms_data = api_client.get_symbols_by_filter(
-                        sector=(
-                            selected_sector
-                            if selected_sector != "All"
-                            else None
-                        ),
+                        sector=(selected_sector if selected_sector != "All" else None),
                         industry=(
-                            selected_industry
-                            if selected_industry != "All"
-                            else None
+                            selected_industry if selected_industry != "All" else None
                         ),
                     )
                 else:
@@ -969,6 +920,7 @@ def screener_page():
                 except Exception as e:
                     st.error(f"Error during screening: {e}")
                     import traceback as tb
+
                     st.code(tb.format_exc())
                     results = []
 
@@ -989,6 +941,7 @@ def screener_page():
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _fallback_symbols() -> List[str]:
     return ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"]

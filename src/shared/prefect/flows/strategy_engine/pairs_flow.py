@@ -32,6 +32,7 @@ from src.services.alpaca.client import AlpacaClient
 from src.services.notification.email_notifier import get_notifier
 from src.services.strategy_engine.pairs.strategy import PairsStrategy
 from src.shared.database.base import db_readonly_session, db_transaction
+from src.shared.database.models.market_data import MarketData
 from src.shared.database.models.strategy_models import PairRegistry, PairTrade
 
 # ---------------------------------------------------------------------------
@@ -94,6 +95,94 @@ async def run_pairs_strategy_task(alpaca: AlpacaClient) -> dict:
         f"{len(ok)} with signal, {len(errors)} errors"
     )
     return summary
+
+
+@task(
+    name="refresh-pair-prices",
+    retries=2,
+    retry_delay_seconds=30,
+    log_prints=True,
+)
+async def refresh_pair_prices_task() -> dict:
+    """
+    Load today's hourly Yahoo bars into market_data for every active pair symbol.
+
+    Runs before the strategy cycle so _fetch_prices() always sees bars up to
+    the current hour.  Uses days_back=2 to ensure the current partial trading
+    day is fully covered (yfinance returns all completed 1h candles for today
+    when queried intraday).
+    """
+    with db_readonly_session() as session:
+        pairs = (
+            session.query(PairRegistry).filter(PairRegistry.is_active.is_(True)).all()
+        )
+        symbols = sorted({sym for p in pairs for sym in (p.symbol1, p.symbol2)})
+        for p in pairs:
+            session.expunge(p)
+
+    if not symbols:
+        logger.info("refresh-pair-prices: no active pairs, skipping")
+        return {"symbols": [], "loaded": 0}
+
+    logger.info("Refreshing hourly bars for %d symbols: %s", len(symbols), symbols)
+
+    from datetime import date, timedelta, timezone
+
+    import yfinance as yf
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    from_date = date.today() - timedelta(days=2)
+    to_date = date.today()
+    total = 0
+
+    for symbol in symbols:
+        try:
+            hist = yf.Ticker(symbol).history(
+                start=str(from_date),
+                end=str(to_date),
+                interval="1h",
+                auto_adjust=True,
+            )
+            if hist.empty:
+                logger.warning("No Yahoo bars returned for %s", symbol)
+                continue
+
+            records = []
+            for ts, row in hist.iterrows():
+                records.append(
+                    {
+                        "symbol": symbol,
+                        "timestamp": ts.to_pydatetime().astimezone(timezone.utc),
+                        "data_source": "yahoo_adjusted_1h",
+                        "open": float(row["Open"]),
+                        "high": float(row["High"]),
+                        "low": float(row["Low"]),
+                        "close": float(row["Close"]),
+                        "volume": int(row["Volume"]),
+                    }
+                )
+
+            with db_transaction() as session:
+                stmt = pg_insert(MarketData).values(records)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["symbol", "timestamp", "data_source"],
+                    set_={
+                        "open": stmt.excluded.open,
+                        "high": stmt.excluded.high,
+                        "low": stmt.excluded.low,
+                        "close": stmt.excluded.close,
+                        "volume": stmt.excluded.volume,
+                    },
+                )
+                session.execute(stmt)
+
+            total += len(records)
+            logger.info("Refreshed %d bars for %s", len(records), symbol)
+        except Exception as exc:
+            logger.warning("Failed to refresh bars for %s: %s", symbol, exc)
+
+    logger.info("refresh-pair-prices: %d total records for %s", total, symbols)
+    return {"symbols": symbols, "loaded": total}
 
 
 # Degradation thresholds for auto-disabling pairs
@@ -221,6 +310,7 @@ async def intraday_pairs_flow(skip_market_check: bool = False) -> dict:
             return {"status": "MARKET_CLOSED", "pairs_evaluated": 0}
 
     try:
+        await refresh_pair_prices_task()
         summary = await run_pairs_strategy_task(alpaca)
         deactivation = await check_and_disable_failing_pairs_task()
         summary["deactivated_pairs"] = deactivation["deactivated"]

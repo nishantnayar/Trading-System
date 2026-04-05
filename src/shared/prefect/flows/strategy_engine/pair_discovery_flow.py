@@ -1,8 +1,9 @@
 """
 Weekly Pair Discovery Flow
 
-Scheduled to run every Sunday at 08:00 UTC (03:00 ET / 00:00 PT) -
-safely after the Friday close and before Monday pre-market.
+Scheduled 03:30 UTC Saturday (late Friday US) - after US cash close, daily
+market ingestion (22:15 UTC Fri), indicators (22:30 UTC Fri), and weekly
+company Yahoo jobs, so the DB has fresh bars before discovery.
 
 Each run:
     1. Load active symbols from DB
@@ -195,7 +196,7 @@ async def deploy_pair_discovery_flow() -> None:
     await deployment.deploy(
         name="Weekly Pair Discovery",
         work_pool_name=PrefectConfig.get_work_pool_name(),
-        cron="0 8 * * 0",  # Sundays at 08:00 UTC (03:00 ET)
+        cron="30 3 * * 6",  # 03:30 UTC Saturday (Fri evening US; after weekly Yahoo batch)
         parameters={
             "days_back": 252,
             "min_correlation": 0.70,

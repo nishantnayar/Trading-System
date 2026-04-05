@@ -7,6 +7,7 @@ Each call to PairsStrategy.run_cycle() performs one full evaluation loop:
     1. Load active pairs from PairRegistry
     2. For each pair:
         a. Fetch latest N hourly bars from data_ingestion.market_data
+           (data_source='yahoo_adjusted', refreshed by pairs_flow before cycle)
         b. SpreadCalculator.calculate() -> spread, z_score
         c. Store spread/z-score to PairSpread table
         d. SignalGenerator.generate() -> signal or None
@@ -14,7 +15,8 @@ Each call to PairsStrategy.run_cycle() performs one full evaluation loop:
         f. PairExecutor.open_pair_trade() or close_pair_trade() / emergency_stop()
     3. Update PairPerformance table
 
-The strategy reads prices from the DB (not Yahoo API) for low latency.
+The strategy reads prices from data_ingestion.market_data (yahoo_adjusted
+hourly bars).  Alpaca is used only for order execution and account info.
 """
 
 import asyncio
@@ -38,6 +40,7 @@ from src.shared.database.models.strategy_models import (
     PairSpread,
     PairTrade,
 )
+from src.shared.market_data import get_price_series
 from src.shared.redis.client import set_json
 
 
@@ -379,15 +382,16 @@ class PairsStrategy:
 
     async def _fetch_prices(self, pair: PairRegistry) -> Tuple[pd.Series, pd.Series]:
         """
-        Fetch the last PRICE_LOOKBACK_BARS hourly closes from Alpaca.
+        Fetch the last PRICE_LOOKBACK_BARS hourly adjusted closes from the DB.
 
-        Using Alpaca instead of the DB because the DB is populated end-of-day
-        by the Yahoo flow - it has no data for today during market hours.
-        Alpaca returns live intraday bars including the current incomplete bar.
+        Data source: data_ingestion.market_data (data_source='yahoo_adjusted').
+        The pairs_flow refreshes these bars from Yahoo Finance before calling
+        run_cycle(), so the DB always has bars up to the current hour.
+        Alpaca is used only for order execution, not for price data.
         """
         sym1, sym2 = pair.symbol1, pair.symbol2
-        p1 = await self.alpaca.get_bars(sym1, limit=self.PRICE_LOOKBACK_BARS)
-        p2 = await self.alpaca.get_bars(sym2, limit=self.PRICE_LOOKBACK_BARS)
+        p1 = get_price_series(sym1, limit=self.PRICE_LOOKBACK_BARS)
+        p2 = get_price_series(sym2, limit=self.PRICE_LOOKBACK_BARS)
         return p1, p2
 
     def _load_all_open_trades(self, pairs: List[PairRegistry]) -> Dict[int, PairTrade]:

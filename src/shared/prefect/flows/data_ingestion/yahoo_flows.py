@@ -40,6 +40,7 @@ from src.shared.prefect.tasks.data_ingestion_tasks import (
 def _market_data_run_name() -> str:
     """Generate business-friendly run name for market data flow."""
     from datetime import datetime
+
     run_date = datetime.now().strftime("%Y-%m-%d")
     return f"Market Data Update - {run_date}"
 
@@ -47,6 +48,7 @@ def _market_data_run_name() -> str:
 def _company_info_run_name() -> str:
     """Generate business-friendly run name for company info flow."""
     from datetime import datetime
+
     run_date = datetime.now().strftime("%Y-%m-%d")
     return f"Company Information Update - {run_date}"
 
@@ -54,6 +56,7 @@ def _company_info_run_name() -> str:
 def _key_statistics_run_name() -> str:
     """Generate business-friendly run name for key statistics flow."""
     from datetime import datetime
+
     run_date = datetime.now().strftime("%Y-%m-%d")
     return f"Key Statistics Update - {run_date}"
 
@@ -61,6 +64,7 @@ def _key_statistics_run_name() -> str:
 def _combined_run_name() -> str:
     """Generate business-friendly run name for combined flow."""
     from datetime import datetime
+
     run_date = datetime.now().strftime("%Y-%m-%d")
     return f"Company Data Update - {run_date}"
 
@@ -102,7 +106,7 @@ async def yahoo_market_data_flow(
             days_back = 7  # For intraday data, look back 7 days to ensure weekdays
         else:
             days_back = 30  # For daily/weekly data, default to 30 days like the script
-    
+
     logger.info(
         f"Starting Yahoo Market Data Flow for {len(symbols) if symbols else 'all active'} symbols (days_back={days_back}, interval={interval})"
     )
@@ -130,9 +134,13 @@ async def yahoo_market_data_flow(
             elif result["status"] == "no_data":
                 # No data available (symbol might be delisted, etc.) - not a failure
                 no_data.append(symbol)
-                logger.info(f"  No data available for {symbol} (likely delisted or no trading data)")
+                logger.info(
+                    f"  No data available for {symbol} (likely delisted or no trading data)"
+                )
             else:
-                failed.append({"symbol": symbol, "error": result.get("error", "Unknown error")})
+                failed.append(
+                    {"symbol": symbol, "error": result.get("error", "Unknown error")}
+                )
         except Exception as e:
             logger.error(f"Failed to process {symbol}: {e}")
             failed.append({"symbol": symbol, "error": str(e)})
@@ -158,38 +166,42 @@ async def yahoo_market_data_flow(
     logger.info("=" * 60)
 
     # Trigger technical indicators calculation after data ingestion completes
-    if result['successful'] > 0:
+    if result["successful"] > 0:
         logger.info("")
         logger.info("=" * 60)
         logger.info("Triggering Technical Indicators Calculation")
         logger.info("=" * 60)
-        
+
         try:
             # Calculate indicators for successfully loaded symbols
             # Note: days_back=300 is needed to fetch enough historical data from database
             # to calculate indicators (SMA_200 needs 200 days, RSI_14 needs 14 days, etc.)
             # This is different from data ingestion days_back which only fetches new data
             indicators_result = await calculate_daily_indicators(
-                symbols=result['successful_symbols'],
+                symbols=result["successful_symbols"],
                 days_back=300,  # Need enough history from DB to calculate indicators
                 max_symbols=max_symbols,  # Pass through max_symbols if set
             )
-            
+
             logger.info("")
             logger.info("=" * 60)
             logger.info("Indicators Calculation Completed")
-            logger.info(f"Successful: {indicators_result['successful']}/{indicators_result['total_symbols']}")
+            logger.info(
+                f"Successful: {indicators_result['successful']}/{indicators_result['total_symbols']}"
+            )
             logger.info(f"Failed: {indicators_result['failed']}")
             logger.info("=" * 60)
-            
+
             # Add indicators result to the main result
-            result['indicators'] = indicators_result
-            
+            result["indicators"] = indicators_result
+
         except Exception as e:
             logger.error(f"Failed to calculate indicators: {e}")
-            result['indicators'] = {"error": str(e)}
+            result["indicators"] = {"error": str(e)}
     else:
-        logger.warning("Skipping indicators calculation - no symbols were successfully loaded")
+        logger.warning(
+            "Skipping indicators calculation - no symbols were successfully loaded"
+        )
 
     return result
 
@@ -386,10 +398,10 @@ async def _resolve_deployment(
 ) -> Any:
     """
     Resolve a deployment that may be a coroutine.
-    
+
     Args:
         deployment: Either a deployment object or a coroutine that returns one
-        
+
     Returns:
         The resolved deployment object
     """
@@ -428,6 +440,9 @@ async def deploy_all_flows() -> None:
     )
 
     # Deploy company info flow (weekly)
+    # Stagger vs Daily Market Data (22:15 UTC Fri) and indicators (22:30 UTC Fri) to
+    # limit Yahoo burst traffic. If you also deploy Weekly Company Data Update below,
+    # consider disabling this deployment to avoid duplicate company-profile fetches.
     company_info_deployment = await _resolve_deployment(
         yahoo_company_info_flow.from_source(
             source=source_path,
@@ -437,7 +452,7 @@ async def deploy_all_flows() -> None:
     await company_info_deployment.deploy(
         name="Weekly Company Information Update",
         work_pool_name=PrefectConfig.get_work_pool_name(),
-        cron="0 2 * * 0",  # 2 AM Sunday (weekly) - UTC
+        cron="0 23 * * 5",  # 23:00 UTC Friday (~after US cash close + daily jobs)
         tags=["data-ingestion", "yahoo", "company-info", "scheduled"],
         description="Weekly company information update from Yahoo Finance",
         ignore_warnings=True,
@@ -455,7 +470,7 @@ async def deploy_all_flows() -> None:
     await combined_deployment.deploy(
         name="Weekly Company Data Update",
         work_pool_name=PrefectConfig.get_work_pool_name(),
-        cron="0 2 * * 0",  # 2 AM Sunday (weekly) - UTC
+        cron="30 1 * * 6",  # 01:30 UTC Saturday (Fri evening US; spaced from company-info job)
         tags=[
             "data-ingestion",
             "yahoo",
@@ -480,7 +495,7 @@ async def deploy_indicator_flow() -> None:
     project_root = Path(__file__).parent.parent.parent.parent.parent.parent
     source_path = str(project_root)
     flow_file = "src/shared/prefect/flows/analytics/indicator_flows.py"
-    
+
     # Deploy indicators flow as standalone (can run independently)
     indicators_deployment = await _resolve_deployment(
         calculate_daily_indicators.from_source(
@@ -499,12 +514,12 @@ async def deploy_indicator_flow() -> None:
         description="Daily technical indicators calculation on trading days (Mon-Fri). Can also run automatically after data ingestion.",
         ignore_warnings=True,
     )
-    
+
     logger.info("Technical Indicators flow deployed successfully!")
 
 
 async def deploy_backup_flow() -> None:
-    """Deploy the weekly database backup flow (runs after weekend jobs)."""
+    """Deploy the weekly database backup flow (after weekly Yahoo and discovery)."""
     from src.shared.prefect.flows.maintenance.backup_flows import backup_trading_db_flow
 
     project_root = Path(__file__).parent.parent.parent.parent.parent.parent
@@ -520,7 +535,7 @@ async def deploy_backup_flow() -> None:
     await backup_deployment.deploy(
         name="Weekly Database Backup",
         work_pool_name=PrefectConfig.get_work_pool_name(),
-        cron="0 4 * * 0",  # 4 AM Sunday UTC (after company info 2 AM, key stats 3 AM)
+        cron="0 5 * * 6",  # 05:00 UTC Saturday (after Fri PM weekly Yahoo + pair discovery)
         tags=["maintenance", "backup", "scheduled"],
         description="Backup data_ingestion and analytics schemas via pg_dump",
         ignore_warnings=True,

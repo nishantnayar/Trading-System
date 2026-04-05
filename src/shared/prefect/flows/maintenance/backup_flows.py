@@ -2,7 +2,7 @@
 Database Backup Flow
 
 Runs pg_dump for data_ingestion and analytics schemas.
-Scheduled for weekends after other weekly jobs.
+Scheduled Saturday morning UTC after weekly Yahoo flows and pair discovery.
 """
 
 import sys
@@ -19,6 +19,7 @@ from prefect import flow
 
 def _backup_run_name() -> str:
     from datetime import datetime
+
     return f"DB Backup - {datetime.now().strftime('%Y-%m-%d')}"
 
 

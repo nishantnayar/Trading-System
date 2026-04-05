@@ -330,7 +330,6 @@ def main():
                 spark_fig = _render_sparkline(z_vals)
                 c5.plotly_chart(
                     spark_fig,
-                    use_container_width=True,
                     config={"displayModeBar": False},
                 )
             else:
@@ -395,7 +394,7 @@ def main():
                 margin=dict(l=0, r=60, t=30, b=0),
                 legend=dict(orientation="h"),
             )
-            st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+            st.plotly_chart(fig, config=PLOTLY_CONFIG)
         else:
             st.info("No spread history yet. Strategy must run at least one cycle.")
 

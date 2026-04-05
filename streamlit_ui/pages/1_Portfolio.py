@@ -30,12 +30,14 @@ PLOTLY_CONFIG = {
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
 
+
 def load_css() -> None:
     css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
     try:
         with open(css_file) as f:
             css = f.read()
         from css_config import generate_css_variables, get_theme_css
+
         st.markdown(
             f"<style>{generate_css_variables()}{css}{get_theme_css()}</style>",
             unsafe_allow_html=True,
@@ -45,6 +47,7 @@ def load_css() -> None:
 
 
 # ── Formatters ────────────────────────────────────────────────────────────────
+
 
 def _d(v, decimals: int = 2) -> str:
     try:
@@ -87,6 +90,7 @@ def _fmt_dt(s: str) -> str:
 
 # ── Allocation pie ────────────────────────────────────────────────────────────
 
+
 def render_allocation(positions: list) -> None:
     if not positions:
         st.markdown(
@@ -98,20 +102,29 @@ def render_allocation(positions: list) -> None:
     labels = [p.get("symbol", "") for p in positions]
     values = [abs(float(p.get("market_value", 0))) for p in positions]
 
-    fig = go.Figure(data=[go.Pie(
-        labels=labels,
-        values=values,
-        hole=0.42,
-        textinfo="label+percent",
-        hovertemplate="<b>%{label}</b><br>$%{value:,.2f}<extra></extra>",
-        marker=dict(
-            colors=[
-                "#1a1a1a", "#6b6b6b", "#9e9e9e",
-                "#c8c8c8", "#e0e0dc", "#2A7A4B",
-                "#C0392B", "#D97706",
-            ],
-        ),
-    )])
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                labels=labels,
+                values=values,
+                hole=0.42,
+                textinfo="label+percent",
+                hovertemplate="<b>%{label}</b><br>$%{value:,.2f}<extra></extra>",
+                marker=dict(
+                    colors=[
+                        "#1a1a1a",
+                        "#6b6b6b",
+                        "#9e9e9e",
+                        "#c8c8c8",
+                        "#e0e0dc",
+                        "#2A7A4B",
+                        "#C0392B",
+                        "#D97706",
+                    ],
+                ),
+            )
+        ]
+    )
     fig.update_layout(
         margin=dict(t=10, b=10, l=10, r=10),
         height=280,
@@ -123,10 +136,11 @@ def render_allocation(positions: list) -> None:
             bgcolor="rgba(0,0,0,0)",
         ),
     )
-    st.plotly_chart(fig, width='stretch', config=PLOTLY_CONFIG)
+    st.plotly_chart(fig, config=PLOTLY_CONFIG)
 
 
 # ── Positions table ───────────────────────────────────────────────────────────
+
 
 def render_positions(positions: list, api) -> None:
     st.markdown("<h2>Positions</h2>", unsafe_allow_html=True)
@@ -145,22 +159,24 @@ def render_positions(positions: list, api) -> None:
         unrl = float(p.get("unrealized_pl", 0))
         unrl_pct = float(p.get("unrealized_plpc", 0)) * 100
         intraday_pct = float(p.get("unrealized_intraday_plpc", 0)) * 100
-        rows.append({
-            "Symbol": p.get("symbol", ""),
-            "Side": p.get("side", "").upper(),
-            "Qty": int(float(p.get("qty", 0))),
-            "Avg Entry": _d(p.get("avg_entry_price", 0)),
-            "Price": _d(p.get("current_price", 0)),
-            "Mkt Value": _d(p.get("market_value", 0)),
-            "Unrlzd P&L": (
-                f"{'+'if unrl >= 0 else ''}{_d(unrl)}"
-                f" ({'+'if unrl_pct >= 0 else ''}{unrl_pct:.2f}%)"
-            ),
-            "Today": _pct_raw(intraday_pct),
-        })
+        rows.append(
+            {
+                "Symbol": p.get("symbol", ""),
+                "Side": p.get("side", "").upper(),
+                "Qty": int(float(p.get("qty", 0))),
+                "Avg Entry": _d(p.get("avg_entry_price", 0)),
+                "Price": _d(p.get("current_price", 0)),
+                "Mkt Value": _d(p.get("market_value", 0)),
+                "Unrlzd P&L": (
+                    f"{'+'if unrl >= 0 else ''}{_d(unrl)}"
+                    f" ({'+'if unrl_pct >= 0 else ''}{unrl_pct:.2f}%)"
+                ),
+                "Today": _pct_raw(intraday_pct),
+            }
+        )
 
     df = pd.DataFrame(rows)
-    st.dataframe(df, width='stretch', hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
 
     # Per-position close buttons
     st.markdown("<h3>Close a Position</h3>", unsafe_allow_html=True)
@@ -196,6 +212,7 @@ def render_positions(positions: list, api) -> None:
 
 # ── Open orders ───────────────────────────────────────────────────────────────
 
+
 def render_orders(orders: list, api) -> None:
     if not orders:
         st.info("No open orders.")
@@ -203,20 +220,22 @@ def render_orders(orders: list, api) -> None:
 
     rows = []
     for o in orders:
-        rows.append({
-            "Symbol": o.get("symbol", ""),
-            "Side": (o.get("side") or "").upper(),
-            "Type": o.get("order_type") or o.get("type", ""),
-            "Qty": o.get("qty", ""),
-            "Limit $": _d(o["limit_price"]) if o.get("limit_price") else "—",
-            "Status": o.get("status", ""),
-            "Submitted": _fmt_dt(o.get("submitted_at", "")),
-            "ID": o.get("id", ""),
-        })
+        rows.append(
+            {
+                "Symbol": o.get("symbol", ""),
+                "Side": (o.get("side") or "").upper(),
+                "Type": o.get("order_type") or o.get("type", ""),
+                "Qty": o.get("qty", ""),
+                "Limit $": _d(o["limit_price"]) if o.get("limit_price") else "—",
+                "Status": o.get("status", ""),
+                "Submitted": _fmt_dt(o.get("submitted_at", "")),
+                "ID": o.get("id", ""),
+            }
+        )
 
     df = pd.DataFrame(rows)
     display_df = df.drop(columns=["ID"])
-    st.dataframe(display_df, width='stretch', hide_index=True)
+    st.dataframe(display_df, width="stretch", hide_index=True)
 
     st.markdown("<h3>Cancel an Order</h3>", unsafe_allow_html=True)
     order_options = {
@@ -240,6 +259,7 @@ def render_orders(orders: list, api) -> None:
 
 # ── Recent trades ─────────────────────────────────────────────────────────────
 
+
 def render_trades(trades: list) -> None:
     if not trades:
         st.info("No recent trades.")
@@ -247,20 +267,23 @@ def render_trades(trades: list) -> None:
 
     rows = []
     for t in trades:
-        rows.append({
-            "Symbol": t.get("symbol", ""),
-            "Side": (t.get("side") or "").upper(),
-            "Qty": t.get("filled_qty") or t.get("qty", ""),
-            "Fill Price": _d(t.get("filled_avg_price", 0)),
-            "Type": t.get("order_type") or t.get("type", ""),
-            "Filled At": _fmt_dt(t.get("filled_at", "")),
-        })
+        rows.append(
+            {
+                "Symbol": t.get("symbol", ""),
+                "Side": (t.get("side") or "").upper(),
+                "Qty": t.get("filled_qty") or t.get("qty", ""),
+                "Fill Price": _d(t.get("filled_avg_price", 0)),
+                "Type": t.get("order_type") or t.get("type", ""),
+                "Filled At": _fmt_dt(t.get("filled_at", "")),
+            }
+        )
 
     df = pd.DataFrame(rows)
-    st.dataframe(df, width='stretch', hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
 
 
 # ── Place order form ──────────────────────────────────────────────────────────
+
 
 def render_place_order(api) -> None:
     with st.form("place_order_form", clear_on_submit=True):
@@ -307,6 +330,7 @@ def render_place_order(api) -> None:
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
+
 
 def main() -> None:
     load_css()

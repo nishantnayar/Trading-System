@@ -246,7 +246,7 @@ def main() -> None:
     start_date = end_date - timedelta(days=lookback_days)
 
     # --- Run scan ---
-    if st.button("Run Scan", type="primary", use_container_width=False):
+    if st.button("Run Scan", type="primary", width="content"):
         _save_prefs(int(lookback_days), int(slippage_bps))
         results: list = []
         progress = st.progress(0, text="Scanning pairs…")
@@ -387,9 +387,7 @@ def _render_results_table(results: list) -> None:
 
         # Action button
         if r["is_active"]:
-            if cols[9].button(
-                "Deactivate", key=f"deact_{r['id']}", use_container_width=True
-            ):
+            if cols[9].button("Deactivate", key=f"deact_{r['id']}", width="stretch"):
                 _set_pair_active(r["id"], False)
                 r["is_active"] = False
                 st.rerun()
@@ -399,7 +397,7 @@ def _render_results_table(results: list) -> None:
                 btn_label,
                 key=f"act_{r['id']}",
                 type="primary" if r["passed"] else "secondary",
-                use_container_width=True,
+                width="stretch",
             ):
                 _set_pair_active(r["id"], True)
                 r["is_active"] = True

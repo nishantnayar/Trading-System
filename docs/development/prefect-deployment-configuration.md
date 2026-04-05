@@ -80,7 +80,7 @@ prefect:
       entrypoint: src/shared/prefect/flows/data_ingestion/yahoo_flows.py:yahoo_company_info_flow
       work_pool_name: data-ingestion-pool
       schedule:
-        cron: "0 2 * * 0"  # 2 AM UTC Sunday (weekly)
+        cron: "0 23 * * 5"  # 23:00 UTC Friday (after US close + daily Yahoo jobs)
         timezone: "UTC"
       tags:
         - data-ingestion
@@ -93,7 +93,7 @@ prefect:
       entrypoint: src/shared/prefect/flows/data_ingestion/yahoo_flows.py:yahoo_key_statistics_flow
       work_pool_name: data-ingestion-pool
       schedule:
-        cron: "0 3 * * 0"  # 3 AM UTC Sunday (weekly)
+        cron: "0 2 * * 6"  # 02:00 UTC Saturday - example only; repo does not deploy standalone key stats
         timezone: "UTC"
       tags:
         - data-ingestion
@@ -106,7 +106,7 @@ prefect:
       entrypoint: src/shared/prefect/flows/data_ingestion/yahoo_flows.py:yahoo_company_info_then_key_statistics_flow
       work_pool_name: data-ingestion-pool
       schedule:
-        cron: "0 2 * * 0"  # 2 AM UTC Sunday (weekly)
+        cron: "30 1 * * 6"  # 01:30 UTC Saturday (Fri evening US; staggered from company-info)
         timezone: "UTC"
       tags:
         - data-ingestion

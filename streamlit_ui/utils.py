@@ -2113,7 +2113,7 @@ def _display_fallback_dataframe(holders: List[Dict[str, Any]]) -> None:
         row.pop("_change_sign", None)
 
     df = pd.DataFrame(holders_data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
 
 
 def display_institutional_holders_grid(

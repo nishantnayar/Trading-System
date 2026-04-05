@@ -441,7 +441,7 @@ def main():
             "Notes (optional)", placeholder="e.g. Tighter stop loss test"
         )
 
-        run_btn = st.button("Run Backtest", type="primary", use_container_width=True)
+        run_btn = st.button("Run Backtest", type="primary", width="stretch")
 
     # -----------------------------------------------------------------------
     # Pair header row: stats + activate button
@@ -478,14 +478,12 @@ def main():
     btn_col, _ = st.columns([2, 8])
     with btn_col:
         if selected["is_active"]:
-            if st.button(
-                "⏸ Deactivate Pair", type="secondary", use_container_width=True
-            ):
+            if st.button("⏸ Deactivate Pair", type="secondary", width="stretch"):
                 _set_pair_active(selected["id"], False)
                 load_pairs.clear()
                 st.rerun()
         else:
-            if st.button("▶ Activate Pair", type="primary", use_container_width=True):
+            if st.button("▶ Activate Pair", type="primary", width="stretch"):
                 _set_pair_active(selected["id"], True)
                 load_pairs.clear()
                 st.rerun()
@@ -1048,7 +1046,7 @@ def _render_price_chart(
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         hovermode="x unified",
     )
-    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+    st.plotly_chart(fig, config=PLOTLY_CONFIG)
     st.caption(
         "Both prices rebased to 100 at period start.  "
         "Dotted vertical lines = ex-dividend dates.  "
@@ -1162,7 +1160,7 @@ def _render_correlation_chart(
         showlegend=True,
         hovermode="x unified",
     )
-    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+    st.plotly_chart(fig, config=PLOTLY_CONFIG)
 
     # Stability verdict
     if pct_below_05 > 20:
@@ -1264,7 +1262,7 @@ def _render_results(result, metrics, run_id: Optional[int]):
             plot_bgcolor="rgba(0,0,0,0)",
             margin=dict(l=0, r=0, t=30, b=0),
         )
-        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+        st.plotly_chart(fig, config=PLOTLY_CONFIG)
     else:
         st.info("No equity curve data.")
 

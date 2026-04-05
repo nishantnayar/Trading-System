@@ -108,9 +108,7 @@ def main() -> None:
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.markdown(
-            _metric_card("Tracked Symbols", str(total)), unsafe_allow_html=True
-        )
+        st.markdown(_metric_card("Tracked Symbols", str(total)), unsafe_allow_html=True)
     with c2:
         st.markdown(
             _metric_card("Up to Date", str(ok), color="#2A7A4B"), unsafe_allow_html=True
@@ -157,7 +155,7 @@ def main() -> None:
         )
         st.dataframe(
             alert_df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "Days Stale": st.column_config.NumberColumn(format="%d days"),
@@ -190,7 +188,9 @@ def main() -> None:
         filtered = df
 
     display = (
-        filtered[["symbol", "last_date", "days_since_last_bar", "record_count", "is_stale"]]
+        filtered[
+            ["symbol", "last_date", "days_since_last_bar", "record_count", "is_stale"]
+        ]
         .rename(
             columns={
                 "symbol": "Symbol",
@@ -205,7 +205,7 @@ def main() -> None:
 
     st.dataframe(
         display,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "Days Stale": st.column_config.NumberColumn(format="%d days"),

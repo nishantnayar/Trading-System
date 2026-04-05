@@ -91,10 +91,11 @@ prefect deployment run "Daily Market Data Update/Daily Market Data Update" --par
 ## What Gets Deployed (Yahoo)
 
 - **Daily Market Data Update** — 22:15 UTC Mon–Fri; fetches 7 days of **unadjusted and adjusted** hourly data from Yahoo (`data_source='yahoo'` and `data_source='yahoo_adjusted'`), then triggers **Technical Indicators** as a sub-flow (`days_back=300` from DB). Indicators are not deployed as a standalone cron to avoid race conditions when Prefect restarts. Task returns `records_count` and `records_count_adjusted`.
-- **Weekly Company Information** — 2 AM UTC Sunday.
-- **Weekly Key Statistics** — 3 AM UTC Sunday.
-- **Weekly Company Data Update** — Combined, 2 AM UTC Sunday.
-- **Weekly Database Backup** — 4 AM UTC Sunday; backs up `data_ingestion` and `analytics` schemas to `backups/trading_backup_YYYYMMDD.dump` via pg_dump. Run manually: `python scripts/backup_trading_db.py`.
+- **Weekly Company Information** — 11 PM UTC Friday (after US close and daily Yahoo).
+- **Weekly Key Statistics** — Prefer combined weekly flow; standalone not deployed by default.
+- **Weekly Company Data Update** — Combined, 1:30 AM UTC Saturday (Fri evening US), staggered from company-only job.
+- **Weekly Pair Discovery** — 3:30 AM UTC Saturday (after weekly Yahoo batch).
+- **Weekly Database Backup** — 5 AM UTC Saturday; backs up `data_ingestion` and `analytics` schemas to `backups/trading_backup_YYYYMMDD.dump` via pg_dump. Run manually: `python scripts/backup_trading_db.py`.
 
 **Note:** If you previously had "Daily Technical Indicators" deployed as a standalone cron, remove it to avoid duplicate runs: `prefect deployment delete "Daily Technical Indicators Calculation/Daily Technical Indicators Calculation"` (or delete via Prefect UI).
 

@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from alpaca_trade_api import REST
-from alpaca_trade_api.rest import APIError, TimeFrame
+from alpaca_trade_api.rest import APIError
 
 from .exceptions import AlpacaAPIError, AlpacaAuthenticationError, AlpacaConnectionError
 
@@ -54,9 +54,8 @@ class AlpacaClient:
                 base_url=self.base_url,
                 api_version="v2",
             )
-            logger.info(
-                f"Alpaca client initialized for {'paper' if is_paper else 'live'} trading"
-            )
+            mode = "paper" if is_paper else "live"
+            logger.info("Alpaca client initialized for %s trading", mode)
         except Exception as e:
             raise AlpacaConnectionError(f"Failed to initialize Alpaca client: {str(e)}")
 
@@ -273,7 +272,7 @@ class AlpacaClient:
         try:
             bars = self.client.get_bars(
                 symbol,
-                TimeFrame.Hour,
+                "1Hour",
                 start=start,
                 limit=limit,
                 adjustment=adjustment,

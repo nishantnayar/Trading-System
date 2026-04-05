@@ -46,7 +46,7 @@ mkdocs-material>=9.0.0
 pymdown-extensions>=10.0
 
 # Streamlit UI
-streamlit>=1.28.0
+streamlit>=1.52.0
 plotly>=5.17.0
 streamlit-plotly-events>=0.0.6
 streamlit-option-menu>=0.3.6
