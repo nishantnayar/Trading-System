@@ -59,14 +59,12 @@ def get_price_series(symbol: str, limit: int = 500) -> pd.Series:
     timestamps = [r[0] for r in reversed(rows)]
     closes = [float(r[1]) for r in reversed(rows)]
 
-    index = pd.DatetimeIndex(pd.to_datetime(timestamps, utc=True), name="timestamp")
-    series = pd.Series(closes, index=index, name=symbol, dtype=float)
-
-    # Ensure timezone-aware UTC index
-    if series.index.tz is None:
-        series.index = series.index.tz_localize("UTC")
+    idx = pd.DatetimeIndex(pd.to_datetime(timestamps, utc=True), name="timestamp")
+    if idx.tz is None:
+        idx = idx.tz_localize("UTC")
     else:
-        series.index = series.index.tz_convert("UTC")
+        idx = idx.tz_convert("UTC")
+    series = pd.Series(closes, index=idx, name=symbol, dtype=float)
 
     logger.debug(
         "get_price_series(%s): %d bars  %s -> %s  last_close=%.4f",

@@ -27,8 +27,9 @@ import logging
 import os
 import signal
 import sys
+import types
 from pathlib import Path
-from typing import List
+from typing import Any, List, Optional
 
 # ---------------------------------------------------------------------------
 # Path bootstrap so this runs as __main__ from the project root
@@ -71,7 +72,7 @@ def _active_symbols() -> List[str]:
     return sorted(symbols)
 
 
-def _push_bar(r, symbol: str, bar_dict: dict) -> None:
+def _push_bar(r: Any, symbol: str, bar_dict: dict[str, Any]) -> None:
     """Append one bar to the Redis list for symbol, trim to max length."""
     key = f"{_KEY_PREFIX}{symbol}"
     pipe = r.pipeline()
@@ -81,7 +82,7 @@ def _push_bar(r, symbol: str, bar_dict: dict) -> None:
     pipe.execute()
 
 
-async def _bar_handler(bar) -> None:
+async def _bar_handler(bar: Any) -> None:
     """Called by StockDataStream for every 1-min bar received."""
     r = get_redis()
     if r is None:
@@ -123,7 +124,7 @@ def run() -> None:
     stream.subscribe_bars(_bar_handler, *symbols)
 
     # Graceful shutdown on SIGINT / SIGTERM
-    def _stop(signum, frame):
+    def _stop(signum: int, frame: Optional[types.FrameType]) -> None:
         logger.info("Received signal %s - shutting down WebSocket stream", signum)
         stream.stop()
 
