@@ -5,7 +5,7 @@
 ## Design Philosophy
 
 ### Core Principles
-1. **Trader-First Workflow**: Page order mirrors typical use: Dashboard, Portfolio, Analysis, Screener, Pairs Trading, Backtest Review, Pair Scanner, Settings, About, Data Quality Monitor (see numbered `pages/` modules).
+1. **Trader-First Workflow**: Page order mirrors how a trader thinks — monitor, research, manage. Dashboard, Portfolio, Analysis, Screener, Strategy Monitor, P&L Report, Pair Lab, Ops (see numbered `pages/` modules).
 2. **Real Data Only**: No hardcoded values, simulated data, or placeholder content anywhere in the UI. Every metric is sourced from the live Alpaca paper trading account or the PostgreSQL database.
 3. **Consistent Design System**: All pages share the same paper/ink aesthetic — fonts, colors, chart styling, and component patterns are defined centrally in `css_config.py` and `styles.css`.
 4. **Reactive Updates**: Streamlit's reactive framework provides live updates; each page fetches fresh data on load with `@st.cache_data(ttl=...)` for performance.
@@ -69,41 +69,60 @@ Stock screening with two modes:
 - Results table with technical indicators, sortable, CSV export
 - Requires Ollama for AI mode; filter mode works standalone
 
-### 4. Pairs Trading — `pages/4_Pairs_Trading.py`
-Live strategy monitoring:
+### 4. Strategy Monitor — `pages/4_Strategy_Monitor.py`
+Unified live monitoring for all active strategies via two tabs:
+
+**Pairs tab**
 - Strategy status metrics (active/inactive, total pairs, active pairs, total P&L)
 - Start / Stop / Emergency Stop controls
-- Active pairs table with z-score color coding (red > 2.0 sigma, orange > 1.5 sigma)
-- Z-score chart with entry/exit threshold lines and configurable history window
+- Active pairs grid with z-score sparklines, color coding (red > 2.0σ, orange > 1.5σ), and unrealized P&L delta
+- Z-score chart with entry/exit threshold lines and configurable history window (7–90 days)
+- Risk Controls expander: circuit breaker state, peak equity, drawdown threshold, reset button
 - Performance summary (Sharpe, max drawdown, win rate, average hold time)
 - Per-pair details expander (hedge ratio, half-life, cointegration p-value, open trade, last signal)
 
-### 5. Backtest Review — `pages/5_Backtest_Review.py`
-Backtest execution and analysis:
-- Pair selector with rank scores
-- Run backtest in-process with pass/fail gates (Sharpe > 0.5, drawdown < 15%, win rate > 45%)
-- Equity curve chart (Plotly, transparent background)
-- Metrics table and trade log
-- Run history comparison
+**Baskets tab**
+- Overview metrics: active baskets, open trades, unrealized P&L, closed P&L
+- Active baskets table with live z-score, activate/deactivate controls
+- Spread charts (spread + z-score dual-axis) per basket
+- Open trades table with leg detail and unrealized P&L
+- Trade history (last 50 closed/stopped trades)
+
+### 5. P&L Report — `pages/5_PnL_Report.py`
+Realized performance across all pairs trades:
+- Summary KPIs: total P&L, win rate, profit factor, avg hold duration
+- Equity curve, daily P&L bar chart, monthly return heatmap
+- Per-pair attribution breakdown
+- Full trade log
+
+### 6. Pair Lab — `pages/6_Pair_Lab.py`
+Scanner and backtest in one place via two tabs:
+
+**Scanner tab**
+- Configurable lookback (90–365 days, default 180) and slippage (0–20 bps)
+- Batch backtests all registered pairs; results sorted PASS-first then by Sharpe descending
+- Gate PASS/FAIL per row with failing metrics highlighted red
+- Inline Activate / Deactivate controls; activating a failing pair shows a warning
+
+**Backtest tab**
+- Pair selector with rank scores; sidebar controls for date range, entry/exit/stop thresholds, slippage, commission, initial capital
+- Run backtest in-process with pass/fail gate verdict (Sharpe > 0.5, drawdown < 15%, win rate > 45%)
 - Stock Analysis expander: Risk Flags (7 checks), Fundamentals, Price Chart (normalised + z-score overlay), Correlation (rolling Pearson with stability verdict)
+- Equity curve, full metrics (Sharpe, drawdown, win rate, profit factor, Kelly fraction), trade log
+- Run history comparison across previous runs
 
-### 6. Pair Scanner — `pages/6_Pair_Scanner.py`
-Pair discovery and screening workflow (registry, filters, links to backtest).
+### 7. Ops — `pages/7_Ops.py`
+System administration via two tabs — no hardcoded values anywhere:
 
-### 7. Settings — `pages/7_Settings.py`
-System configuration — no fake data, no hardcoded values:
-- **Connection Status**: Live checks of API server health, Alpaca account number, market open/closed
-- **Analysis Preferences**: Default symbol and timeframe (written to session state for use by Analysis page)
-- **System Info**: API base URL, session start time, Streamlit version, Python version
+**Connections & Preferences tab**
+- Live status badges: API server health, Alpaca account number and paper/live mode, market open/closed
+- Analysis Preferences: default symbol and timeframe (written to session state, pre-fills Analysis page)
+- System Info: API base URL, session start time, Streamlit and Python versions
 
-### 8. About — `pages/8_About.py`
-Project and author information:
-- Author bio (Nishant Nayar, VP – Lead Solution Analyst, Greater Chicago Area)
-- Project features and technology stack
-- Contact links (LinkedIn, GitHub, Medium, Portfolio)
-
-### 9. Data Quality Monitor — `pages/9_Data_Quality_Monitor.py`
-Data ingestion health and quality checks (monitoring pipeline and coverage).
+**Data Quality tab**
+- Summary metrics: tracked symbols, up-to-date count, stale count, last ingestion timestamp
+- Alerts table for stale symbols (sorted by days since last bar)
+- Full ingestion series table with freshness filter (All / Stale only / Fresh only)
 
 ---
 

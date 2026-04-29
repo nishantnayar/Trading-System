@@ -227,4 +227,7 @@ if __name__ == "__main__":
     if "--deploy" in _sys.argv:
         asyncio.run(deploy_pair_discovery_flow())
     else:
-        asyncio.run(weekly_pair_discovery_flow())  # type: ignore[arg-type]
+        async def _run() -> None:
+            await weekly_pair_discovery_flow()
+
+        asyncio.run(_run())

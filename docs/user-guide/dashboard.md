@@ -13,14 +13,14 @@ The sidebar lists all pages in workflow order. Streamlit's automatic navigation 
 
 ```
 Trading System
-├── Dashboard          ← streamlit_app.py (home)
-├── Portfolio          ← pages/1_Portfolio.py
-├── Analysis           ← pages/2_Analysis.py
-├── Screener           ← pages/3_Screener.py
-├── Pairs Trading      ← pages/4_Pairs_Trading.py
-├── Backtest Review    ← pages/5_Backtest_Review.py
-├── Settings           ← pages/6_Settings.py
-└── About              ← pages/7_About.py
+├── Dashboard           ← streamlit_app.py (home)
+├── Portfolio           ← pages/1_Portfolio.py
+├── Analysis            ← pages/2_Analysis.py
+├── Screener            ← pages/3_Screener.py
+├── Strategy Monitor    ← pages/4_Strategy_Monitor.py  (Pairs + Baskets tabs)
+├── P&L Report          ← pages/5_PnL_Report.py
+├── Pair Lab            ← pages/6_Pair_Lab.py          (Scanner + Backtest tabs)
+└── Ops                 ← pages/7_Ops.py               (Connections + Data Quality tabs)
 ```
 
 ---
@@ -78,67 +78,78 @@ Stock screening with two operating modes:
 
 ---
 
-## Pairs Trading
+## Strategy Monitor
 
-Live monitoring for the statistical arbitrage strategy.
+Unified live view for all running strategies. Two tabs:
 
+**Pairs tab**
 - **Status Bar**: Strategy active/inactive, total pairs, active pairs, aggregate P&L, last update time
 - **Controls**: Start Strategy, Stop Strategy, Emergency Stop (two-click confirmation)
-- **Active Pairs Table**: Z-score color coded — red (|z| > 2.0σ), orange (|z| > 1.5σ), normal otherwise
-- **Z-Score Chart**: Historical spread z-score with entry/exit threshold lines; adjustable history window (7–90 days)
+- **Active Pairs Grid**: Z-score sparklines (last 48 bars), color coding — red (|z| > 2.0σ), orange (|z| > 1.5σ), unrealized P&L with delta vs. last load
+- **Risk Controls**: Circuit breaker state, peak equity, drawdown threshold; reset and threshold update in place
+- **Z-Score Chart**: Historical spread z-score with entry/exit threshold lines; adjustable window (7–90 days)
 - **Performance Summary**: Sharpe ratio, max drawdown, win rate, average hold time
-- **Pair Details**: Expandable panel — hedge ratio, half-life, cointegration p-value, open trade, last signal
 
-The strategy executes two-legged trades on Alpaca (paper account). The Prefect flow runs on schedule `0 14-21 * * 1-5` UTC (9 AM–5 PM ET, Mon–Fri).
+**Baskets tab**
+- Active baskets with live z-score, sector, half-life, and activate/deactivate controls
+- Spread + z-score dual-axis charts per basket
+- Open trades with leg detail and unrealized P&L
+- Last 50 closed/stopped trades with P&L and exit reason
+
+The pairs strategy executes two-legged trades on Alpaca (paper account). Prefect flow: `0 14-21 * * 1-5` UTC.
 
 ---
 
-## Backtest Review
+## P&L Report
 
-Historical validation of pairs trading configurations before live execution.
+Realized performance across all pairs trades.
 
-- **Pair Selector**: Choose pair with rank score indicator
-- **Run Backtest**: Executes in-process against database data (fills at next-bar open to avoid look-ahead bias)
-- **Pass/Fail Gates**: Sharpe > 0.5, max drawdown < 15%, win rate > 45%
-- **Equity Curve**: Portfolio value over backtest period
-- **Metrics**: Sharpe, max drawdown, win rate, profit factor, Kelly fraction
-- **Trade Log**: Individual trade entries and exits
-- **Run History**: Compare results across multiple backtest runs
-- **Stock Analysis** (expandable):
-  - *Risk Flags*: 7 automated checks
-  - *Fundamentals*: Company cards and key statistics
-  - *Price Chart*: Normalised price with z-score overlay and dividend/split markers
+- **Summary KPIs**: Total P&L, win rate, profit factor, average hold duration
+- **Equity Curve**: Cumulative realized equity over time
+- **Daily P&L**: Bar chart showing day-by-day realized P&L
+- **Monthly Heatmap**: Return by month for quick regime identification
+- **Per-Pair Attribution**: Breakdown of P&L contribution by pair
+- **Trade Log**: Full history of all closed trades
+
+---
+
+## Pair Lab
+
+Scanner and backtest combined — two tabs for the full pair validation workflow.
+
+**Scanner tab**
+- Configure lookback days (90–365, default 180) and slippage (0–20 bps)
+- Click **Run Scan** to backtest every registered pair in batch
+- Results sorted: PASS first, then by Sharpe descending
+- Failing gate metrics shown in red; inline Activate / Deactivate per row
+
+**Backtest tab**
+- Select a pair from the dropdown; configure thresholds, slippage, commission, initial capital in the sidebar
+- **Stock Analysis** expander (always visible before running):
+  - *Risk Flags*: 7 automated checks (market cap mismatch, liquidity imbalance, beta divergence, correlation decay, stock splits, upcoming ex-dividends, short interest)
+  - *Fundamentals*: Company cards and side-by-side key statistics
+  - *Price Chart*: Normalised price (base = 100) with spread z-score overlay and dividend/split markers
   - *Correlation*: Rolling 30-bar Pearson correlation with stability verdict
+- Click **Run Backtest** for gate verdict, equity curve, full metrics, and trade log
+- **Run History**: Compare results across all previous runs for this pair
+
+Gate criteria (all must pass): Sharpe > 0.5, win rate > 45%, max drawdown < 15%
 
 ---
 
-## Settings
+## Ops
 
-System configuration and connection verification. Contains no hardcoded values.
+System administration in two tabs. No hardcoded values anywhere.
 
-**Connection Status**
-- API server health (green/red badge)
-- Alpaca account number and paper/live mode
-- Market open/closed status
+**Connections & Preferences tab**
+- **Connection Status**: Live badges for API server health, Alpaca account number and paper/live mode, market open/closed
+- **Analysis Preferences**: Default symbol and timeframe — saved to `config/analysis_prefs.json` and written to session state to pre-fill the Analysis page
+- **System Info**: API base URL, session start time, Streamlit and Python versions
 
-**Analysis Preferences**
-- Default symbol (written to `st.session_state.selected_symbol`)
-- Default timeframe (written to `st.session_state.selected_timeframe`)
-- These values pre-populate the Analysis page on next visit
-
-**System Info**
-- API base URL (from `API_BASE_URL` environment variable or `http://localhost:8001`)
-- Session start time
-- Streamlit and Python versions
-
----
-
-## About
-
-System overview and author information:
-- Author: Nishant Nayar, VP – Lead Solution Analyst, Greater Chicago Area
-- Project features and technology stack
-- Contact: LinkedIn, GitHub, Medium, Portfolio (nishantnayar.vercel.app)
+**Data Quality tab**
+- **Summary**: Tracked symbols, up-to-date count, stale count, last ingestion timestamp
+- **Alerts**: Table of stale symbols sorted by days since last bar
+- **All Ingestion Series**: Full table with freshness filter (All / Stale only / Fresh only)
 
 ---
 
@@ -146,8 +157,8 @@ System overview and author information:
 
 | Variable | Set By | Used By | Purpose |
 |----------|--------|---------|---------|
-| `selected_symbol` | Settings, Analysis | Analysis | Default symbol on page load |
-| `selected_timeframe` | Settings, Analysis | Analysis | Default timeframe on page load |
+| `selected_symbol` | Ops, Analysis | Analysis | Default symbol on page load |
+| `selected_timeframe` | Ops, Analysis | Analysis | Default timeframe on page load |
 
 ---
 
@@ -158,5 +169,6 @@ System overview and author information:
 | "Could not load account data" on Dashboard | FastAPI not running | `python -m src.web.main` |
 | No symbols in Analysis dropdown | Data ingestion has not run | Run Yahoo Finance Prefect flow |
 | Screener AI mode fails | Ollama not running | `ollama serve` and `ollama pull phi3` |
-| Pairs Trading shows no active pairs | Pairs not registered | Run `scripts/discover_pairs.py` |
+| Strategy Monitor shows no active pairs | Pairs not registered | Run `scripts/discover_pairs.py` |
 | Stale account data after API key change | Module singleton cached | Restart FastAPI server completely |
+| Pair Lab Scanner returns no results | No market data for date range | Check data ingestion ran for the lookback period |

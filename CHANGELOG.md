@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **UI Consolidation (11 pages -> 7)**: Merged redundant pages to reduce sidebar clutter and match trader workflow
+  - `4_Pairs_Trading.py` + `8_Basket_Trading.py` -> `4_Strategy_Monitor.py` (Pairs tab + Baskets tab)
+  - `6_Backtest_Review.py` + `7_Pair_Scanner.py` -> `6_Pair_Lab.py` (Backtest tab + Scanner tab)
+  - `9_Data_Quality_Monitor.py` + `10_Settings.py` -> `7_Ops.py` (Data Quality tab + Connections & Preferences tab)
+  - `11_About.py` removed entirely (not a trading workflow)
+  - `5_PnL_Report.py` retained as standalone
+
+### Fixed
+- **mypy** — resolved all 8 type errors across 4 files (previously accumulating):
+  - `src/services/strategy_engine/pairs/strategy.py`: added `Any` to typing imports; annotated first `result` dict as `Dict[str, Any]` so all reassignments in `_run_pair_cycle` share the wider type
+  - `src/shared/prefect/flows/strategy_engine/pairs_flow.py`: added `# type: ignore[arg-type]` on `asyncio.run()` call where Prefect `@flow` decorator changes return type invisibly to mypy
+  - `src/shared/prefect/flows/strategy_engine/pair_discovery_flow.py`: same `asyncio.run()` fix
+  - `src/services/analytics/indicator_calculator.py`: split chained `float(value.item() if ...)` into two lines so mypy can verify the intermediate type before the `float()` cast
+  - `mypy src/ --ignore-missing-imports` now reports **0 errors** across 107 source files
+
 ### Added
 - ✅ **Pair Scanner** (`streamlit_ui/pages/6_Pair_Scanner.py`): new Streamlit page that backtests all registered pairs and ranks results:
   - Configurable lookback (90–365 days, default 180) and slippage (0–20 bps, default 5)

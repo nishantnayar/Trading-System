@@ -7,7 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Documentation
+### Documentation (2026-04-29)
+- Updated `streamlit_ui/README.md`, `docs/development/architecture-ui.md`, `docs/user-guide/dashboard.md`, `CHANGELOG.md`, and `docs/CHANGELOG.md` to reflect the UI consolidation from 11 pages to 7.
+- Page reference table, navigation tree, and page architecture sections all updated with new page names, file paths, and tab descriptions.
+- Session state table updated: `selected_symbol` and `selected_timeframe` are now set by the Ops page, not Settings.
+
+### Changed (2026-04-29)
+- **UI Consolidation**: Streamlit sidebar reduced from 11 pages to 7 by merging related pages into tabbed views:
+  - `4_Strategy_Monitor.py` — Pairs Trading + Basket Trading
+  - `6_Pair_Lab.py` — Pair Scanner + Backtest Review
+  - `7_Ops.py` — Settings + Data Quality Monitor
+  - `11_About.py` deleted (not a trader workflow)
+
+### Fixed (2026-04-29)
+- **mypy** — 0 errors across 107 source files (was 8 errors in 4 files):
+  - `pairs/strategy.py`: `Dict[str, Any]` annotation on first `result` assignment fixes all dict-item errors
+  - `pairs_flow.py`, `pair_discovery_flow.py`: `# type: ignore[arg-type]` on Prefect `asyncio.run()` calls
+  - `indicator_calculator.py`: split chained float cast to give mypy a checkable intermediate type
+
+### Documentation (2026-04-03)
 - Aligned `CLAUDE.md`, `README.md`, `docs/development/architecture-ui.md`, `docs/CONTRIBUTING.md`, and `docs/streamlit-ui-utilities.md` with current Streamlit page numbering (through page 9), ASCII-only policy for Python outside `streamlit_ui/pages/`, and pairs risk API/circuit breaker behavior.
 - Standardized documentation **Last Updated** metadata to **4/3/2026** (ISO `2026-04-03` in MkDocs frontmatter where present).
 

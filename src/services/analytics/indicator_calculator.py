@@ -389,7 +389,7 @@ class IndicatorCalculationService:
                 else:
                     # Fallback: convert to Python type
                     item = value.item() if hasattr(value, "item") else value
-                    return float(item)  # type: ignore[arg-type]
+                    return float(item)
             # Handle numpy arrays
             if isinstance(value, np.ndarray):
                 result: List[Any] = value.tolist()

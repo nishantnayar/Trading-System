@@ -44,10 +44,10 @@ Pages are numbered to enforce sidebar order. Streamlit strips the numeric prefix
 | `pages/1_Portfolio.py` | Portfolio | Full account summary, position management, order management, trade history, order placement |
 | `pages/2_Analysis.py` | Analysis | Candlestick charts with volume and technical indicators (SMA, EMA, RSI, MACD, Bollinger Bands) |
 | `pages/3_Screener.py` | Screener | AI-powered stock screening via Ollama; traditional filter mode also available |
-| `pages/4_Pairs_Trading.py` | Pairs Trading | Live pairs strategy monitoring — z-score chart, active pairs table, performance summary |
-| `pages/5_Backtest_Review.py` | Backtest Review | Backtest runner with pass/fail gates, equity curve, trade log, pair stock analysis |
-| `pages/6_Settings.py` | Settings | API connection status, analysis preferences (symbol/timeframe), system info |
-| `pages/7_About.py` | About | System overview, technology stack, contact information |
+| `pages/4_Strategy_Monitor.py` | Strategy Monitor | Live monitoring for all strategies — Pairs tab (z-scores, risk controls, performance) and Baskets tab (spread charts, open/closed trades) |
+| `pages/5_PnL_Report.py` | P&L Report | Realized performance — equity curve, daily P&L, monthly heatmap, per-pair attribution, full trade log |
+| `pages/6_Pair_Lab.py` | Pair Lab | Scanner tab (batch backtest all pairs, rank by Sharpe, activate/deactivate) and Backtest tab (single-pair deep dive with risk flags, fundamentals, price chart, run history) |
+| `pages/7_Ops.py` | Ops | Connections & Preferences tab (API/Alpaca status, analysis defaults) and Data Quality tab (ingestion timestamps, stale data alerts) |
 
 ## Design System
 
@@ -71,8 +71,8 @@ The Stock Screener page (`pages/3_Screener.py`) supports:
 ## Session State
 
 Cross-page persistent state is intentionally minimal:
-- `selected_symbol` — carried from Settings to Analysis page
-- `selected_timeframe` — carried from Settings to Analysis page
+- `selected_symbol` — carried from Ops to Analysis page
+- `selected_timeframe` — carried from Ops to Analysis page
 
 ## Dependencies
 

@@ -452,4 +452,7 @@ if __name__ == "__main__":
         asyncio.run(deploy_pairs_flow())
     else:
         # Default: run one cycle immediately (skip market check for manual testing)
-        asyncio.run(intraday_pairs_flow(skip_market_check=True))  # type: ignore[arg-type]
+        async def _run() -> None:
+            await intraday_pairs_flow(skip_market_check=True)
+
+        asyncio.run(_run())

@@ -69,7 +69,7 @@ class BasketSpreadCalculator:
             frames[sym] = prices[sym]
 
         aligned = pd.concat(frames, axis=1).dropna()
-        aligned.columns = self.symbols
+        aligned.columns = pd.Index(self.symbols)
 
         if len(aligned) < self.z_score_window:
             logger.warning(
