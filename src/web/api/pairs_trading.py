@@ -7,7 +7,7 @@ PairSpread, PairSignal, and BacktestRun tables.
 """
 
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml  # type: ignore
@@ -186,7 +186,7 @@ async def get_active_pairs() -> Dict[str, List[PairData]]:
 
             if trade:
                 if trade.entry_time:
-                    days_held = (datetime.utcnow() - trade.entry_time).days
+                    days_held = (datetime.now(timezone.utc) - trade.entry_time).days
                 entry_p1 = float(trade.entry_price1) if trade.entry_price1 else None
                 entry_p2 = float(trade.entry_price2) if trade.entry_price2 else None
                 pnl = float(trade.pnl) if trade.pnl else 0.0
@@ -669,6 +669,282 @@ async def run_backtest(config: BacktestConfig) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error running backtest: {e}")
         raise HTTPException(status_code=500, detail=f"Backtest failed: {e}")
+
+
+@router.get("/pnl/trades")
+async def get_trade_history(
+    pair_id: Optional[int] = None,
+    status: Optional[str] = None,
+    days: int = 90,
+) -> Dict[str, Any]:
+    """Return closed trade history with optional filters."""
+    try:
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        with db_readonly_session() as session:
+            q = session.query(PairTrade, PairRegistry).join(
+                PairRegistry, PairTrade.pair_id == PairRegistry.id
+            )
+            if pair_id is not None:
+                q = q.filter(PairTrade.pair_id == pair_id)
+            if status:
+                q = q.filter(PairTrade.status == status.upper())
+            else:
+                q = q.filter(PairTrade.status.in_(["CLOSED", "STOPPED"]))
+            q = q.filter(PairTrade.entry_time >= cutoff)
+            rows = q.order_by(PairTrade.entry_time.desc()).all()
+
+        trades = []
+        for trade, pair in rows:
+            hold_hours = None
+            if trade.entry_time and trade.exit_time:
+                delta = trade.exit_time - trade.entry_time
+                hold_hours = round(delta.total_seconds() / 3600, 1)
+            trades.append(
+                {
+                    "id": trade.id,
+                    "pair_id": trade.pair_id,
+                    "pair_name": f"{pair.symbol1}/{pair.symbol2}",
+                    "symbol1": pair.symbol1,
+                    "symbol2": pair.symbol2,
+                    "side": trade.side,
+                    "status": trade.status,
+                    "entry_time": trade.entry_time.isoformat(),
+                    "exit_time": (
+                        trade.exit_time.isoformat() if trade.exit_time else None
+                    ),
+                    "entry_z_score": (
+                        float(trade.entry_z_score) if trade.entry_z_score else None
+                    ),
+                    "exit_z_score": (
+                        float(trade.exit_z_score) if trade.exit_z_score else None
+                    ),
+                    "qty1": trade.qty1,
+                    "qty2": trade.qty2,
+                    "entry_price1": (
+                        float(trade.entry_price1) if trade.entry_price1 else None
+                    ),
+                    "entry_price2": (
+                        float(trade.entry_price2) if trade.entry_price2 else None
+                    ),
+                    "exit_price1": (
+                        float(trade.exit_price1) if trade.exit_price1 else None
+                    ),
+                    "exit_price2": (
+                        float(trade.exit_price2) if trade.exit_price2 else None
+                    ),
+                    "pnl": float(trade.pnl) if trade.pnl is not None else None,
+                    "pnl_pct": (
+                        float(trade.pnl_pct) if trade.pnl_pct is not None else None
+                    ),
+                    "exit_reason": trade.exit_reason,
+                    "hold_hours": hold_hours,
+                }
+            )
+        return {"trades": trades, "count": len(trades)}
+    except Exception as e:
+        logger.error(f"Error getting trade history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get trade history")
+
+
+@router.get("/pnl/daily")
+async def get_daily_pnl(days: int = 90) -> Dict[str, Any]:
+    """Return daily realized P&L by aggregating closed trades per calendar date."""
+    try:
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        with db_readonly_session() as session:
+            rows = (
+                session.query(PairTrade)
+                .filter(
+                    PairTrade.status.in_(["CLOSED", "STOPPED"]),
+                    PairTrade.exit_time >= cutoff,
+                    PairTrade.pnl.isnot(None),
+                )
+                .order_by(PairTrade.exit_time)
+                .all()
+            )
+            for r in rows:
+                session.expunge(r)
+
+        from collections import defaultdict
+
+        daily: Dict[str, float] = defaultdict(float)
+        for trade in rows:
+            if trade.exit_time:
+                day = trade.exit_time.strftime("%Y-%m-%d")
+                daily[day] += float(trade.pnl or 0)
+
+        # build cumulative series
+        sorted_days = sorted(daily.keys())
+        cumulative = 0.0
+        series = []
+        for day in sorted_days:
+            cumulative += daily[day]
+            series.append(
+                {
+                    "date": day,
+                    "daily_pnl": round(daily[day], 4),
+                    "cumulative_pnl": round(cumulative, 4),
+                }
+            )
+        return {"series": series}
+    except Exception as e:
+        logger.error(f"Error getting daily P&L: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get daily P&L")
+
+
+@router.get("/pnl/summary")
+async def get_pnl_summary() -> Dict[str, Any]:
+    """Return all-time P&L totals and per-pair attribution from closed trades."""
+    try:
+        with db_readonly_session() as session:
+            closed = (
+                session.query(PairTrade, PairRegistry)
+                .join(PairRegistry, PairTrade.pair_id == PairRegistry.id)
+                .filter(
+                    PairTrade.status.in_(["CLOSED", "STOPPED"]),
+                    PairTrade.pnl.isnot(None),
+                )
+                .all()
+            )
+
+        from collections import defaultdict
+
+        pair_stats: Dict[str, Dict] = defaultdict(
+            lambda: {
+                "total_pnl": 0.0,
+                "trade_count": 0,
+                "winning": 0,
+                "pnl_pcts": [],
+                "hold_hours": [],
+                "stop_losses": 0,
+            }
+        )
+        total_pnl = 0.0
+        total_trades = 0
+        winning_trades = 0
+        all_pnl_pcts = []
+
+        for trade, pair in closed:
+            key = f"{pair.symbol1}/{pair.symbol2}"
+            pnl = float(trade.pnl)
+            total_pnl += pnl
+            total_trades += 1
+            pair_stats[key]["total_pnl"] += pnl
+            pair_stats[key]["trade_count"] += 1
+            if pnl > 0:
+                winning_trades += 1
+                pair_stats[key]["winning"] += 1
+            if trade.pnl_pct is not None:
+                all_pnl_pcts.append(float(trade.pnl_pct))
+                pair_stats[key]["pnl_pcts"].append(float(trade.pnl_pct))
+            if trade.entry_time and trade.exit_time:
+                h = (trade.exit_time - trade.entry_time).total_seconds() / 3600
+                pair_stats[key]["hold_hours"].append(h)
+            if trade.exit_reason in ("STOP_LOSS",):
+                pair_stats[key]["stop_losses"] += 1
+
+        per_pair = []
+        for name, s in pair_stats.items():
+            avg_pnl_pct = (
+                sum(s["pnl_pcts"]) / len(s["pnl_pcts"]) if s["pnl_pcts"] else None
+            )
+            avg_hold = (
+                round(sum(s["hold_hours"]) / len(s["hold_hours"]), 1)
+                if s["hold_hours"]
+                else None
+            )
+            per_pair.append(
+                {
+                    "pair": name,
+                    "total_pnl": round(s["total_pnl"], 4),
+                    "trade_count": s["trade_count"],
+                    "win_rate": (
+                        round(s["winning"] / s["trade_count"], 4)
+                        if s["trade_count"]
+                        else 0.0
+                    ),
+                    "avg_pnl_pct": round(avg_pnl_pct, 4) if avg_pnl_pct else None,
+                    "avg_hold_hours": avg_hold,
+                    "stop_losses": s["stop_losses"],
+                }
+            )
+        per_pair.sort(key=lambda x: x["total_pnl"], reverse=True)
+
+        win_rate = winning_trades / total_trades if total_trades else 0.0
+        avg_pnl_pct = sum(all_pnl_pcts) / len(all_pnl_pcts) if all_pnl_pcts else 0.0
+        profit_factor = None
+        wins = [p for p in all_pnl_pcts if p > 0]
+        losses = [p for p in all_pnl_pcts if p < 0]
+        if losses:
+            profit_factor = round(sum(wins) / abs(sum(losses)), 4) if wins else 0.0
+
+        return {
+            "total_pnl": round(total_pnl, 4),
+            "total_trades": total_trades,
+            "winning_trades": winning_trades,
+            "win_rate": round(win_rate, 4),
+            "avg_pnl_pct": round(avg_pnl_pct, 4),
+            "profit_factor": profit_factor,
+            "per_pair": per_pair,
+        }
+    except Exception as e:
+        logger.error(f"Error getting P&L summary: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get P&L summary")
+
+
+@router.get("/pnl/monthly")
+async def get_monthly_pnl() -> Dict[str, Any]:
+    """Return month-over-month P&L breakdown from closed trades."""
+    try:
+        with db_readonly_session() as session:
+            rows = (
+                session.query(PairTrade, PairRegistry)
+                .join(PairRegistry, PairTrade.pair_id == PairRegistry.id)
+                .filter(
+                    PairTrade.status.in_(["CLOSED", "STOPPED"]),
+                    PairTrade.pnl.isnot(None),
+                    PairTrade.exit_time.isnot(None),
+                )
+                .order_by(PairTrade.exit_time)
+                .all()
+            )
+
+        from collections import defaultdict
+
+        # month -> pair -> pnl list
+        monthly: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        monthly_counts: Dict[str, int] = defaultdict(int)
+        monthly_wins: Dict[str, int] = defaultdict(int)
+
+        for trade, pair in rows:
+            month = trade.exit_time.strftime("%Y-%m")
+            key = f"{pair.symbol1}/{pair.symbol2}"
+            pnl = float(trade.pnl)
+            monthly[month][key] += pnl
+            monthly_counts[month] += 1
+            if pnl > 0:
+                monthly_wins[month] += 1
+
+        result = []
+        for month in sorted(monthly.keys()):
+            total = sum(monthly[month].values())
+            result.append(
+                {
+                    "month": month,
+                    "total_pnl": round(total, 4),
+                    "trade_count": monthly_counts[month],
+                    "win_rate": (
+                        round(monthly_wins[month] / monthly_counts[month], 4)
+                        if monthly_counts[month]
+                        else 0.0
+                    ),
+                    "by_pair": {k: round(v, 4) for k, v in monthly[month].items()},
+                }
+            )
+        return {"monthly": result}
+    except Exception as e:
+        logger.error(f"Error getting monthly P&L: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get monthly P&L")
 
 
 @router.get("/backtest/history")

@@ -1,17 +1,12 @@
 """
-Backtest Review — Pairs Trading Strategy Gate
+Pair Lab -- Pair Scanner and Backtest Review in one place.
 
-Run backtests against historical data, review results, and decide whether
-to enable live trading for a pair.
-
-Gate criteria (all must pass before enabling live trading):
-    Sharpe ratio  > 0.5
-    Win rate      > 45%
-    Max drawdown  < 15%
-
-This page calls BacktestEngine directly (no API dependency).
+Tabs:
+  Scanner  -- batch-backtest all registered pairs, rank by Sharpe, activate/deactivate
+  Backtest -- deep-dive single pair: risk flags, fundamentals, price chart, backtest run
 """
 
+import json
 import os
 import sys
 from datetime import date, timedelta
@@ -22,7 +17,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-# Add project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from src.services.strategy_engine.backtesting.engine import BacktestEngine  # noqa: E402
@@ -46,8 +40,8 @@ from src.shared.database.models.strategy_models import (  # noqa: E402
 # ---------------------------------------------------------------------------
 
 st.set_page_config(
-    page_title="Backtest Review",
-    page_icon="📊",
+    page_title="Pair Lab",
+    page_icon="🔬",
     layout="wide",
 )
 
@@ -57,15 +51,45 @@ PLOTLY_CONFIG = {
     "modeBarButtonsToRemove": ["pan2d", "lasso2d", "select2d"],
 }
 
-# Colour palette — consistent across all charts
-C1 = "#1f77b4"  # symbol1 — blue
-C2 = "#ff7f0e"  # symbol2 — orange
+GATE_SHARPE = 0.5
+GATE_WIN_RATE = 45.0
+GATE_DRAWDOWN = 15.0
+
+COLOR_PASS = "#2A7A4B"
+COLOR_FAIL = "#C0392B"
+COLOR_ACTIVE = "#1f77b4"
+
+C1 = "#1f77b4"
+C2 = "#ff7f0e"
 CDIV1 = "#1f77b4"
 CDIV2 = "#ff7f0e"
 CSPLIT = "#e377c2"
 CDANGER = "#C0392B"
 CWARN = "#D97706"
 CPASS = "#2A7A4B"
+
+_PREFS_FILE = os.path.join(
+    os.path.dirname(__file__), "..", "..", "config", "scanner_prefs.json"
+)
+_PREFS_DEFAULTS = {"lookback_days": 180, "slippage_bps": 5}
+
+
+def _load_prefs() -> dict:
+    try:
+        with open(_PREFS_FILE) as f:
+            data = json.load(f)
+        return {**_PREFS_DEFAULTS, **data}
+    except Exception:
+        return dict(_PREFS_DEFAULTS)
+
+
+def _save_prefs(lookback_days: int, slippage_bps: int) -> None:
+    try:
+        os.makedirs(os.path.dirname(_PREFS_FILE), exist_ok=True)
+        with open(_PREFS_FILE, "w") as f:
+            json.dump({"lookback_days": lookback_days, "slippage_bps": slippage_bps}, f)
+    except Exception:
+        pass
 
 
 def _load_css() -> None:
@@ -84,18 +108,15 @@ def _load_css() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Cached data fetchers
+# Shared data helpers
 # ---------------------------------------------------------------------------
 
 
-@st.cache_data(ttl=60)
-def load_pairs() -> list:
-    """Return list of registered pairs ordered active-first."""
+@st.cache_data(ttl=300)
+def load_all_pairs() -> list:
     try:
         with db_readonly_session() as session:
             pairs = session.query(PairRegistry).all()
-            # Sort: active first, then by rank_score desc (Python-side avoids
-            # SQLAlchemy column-not-yet-mapped errors on stale cache)
             pairs.sort(
                 key=lambda p: (
                     not p.is_active,
@@ -108,11 +129,11 @@ def load_pairs() -> list:
                     "label": (
                         f"#{i+1}  {p.symbol1}/{p.symbol2}"
                         f"  [{p.sector or 'N/A'}]"
-                        + (f"  ★{float(p.rank_score):.3f}" if p.rank_score else "")
+                        + (f"  *{float(p.rank_score):.3f}" if p.rank_score else "")
                     ),
                     "symbol1": p.symbol1,
                     "symbol2": p.symbol2,
-                    "sector": p.sector,
+                    "sector": p.sector or "--",
                     "hedge_ratio": float(p.hedge_ratio),
                     "half_life_hours": (
                         float(p.half_life_hours) if p.half_life_hours else None
@@ -123,8 +144,11 @@ def load_pairs() -> list:
                     "entry_threshold": float(p.entry_threshold),
                     "exit_threshold": float(p.exit_threshold),
                     "stop_loss_threshold": float(p.stop_loss_threshold),
+                    "max_hold_hours": (
+                        float(p.max_hold_hours) if p.max_hold_hours else 48.0
+                    ),
                     "rank_score": (float(p.rank_score) if p.rank_score else None),
-                    "is_active": p.is_active,
+                    "is_active": bool(p.is_active),
                 }
                 for i, p in enumerate(pairs)
             ]
@@ -133,9 +157,74 @@ def load_pairs() -> list:
         return []
 
 
+def _set_pair_active(pair_id: int, active: bool) -> None:
+    with db_transaction() as session:
+        pair = session.query(PairRegistry).filter_by(id=pair_id).first()
+        if pair:
+            pair.is_active = active
+
+
+def _run_backtest_for_pair(
+    pair_dict: dict, start: date, end: date, slippage_bps: float
+) -> Optional[dict]:
+    class _PairProxy:
+        def __init__(self, d: dict) -> None:
+            self.id = d["id"]
+            self.symbol1 = d["symbol1"]
+            self.symbol2 = d["symbol2"]
+            self.hedge_ratio = d["hedge_ratio"]
+            self.z_score_window = d["z_score_window"]
+            self.entry_threshold = d["entry_threshold"]
+            self.exit_threshold = d["exit_threshold"]
+            self.stop_loss_threshold = d["stop_loss_threshold"]
+            self.max_hold_hours = d["max_hold_hours"]
+
+    try:
+        engine = BacktestEngine(
+            pair=_PairProxy(pair_dict),  # type: ignore[arg-type]
+            start_date=start,
+            end_date=end,
+            initial_capital=100_000.0,
+            slippage_bps=slippage_bps,
+            commission_per_trade=0.0,
+        )
+        result = engine.run()
+        if not result.trades:
+            return None
+        calc = MetricsCalculator()
+        m = calc.compute(result)
+        return {
+            "id": pair_dict["id"],
+            "pair": f"{pair_dict['symbol1']}/{pair_dict['symbol2']}",
+            "sector": pair_dict["sector"],
+            "rank_score": pair_dict.get("rank_score", 0.0),
+            "sharpe": m.sharpe_ratio,
+            "win_rate": m.win_rate_pct,
+            "max_dd": m.max_drawdown_pct,
+            "total_trades": m.total_trades,
+            "total_return": m.total_return_pct,
+            "passed": m.passed_gate,
+            "is_active": pair_dict["is_active"],
+        }
+    except Exception as e:
+        return {
+            "id": pair_dict["id"],
+            "pair": f"{pair_dict['symbol1']}/{pair_dict['symbol2']}",
+            "sector": pair_dict["sector"],
+            "rank_score": pair_dict.get("rank_score", 0.0),
+            "sharpe": None,
+            "win_rate": None,
+            "max_dd": None,
+            "total_trades": 0,
+            "total_return": None,
+            "passed": False,
+            "is_active": pair_dict["is_active"],
+            "error": str(e),
+        }
+
+
 @st.cache_data(ttl=300)
 def load_company_info(symbol1: str, symbol2: str) -> dict:
-    """Load CompanyInfo rows for both symbols."""
     result = {}
     with db_readonly_session() as session:
         for sym in (symbol1, symbol2):
@@ -143,9 +232,9 @@ def load_company_info(symbol1: str, symbol2: str) -> dict:
             if row:
                 result[sym] = {
                     "name": row.name or sym,
-                    "sector": row.sector or "—",
-                    "industry": row.industry or "—",
-                    "exchange": row.exchange or "—",
+                    "sector": row.sector or "--",
+                    "industry": row.industry or "--",
+                    "exchange": row.exchange or "--",
                     "employees": row.employees,
                     "market_cap": row.market_cap,
                     "description": row.description or "",
@@ -158,7 +247,6 @@ def load_company_info(symbol1: str, symbol2: str) -> dict:
 
 @st.cache_data(ttl=300)
 def load_key_stats(symbol1: str, symbol2: str) -> dict:
-    """Load the most recent KeyStatistics row for each symbol."""
     result = {}
     with db_readonly_session() as session:
         for sym in (symbol1, symbol2):
@@ -173,9 +261,7 @@ def load_key_stats(symbol1: str, symbol2: str) -> dict:
                     "market_cap": row.market_cap,
                     "beta": float(row.beta) if row.beta else None,
                     "avg_volume": row.average_volume,
-                    "trailing_pe": (
-                        float(row.trailing_pe) if row.trailing_pe else None
-                    ),
+                    "trailing_pe": float(row.trailing_pe) if row.trailing_pe else None,
                     "price_to_book": (
                         float(row.price_to_book) if row.price_to_book else None
                     ),
@@ -213,7 +299,7 @@ def load_key_stats(symbol1: str, symbol2: str) -> dict:
                         if row.held_percent_institutions
                         else None
                     ),
-                    "as_of": row.date.isoformat() if row.date else "—",
+                    "as_of": row.date.isoformat() if row.date else "--",
                 }
             else:
                 result[sym] = {}
@@ -228,7 +314,6 @@ def load_price_history(
     end: date,
     data_source: str = "yahoo_adjusted",
 ) -> tuple:
-    """Load hourly close prices for both symbols over the date range."""
     with db_readonly_session() as session:
 
         def _fetch(sym):
@@ -257,7 +342,6 @@ def load_price_history(
 
 @st.cache_data(ttl=3600)
 def load_corporate_events(symbol1: str, symbol2: str, start: date, end: date) -> dict:
-    """Load dividends and splits for both symbols in the date window."""
     events: dict = {
         symbol1: {"dividends": [], "splits": []},
         symbol2: {"dividends": [], "splits": []},
@@ -277,7 +361,6 @@ def load_corporate_events(symbol1: str, symbol2: str, start: date, end: date) ->
             events[sym]["dividends"] = [
                 {"date": d.ex_date, "amount": float(d.amount)} for d in divs
             ]
-
             splits = (
                 session.query(
                     StockSplit.split_date, StockSplit.split_ratio, StockSplit.ratio_str
@@ -303,7 +386,6 @@ def load_corporate_events(symbol1: str, symbol2: str, start: date, end: date) ->
 
 @st.cache_data(ttl=30)
 def load_run_history(pair_id: int) -> pd.DataFrame:
-    """Load previous BacktestRun records for a pair."""
     try:
         with db_readonly_session() as session:
             runs = (
@@ -321,10 +403,10 @@ def load_run_history(pair_id: int) -> pd.DataFrame:
                     {
                         "ID": r.id,
                         "Run Date": r.run_date,
-                        "Period": f"{r.start_date} → {r.end_date}",
-                        "Entry±": r.entry_threshold,
-                        "Exit±": r.exit_threshold,
-                        "Stop±": r.stop_loss_threshold,
+                        "Period": f"{r.start_date} -> {r.end_date}",
+                        "Entry+-": r.entry_threshold,
+                        "Exit+-": r.exit_threshold,
+                        "Stop+-": r.stop_loss_threshold,
                         "Return%": round(float(r.total_return or 0), 2),
                         "Sharpe": round(float(r.sharpe_ratio or 0), 3),
                         "MaxDD%": round(float(r.max_drawdown or 0), 2),
@@ -341,44 +423,224 @@ def load_run_history(pair_id: int) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def _set_pair_active(pair_id: int, active: bool) -> None:
-    """Toggle is_active flag on a pair_registry row."""
-    with db_transaction() as session:
-        pair = session.query(PairRegistry).filter_by(id=pair_id).first()
-        if pair:
-            pair.is_active = active
-
-
 # ---------------------------------------------------------------------------
-# Main page
+# Scanner tab
 # ---------------------------------------------------------------------------
 
 
-def main():
-    _load_css()
-    st.title("Backtest Review — Pairs Trading")
+def _render_scanner_tab(pairs: list) -> None:
+    st.caption(
+        "Backtest every registered pair and rank by Sharpe ratio. "
+        "Activate passing pairs to include them in live trading."
+    )
+
+    if not pairs:
+        st.warning("No pairs registered. Run `scripts/discover_pairs.py` first.")
+        return
+
+    prefs = _load_prefs()
+
+    with st.expander("Scan Parameters", expanded=False):
+        col_a, col_b, col_c = st.columns(3)
+        with col_a:
+            lookback_days = st.slider(
+                "Lookback (days)",
+                90,
+                365,
+                prefs["lookback_days"],
+                30,
+                key="scanner_lookback",
+            )
+        with col_b:
+            slippage_bps = st.slider(
+                "Slippage (bps/fill)",
+                0,
+                20,
+                prefs["slippage_bps"],
+                1,
+                key="scanner_slippage",
+            )
+        with col_c:
+            st.metric("Pairs to scan", len(pairs))
+
+    end_date = date.today()
+    start_date = end_date - timedelta(days=lookback_days)
+
+    if st.button("Run Scan", type="primary", key="scanner_run"):
+        _save_prefs(int(lookback_days), int(slippage_bps))
+        results: list = []
+        progress = st.progress(0, text="Scanning pairs...")
+
+        for i, pair in enumerate(pairs):
+            progress.progress(
+                (i + 1) / len(pairs),
+                text=(
+                    f"Scanning {pair['symbol1']}/{pair['symbol2']} "
+                    f"({i+1}/{len(pairs)})..."
+                ),
+            )
+            r = _run_backtest_for_pair(pair, start_date, end_date, float(slippage_bps))
+            if r is not None:
+                results.append(r)
+
+        progress.empty()
+
+        if not results:
+            st.warning(
+                "No results -- check that market data is loaded for the date range."
+            )
+            return
+
+        results.sort(
+            key=lambda r: (
+                not r["passed"],
+                -(r["sharpe"] if r["sharpe"] is not None else -999),
+            )
+        )
+        st.session_state["scanner_results"] = results
+        st.session_state["scanner_params"] = {
+            "start": start_date.isoformat(),
+            "end": end_date.isoformat(),
+            "slippage_bps": slippage_bps,
+        }
+
+    if "scanner_results" not in st.session_state:
+        st.info(
+            "Configure parameters above and click **Run Scan** to evaluate all pairs."
+        )
+        return
+
+    results = st.session_state["scanner_results"]
+    params = st.session_state["scanner_params"]
+    passing = [r for r in results if r["passed"]]
+    failing = [r for r in results if not r["passed"]]
+
+    st.markdown(
+        f"**Scan period:** {params['start']} -> {params['end']}  .  "
+        f"**Slippage:** {params['slippage_bps']} bps  .  "
+        f"**{len(passing)} PASS** / {len(failing)} FAIL  .  "
+        f"{sum(1 for r in results if r['is_active'])} currently active"
+    )
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Pairs Scanned", len(results))
+    m2.metric("Passing Gate", len(passing))
+    m3.metric(
+        "Best Sharpe",
+        f"{results[0]['sharpe']:.3f}" if results[0]["sharpe"] is not None else "--",
+        results[0]["pair"],
+    )
+    active_passing = sum(1 for r in passing if r["is_active"])
+    m4.metric("Active & Passing", active_passing)
+
+    st.divider()
+    _render_scanner_table(results)
+
+
+def _render_scanner_table(results: list) -> None:
+    hcols = st.columns([0.5, 2.0, 1.5, 0.9, 0.9, 0.9, 0.7, 1.0, 1.2, 1.2])
+    for col, h in zip(
+        hcols,
+        [
+            "#",
+            "Pair",
+            "Sector",
+            "Sharpe",
+            "Win Rate",
+            "Max DD",
+            "Trades",
+            "Return",
+            "Gate",
+            "Action",
+        ],
+    ):
+        col.markdown(f"**{h}**")
+    st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+
+    for i, r in enumerate(results):
+        cols = st.columns([0.5, 2.0, 1.5, 0.9, 0.9, 0.9, 0.7, 1.0, 1.2, 1.2])
+        gate_color = COLOR_PASS if r["passed"] else COLOR_FAIL
+        gate_label = "PASS" if r["passed"] else "FAIL"
+        active_badge = " [active]" if r["is_active"] else ""
+
+        sharpe_str = f"{r['sharpe']:.3f}" if r["sharpe"] is not None else "--"
+        win_str = f"{r['win_rate']:.1f}%" if r["win_rate"] is not None else "--"
+        dd_str = f"{r['max_dd']:.2f}%" if r["max_dd"] is not None else "--"
+        ret_str = f"{r['total_return']:.2f}%" if r["total_return"] is not None else "--"
+
+        sharpe_color = (
+            "" if r["sharpe"] is None or r["sharpe"] >= GATE_SHARPE else COLOR_FAIL
+        )
+        win_color = (
+            ""
+            if r["win_rate"] is None or r["win_rate"] >= GATE_WIN_RATE
+            else COLOR_FAIL
+        )
+        dd_color = (
+            "" if r["max_dd"] is None or r["max_dd"] < GATE_DRAWDOWN else COLOR_FAIL
+        )
+
+        def _colored(text: str, color: str) -> str:
+            if color:
+                return f'<span style="color:{color}">{text}</span>'
+            return text
+
+        cols[0].write(i + 1)
+        cols[1].markdown(f"**{r['pair']}**{active_badge}")
+        cols[2].write(r["sector"])
+        cols[3].markdown(_colored(sharpe_str, sharpe_color), unsafe_allow_html=True)
+        cols[4].markdown(_colored(win_str, win_color), unsafe_allow_html=True)
+        cols[5].markdown(_colored(dd_str, dd_color), unsafe_allow_html=True)
+        cols[6].write(r["total_trades"])
+        cols[7].write(ret_str)
+        cols[8].markdown(
+            f'<span style="color:{gate_color};font-weight:bold">{gate_label}</span>',
+            unsafe_allow_html=True,
+        )
+
+        if r["is_active"]:
+            if cols[9].button("Deactivate", key=f"sc_deact_{r['id']}"):
+                _set_pair_active(r["id"], False)
+                r["is_active"] = False
+                st.rerun()
+        else:
+            btn_label = "Activate" if r["passed"] else "Activate (!)"
+            if cols[9].button(
+                btn_label,
+                key=f"sc_act_{r['id']}",
+                type="primary" if r["passed"] else "secondary",
+            ):
+                _set_pair_active(r["id"], True)
+                r["is_active"] = True
+                st.rerun()
+
+    st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+    st.caption("[active] = currently live  .  (!) = activating a failing pair")
+
+
+# ---------------------------------------------------------------------------
+# Backtest tab
+# ---------------------------------------------------------------------------
+
+
+def _render_backtest_tab(pairs: list) -> None:
     st.caption(
         "Run strategy backtests on historical data. "
         "All three gate criteria must pass before enabling live trading."
     )
 
-    pairs = load_pairs()
     if not pairs:
         st.warning("No pairs registered. Run `scripts/discover_pairs.py` first.")
         return
 
-    # -----------------------------------------------------------------------
-    # Sidebar — config panel
-    # -----------------------------------------------------------------------
     with st.sidebar:
-        st.header("Configuration")
+        st.header("Backtest Configuration")
 
         pair_labels = [p["label"] for p in pairs]
-        selected_label = st.selectbox("Select Pair", pair_labels)
+        selected_label = st.selectbox("Select Pair", pair_labels, key="bt_pair_select")
         selected = next(p for p in pairs if p["label"] == selected_label)
 
         st.divider()
-
         st.subheader("Date Range")
         default_end = date.today()
         default_start = default_end - timedelta(days=180)
@@ -386,49 +648,37 @@ def main():
         end_date = st.date_input("End Date", value=default_end)
 
         st.divider()
-
         st.subheader("Strategy Parameters")
         entry_threshold = st.slider(
-            "Entry threshold (±z)",
+            "Entry threshold (+-z)",
             1.0,
             3.5,
             float(selected["entry_threshold"]),
             0.1,
         )
         exit_threshold = st.slider(
-            "Exit threshold (±z)",
+            "Exit threshold (+-z)",
             0.1,
             1.5,
             float(selected["exit_threshold"]),
             0.1,
         )
         stop_threshold = st.slider(
-            "Stop loss (±z)",
+            "Stop loss (+-z)",
             2.5,
             5.0,
             float(selected["stop_loss_threshold"]),
             0.1,
         )
-        slippage_bps = st.slider(
-            "Slippage (bps/fill)",
-            0,
-            20,
-            5,
-            1,
-            help="Basis points added to buys / subtracted from sells per leg fill.",
-        )
+        slippage_bps = st.slider("Slippage (bps/fill)", 0, 20, 5, 1)
         commission = st.number_input(
             "Commission ($/trade)",
             min_value=0.0,
             max_value=2.0,
             value=0.0,
             step=0.01,
-            help="Flat dollar cost deducted from P&L per closed round-trip. "
-            "Alpaca is commission-free; set >0 to stress-test.",
         )
-
         st.divider()
-
         initial_capital = st.number_input(
             "Initial Capital ($)",
             min_value=10_000,
@@ -436,25 +686,16 @@ def main():
             value=100_000,
             step=10_000,
         )
+        notes = st.text_input("Notes (optional)", placeholder="e.g. Tighter stop test")
+        run_btn = st.button("Run Backtest", type="primary", key="bt_run")
 
-        notes = st.text_input(
-            "Notes (optional)", placeholder="e.g. Tighter stop loss test"
-        )
-
-        run_btn = st.button("Run Backtest", type="primary", width="stretch")
-
-    # -----------------------------------------------------------------------
-    # Pair header row: stats + activate button
-    # -----------------------------------------------------------------------
     col_a, col_b, col_c, col_d, col_r = st.columns([2, 2, 2, 2, 2])
-    col_a.metric("Hedge Ratio (β)", f"{selected['hedge_ratio']:.4f}")
+    col_a.metric("Hedge Ratio", f"{selected['hedge_ratio']:.4f}")
     col_b.metric(
         "Half-Life",
         f"{selected['half_life_hours']:.1f}h" if selected["half_life_hours"] else "N/A",
     )
     col_c.metric("Z-Score Window", f"{selected['z_score_window']} bars")
-
-    # Rank score with colour-coded quality label
     rank = selected.get("rank_score")
     if rank is not None:
         rank_label = (
@@ -467,39 +708,28 @@ def main():
             f"{rank:.4f}",
             delta=rank_label,
             delta_color="normal" if rank >= 0.75 else "inverse",
-            help="(1 - coint_p) × |correlation| × liquidity. Higher = stronger pair.",
         )
     else:
         col_r.metric("Rank Score", "N/A")
-
     col_d.metric("Status", "Active" if selected["is_active"] else "Inactive")
 
-    # Activate / Deactivate — own row so it's never squished
     btn_col, _ = st.columns([2, 8])
     with btn_col:
         if selected["is_active"]:
-            if st.button("⏸ Deactivate Pair", type="secondary", width="stretch"):
+            if st.button("Deactivate Pair", type="secondary"):
                 _set_pair_active(selected["id"], False)
-                load_pairs.clear()
+                load_all_pairs.clear()
                 st.rerun()
         else:
-            if st.button("▶ Activate Pair", type="primary", width="stretch"):
+            if st.button("Activate Pair", type="primary"):
                 _set_pair_active(selected["id"], True)
-                load_pairs.clear()
+                load_all_pairs.clear()
                 st.rerun()
 
     st.divider()
-
-    # -----------------------------------------------------------------------
-    # Stock Analysis Panel
-    # -----------------------------------------------------------------------
     _render_pair_analysis(selected, start_date, end_date)
-
     st.divider()
 
-    # -----------------------------------------------------------------------
-    # Run backtest
-    # -----------------------------------------------------------------------
     if run_btn:
         if start_date >= end_date:
             st.error("Start date must be before end date.")
@@ -516,7 +746,7 @@ def main():
             session.expunge(pair_row)
 
         with st.spinner(
-            f"Running backtest for {selected['symbol1']}/{selected['symbol2']}…"
+            f"Running backtest for {selected['symbol1']}/{selected['symbol2']}..."
         ):
             try:
                 engine = BacktestEngine(
@@ -530,34 +760,24 @@ def main():
                 result = engine.run()
                 calc = MetricsCalculator()
                 metrics = calc.compute(result)
-
                 reporter = BacktestReport()
                 run_id = reporter.save(result, metrics, notes=notes or None)
-
-                st.session_state["last_result"] = result
-                st.session_state["last_metrics"] = metrics
-                st.session_state["last_run_id"] = run_id
-
+                st.session_state["bt_result"] = result
+                st.session_state["bt_metrics"] = metrics
+                st.session_state["bt_run_id"] = run_id
                 load_run_history.clear()
-
             except Exception as e:
                 st.error(f"Backtest failed: {e}")
                 st.exception(e)
                 return
 
-    # -----------------------------------------------------------------------
-    # Backtest results
-    # -----------------------------------------------------------------------
-    result = st.session_state.get("last_result")
-    metrics = st.session_state.get("last_metrics")
-    run_id = st.session_state.get("last_run_id")
+    result = st.session_state.get("bt_result")
+    metrics = st.session_state.get("bt_metrics")
+    run_id = st.session_state.get("bt_run_id")
 
     if result is not None and metrics is not None:
-        _render_results(result, metrics, run_id)
+        _render_backtest_results(result, metrics, run_id)
 
-    # -----------------------------------------------------------------------
-    # Run history
-    # -----------------------------------------------------------------------
     st.subheader("Run History")
     history_df = load_run_history(selected["id"])
     if history_df.empty:
@@ -572,40 +792,28 @@ def main():
             )
 
         styled = history_df.style.map(_highlight_gate, subset=["Gate"])
-        st.dataframe(styled, width="stretch", hide_index=True)
+        st.dataframe(styled, hide_index=True)
 
 
 # ---------------------------------------------------------------------------
-# Stock Analysis Panel
+# Stock analysis panel (shared logic)
 # ---------------------------------------------------------------------------
 
 
-def _render_pair_analysis(selected: dict, start_date: date, end_date: date):
-    """
-    Full trader-focused analysis panel for the selected pair.
-
-    Tabs:
-      1. Risk Flags   — immediate go/no-go signals before running backtest
-      2. Fundamentals — company profiles + side-by-side key stats
-      3. Price Chart  — normalised prices, volume, dividends, splits
-      4. Correlation  — rolling 30-bar correlation with stability assessment
-    """
+def _render_pair_analysis(selected: dict, start_date: date, end_date: date) -> None:
     s1 = selected["symbol1"]
     s2 = selected["symbol2"]
 
-    with st.expander(f"Stock Analysis — {s1} / {s2}", expanded=True):
+    with st.expander(f"Stock Analysis -- {s1} / {s2}", expanded=True):
         company = load_company_info(s1, s2)
         stats = load_key_stats(s1, s2)
         prices1, prices2 = load_price_history(s1, s2, start_date, end_date)
         events = load_corporate_events(s1, s2, start_date, end_date)
 
         tab_flags, tab_fund, tab_price, tab_corr = st.tabs(
-            ["⚠ Risk Flags", "Fundamentals", "Price Chart", "Correlation"]
+            ["Risk Flags", "Fundamentals", "Price Chart", "Correlation"]
         )
 
-        # -------------------------------------------------------------------
-        # Tab 1 — Risk Flags
-        # -------------------------------------------------------------------
         with tab_flags:
             flags = _compute_risk_flags(
                 s1, s2, stats, prices1, prices2, events, selected
@@ -615,36 +823,28 @@ def _render_pair_analysis(selected: dict, start_date: date, end_date: date):
             else:
                 for f in flags:
                     if f["level"] == "danger":
-                        st.error(f"**{f['title']}** — {f['detail']}")
+                        st.error(f"**{f['title']}** -- {f['detail']}")
                     else:
-                        st.warning(f"**{f['title']}** — {f['detail']}")
+                        st.warning(f"**{f['title']}** -- {f['detail']}")
 
-            # Quick stat summary so trader sees numbers behind each flag
             st.markdown("---")
             st.caption("Supporting figures")
             fc1, fc2, fc3, fc4 = st.columns(4)
             mc1 = stats.get(s1, {}).get("market_cap")
             mc2 = stats.get(s2, {}).get("market_cap")
-            fc1.metric(
-                "Market Cap Ratio",
-                _mcap_ratio_str(mc1, mc2),
-                help=f"{s1} vs {s2} — pairs trade best when <5×",
-            )
+            fc1.metric("Market Cap Ratio", _mcap_ratio_str(mc1, mc2))
             av1 = stats.get(s1, {}).get("avg_volume") or 0
             av2 = stats.get(s2, {}).get("avg_volume") or 0
             fc2.metric(
                 "Avg Volume Ratio",
-                f"{max(av1, av2) / min(av1, av2):.1f}×" if min(av1, av2) > 0 else "N/A",
-                help="Liquidity balance — keep below 10×",
+                f"{max(av1, av2) / min(av1, av2):.1f}x" if min(av1, av2) > 0 else "N/A",
             )
             b1 = stats.get(s1, {}).get("beta")
             b2 = stats.get(s2, {}).get("beta")
             fc3.metric(
                 "Beta Gap",
                 f"{abs((b1 or 0) - (b2 or 0)):.2f}" if b1 and b2 else "N/A",
-                help="Market sensitivity diff — keep below 0.5",
             )
-            # Upcoming dividends within 10 days
             from datetime import date as _date
 
             today = _date.today()
@@ -654,17 +854,9 @@ def _render_pair_analysis(selected: dict, start_date: date, end_date: date):
                     days_away = (d["date"] - today).days
                     if 0 <= days_away <= 10:
                         upcoming.append(f"{sym} ex-div in {days_away}d")
-            fc4.metric(
-                "Upcoming Ex-Div",
-                ", ".join(upcoming) if upcoming else "None",
-                help="Ex-dividend within 10 days can distort spread",
-            )
+            fc4.metric("Upcoming Ex-Div", ", ".join(upcoming) if upcoming else "None")
 
-        # -------------------------------------------------------------------
-        # Tab 2 — Fundamentals
-        # -------------------------------------------------------------------
         with tab_fund:
-            # Company cards
             cc1, cc2 = st.columns(2)
             for col, sym in ((cc1, s1), (cc2, s2)):
                 info = company.get(sym, {})
@@ -672,31 +864,29 @@ def _render_pair_analysis(selected: dict, start_date: date, end_date: date):
                 with col:
                     st.markdown(f"### {info.get('name', sym)}  `{sym}`")
                     st.caption(
-                        f"{info.get('industry', '—')}  ·  "
-                        f"{info.get('exchange', '—')}  ·  "
-                        f"{info.get('sector', '—')}"
+                        f"{info.get('industry', '--')}  .  "
+                        f"{info.get('exchange', '--')}  .  "
+                        f"{info.get('sector', '--')}"
                     )
                     mc = info.get("market_cap") or ks.get("market_cap")
                     emp = info.get("employees")
                     st.markdown(
-                        f"**Market Cap:** {_fmt_mcap(mc)}  " f"  **Employees:** {emp:,}"
+                        f"**Market Cap:** {_fmt_mcap(mc)}  **Employees:** {emp:,}"
                         if emp
                         else f"**Market Cap:** {_fmt_mcap(mc)}"
                     )
                     desc = info.get("description", "")
                     if desc:
-                        st.caption(desc[:280] + ("…" if len(desc) > 280 else ""))
+                        st.caption(desc[:280] + ("..." if len(desc) > 280 else ""))
 
             st.markdown("---")
-
-            # Side-by-side key stats table
             st.subheader("Key Statistics")
             rows = [
                 ("Market Cap", _fmt_mcap, "market_cap"),
-                ("Beta (β)", lambda v: f"{v:.2f}", "beta"),
+                ("Beta", lambda v: f"{v:.2f}", "beta"),
                 ("Avg Daily Volume", lambda v: f"{int(v):,}", "avg_volume"),
-                ("Trailing P/E", lambda v: f"{v:.1f}×", "trailing_pe"),
-                ("Price / Book", lambda v: f"{v:.2f}×", "price_to_book"),
+                ("Trailing P/E", lambda v: f"{v:.1f}x", "trailing_pe"),
+                ("Price / Book", lambda v: f"{v:.2f}x", "price_to_book"),
                 ("Profit Margin", lambda v: f"{v*100:.1f}%", "profit_margin"),
                 ("Return on Equity", lambda v: f"{v*100:.1f}%", "roe"),
                 ("Debt / Equity", lambda v: f"{v:.2f}", "debt_to_equity"),
@@ -707,36 +897,21 @@ def _render_pair_analysis(selected: dict, start_date: date, end_date: date):
                 ("Short Ratio", lambda v: f"{v:.1f}d", "short_ratio"),
                 ("Inst. Ownership", lambda v: f"{v*100:.1f}%", "held_pct_inst"),
             ]
-            table_data = {"Metric": [], s1: [], s2: []}
+            table_data: Dict = {"Metric": [], s1: [], s2: []}
             for label, fmt, key in rows:
                 v1 = stats.get(s1, {}).get(key)
                 v2 = stats.get(s2, {}).get(key)
                 table_data["Metric"].append(label)
                 table_data[s1].append(_safe_fmt(v1, fmt))
                 table_data[s2].append(_safe_fmt(v2, fmt))
-            st.dataframe(
-                pd.DataFrame(table_data),
-                width="stretch",
-                hide_index=True,
-            )
-            if stats.get(s1):
-                st.caption(
-                    f"Data as of: {s1} → {stats[s1].get('as_of', '—')}  "
-                    f"  {s2} → {stats.get(s2, {}).get('as_of', '—')}"
-                )
+            st.dataframe(pd.DataFrame(table_data), hide_index=True)
 
-        # -------------------------------------------------------------------
-        # Tab 3 — Price Chart
-        # -------------------------------------------------------------------
         with tab_price:
             if prices1.empty or prices2.empty:
                 st.info("Not enough price data in the selected date range.")
             else:
                 _render_price_chart(s1, s2, prices1, prices2, events)
 
-        # -------------------------------------------------------------------
-        # Tab 4 — Correlation
-        # -------------------------------------------------------------------
         with tab_corr:
             if prices1.empty or prices2.empty:
                 st.info("Not enough price data to compute rolling correlation.")
@@ -748,11 +923,6 @@ def _render_pair_analysis(selected: dict, start_date: date, end_date: date):
                     prices2,
                     registered_corr=selected.get("correlation"),
                 )
-
-
-# ---------------------------------------------------------------------------
-# Risk flag logic
-# ---------------------------------------------------------------------------
 
 
 def _compute_risk_flags(
@@ -768,7 +938,6 @@ def _compute_risk_flags(
     ks1 = stats.get(s1, {})
     ks2 = stats.get(s2, {})
 
-    # 1. Market cap mismatch (>10× is a structural mismatch)
     mc1 = ks1.get("market_cap") or 0
     mc2 = ks2.get("market_cap") or 0
     if mc1 > 0 and mc2 > 0:
@@ -779,7 +948,7 @@ def _compute_risk_flags(
                     "level": "danger",
                     "title": "Large Market Cap Mismatch",
                     "detail": (
-                        f"{s1} vs {s2} market cap ratio is {ratio:.1f}×. "
+                        f"{s1} vs {s2} market cap ratio is {ratio:.1f}x. "
                         "Extreme size differences weaken cointegration stability."
                     ),
                 }
@@ -789,14 +958,10 @@ def _compute_risk_flags(
                 {
                     "level": "warn",
                     "title": "Market Cap Mismatch",
-                    "detail": (
-                        f"Ratio is {ratio:.1f}×. Monitor — the larger company may "
-                        "absorb sector shocks differently."
-                    ),
+                    "detail": f"Ratio is {ratio:.1f}x. Monitor closely.",
                 }
             )
 
-    # 2. Liquidity mismatch (>10× avg volume makes leg balancing hard)
     av1 = ks1.get("avg_volume") or 0
     av2 = ks2.get("avg_volume") or 0
     if av1 > 0 and av2 > 0:
@@ -807,7 +972,7 @@ def _compute_risk_flags(
                     "level": "danger",
                     "title": "Liquidity Mismatch",
                     "detail": (
-                        f"Average volume ratio is {liq_ratio:.1f}×. "
+                        f"Average volume ratio is {liq_ratio:.1f}x. "
                         "The thinner leg may experience significant slippage."
                     ),
                 }
@@ -817,14 +982,10 @@ def _compute_risk_flags(
                 {
                     "level": "warn",
                     "title": "Liquidity Imbalance",
-                    "detail": (
-                        f"Volume ratio is {liq_ratio:.1f}×. "
-                        "Watch for slippage on the smaller leg."
-                    ),
+                    "detail": f"Volume ratio is {liq_ratio:.1f}x. Watch for slippage.",
                 }
             )
 
-    # 3. Beta divergence (different market sensitivity → spread driven by beta, not mean-reversion)
     b1 = ks1.get("beta")
     b2 = ks2.get("beta")
     if b1 is not None and b2 is not None:
@@ -835,8 +996,8 @@ def _compute_risk_flags(
                     "level": "danger",
                     "title": "High Beta Divergence",
                     "detail": (
-                        f"{s1} β={b1:.2f}, {s2} β={b2:.2f} (gap {gap:.2f}). "
-                        "The spread will be heavily influenced by market direction."
+                        f"{s1} beta={b1:.2f}, {s2} beta={b2:.2f} (gap {gap:.2f}). "
+                        "Spread will be heavily influenced by market direction."
                     ),
                 }
             )
@@ -845,19 +1006,14 @@ def _compute_risk_flags(
                 {
                     "level": "warn",
                     "title": "Beta Divergence",
-                    "detail": (
-                        f"Gap is {gap:.2f}. Consider delta-hedging or using "
-                        "beta-adjusted position sizing."
-                    ),
+                    "detail": f"Gap is {gap:.2f}. Consider beta-adjusted sizing.",
                 }
             )
 
-    # 4. Recent correlation decay
     if len(prices1) > 60 and len(prices2) > 60:
         aligned = pd.concat([prices1, prices2], axis=1).dropna()
         if len(aligned) > 60:
             log_ret = np.log(aligned / aligned.shift(1)).dropna()
-            # Last 30 bars vs registered correlation
             recent_corr = (
                 log_ret.iloc[-30:][s1].corr(log_ret.iloc[-30:][s2])
                 if len(log_ret) >= 30
@@ -890,13 +1046,12 @@ def _compute_risk_flags(
                         }
                     )
 
-    # 5. Stock splits in the window
     for sym in (s1, s2):
         for sp in events[sym]["splits"]:
             flags.append(
                 {
                     "level": "danger",
-                    "title": f"Stock Split — {sym}",
+                    "title": f"Stock Split -- {sym}",
                     "detail": (
                         f"{sym} had a {sp['label']} split on {sp['date']}. "
                         "This may have introduced a price discontinuity in the spread."
@@ -904,7 +1059,6 @@ def _compute_risk_flags(
                 }
             )
 
-    # 6. Upcoming ex-dividend within 10 days
     from datetime import date as _date
 
     today = _date.today()
@@ -915,7 +1069,7 @@ def _compute_risk_flags(
                 flags.append(
                     {
                         "level": "warn",
-                        "title": f"Upcoming Ex-Dividend — {sym}",
+                        "title": f"Upcoming Ex-Dividend -- {sym}",
                         "detail": (
                             f"{sym} goes ex-div on {d['date']} "
                             f"(${d['amount']:.4f}, in {days_away} day(s)). "
@@ -924,14 +1078,13 @@ def _compute_risk_flags(
                     }
                 )
 
-    # 7. High short ratio (>5 days to cover = potential squeeze risk)
     for sym, ks in ((s1, ks1), (s2, ks2)):
         sr = ks.get("short_ratio")
         if sr and sr > 5:
             flags.append(
                 {
                     "level": "warn",
-                    "title": f"Elevated Short Interest — {sym}",
+                    "title": f"Elevated Short Interest -- {sym}",
                     "detail": (
                         f"Short ratio is {sr:.1f} days-to-cover. "
                         "A squeeze could cause an outsized move in this leg."
@@ -942,19 +1095,9 @@ def _compute_risk_flags(
     return flags
 
 
-# ---------------------------------------------------------------------------
-# Price chart renderer
-# ---------------------------------------------------------------------------
-
-
 def _render_price_chart(
-    s1: str,
-    s2: str,
-    prices1: pd.Series,
-    prices2: pd.Series,
-    events: dict,
+    s1: str, s2: str, prices1: pd.Series, prices2: pd.Series, events: dict
 ) -> None:
-    """Normalised price chart (rebased to 100) with volume bars and event markers."""
     aligned = pd.concat([prices1, prices2], axis=1).dropna()
     if aligned.empty:
         st.info("Insufficient overlapping price data.")
@@ -966,7 +1109,6 @@ def _render_price_chart(
     norm2 = aligned[s2] / base2 * 100
 
     fig = go.Figure()
-
     fig.add_trace(
         go.Scatter(
             x=norm1.index,
@@ -986,7 +1128,6 @@ def _render_price_chart(
         )
     )
 
-    # Spread (right y-axis) — log spread normalised to 0 start
     log_spread = np.log(aligned[s1]) - np.log(aligned[s2])
     log_spread_norm = (log_spread - log_spread.mean()) / (log_spread.std() or 1)
     fig.add_trace(
@@ -1001,20 +1142,16 @@ def _render_price_chart(
         )
     )
 
-    # Dividend markers
-    for sym, color, side in ((s1, CDIV1, "left"), (s2, CDIV2, "right")):
+    for sym, color in ((s1, CDIV1), (s2, CDIV2)):
         for d in events[sym]["dividends"]:
             dt = pd.Timestamp(d["date"]).tz_localize("UTC")
-            if dt in aligned.index or True:  # add anyway as vline
-                fig.add_vline(
-                    x=dt.value / 1e6,  # plotly expects ms
-                    line=dict(color=color, width=1, dash="dot"),
-                    annotation_text=f"${d['amount']:.2f} {sym}",
-                    annotation_position=f"top {side}",
-                    annotation_font_size=9,
-                )
-
-    # Split markers
+            fig.add_vline(
+                x=dt.value / 1e6,
+                line=dict(color=color, width=1, dash="dot"),
+                annotation_text=f"${d['amount']:.2f} {sym}",
+                annotation_position="top left",
+                annotation_font_size=9,
+            )
     for sym in (s1, s2):
         for sp in events[sym]["splits"]:
             dt = pd.Timestamp(sp["date"]).tz_localize("UTC")
@@ -1048,16 +1185,10 @@ def _render_price_chart(
     )
     st.plotly_chart(fig, config=PLOTLY_CONFIG)
     st.caption(
-        "Both prices rebased to 100 at period start.  "
-        "Dotted vertical lines = ex-dividend dates.  "
-        "Purple solid lines = stock splits.  "
-        "Right axis = log-spread z-score."
+        "Both prices rebased to 100 at period start. "
+        "Dotted verticals = ex-dividend dates. "
+        "Purple lines = stock splits. Right axis = log-spread z-score."
     )
-
-
-# ---------------------------------------------------------------------------
-# Correlation chart renderer
-# ---------------------------------------------------------------------------
 
 
 def _render_correlation_chart(
@@ -1068,7 +1199,6 @@ def _render_correlation_chart(
     registered_corr: Optional[float],
     window: int = 30,
 ) -> None:
-    """Rolling Pearson correlation on hourly log-returns."""
     aligned = pd.concat([prices1, prices2], axis=1).dropna()
     if len(aligned) < window + 5:
         st.info(f"Need at least {window + 5} bars to compute rolling correlation.")
@@ -1077,13 +1207,11 @@ def _render_correlation_chart(
     log_ret = np.log(aligned / aligned.shift(1)).dropna()
     rolling_corr = log_ret[s1].rolling(window).corr(log_ret[s2]).dropna()
 
-    # Stats
     curr_corr = float(rolling_corr.iloc[-1])
     mean_corr = float(rolling_corr.mean())
     min_corr = float(rolling_corr.min())
     pct_below_05 = float((rolling_corr < 0.5).mean() * 100)
 
-    # Metrics row
     mc1, mc2, mc3, mc4 = st.columns(4)
     mc1.metric(
         "Current (last bar)",
@@ -1097,16 +1225,9 @@ def _render_correlation_chart(
     )
     mc2.metric("Mean (period)", f"{mean_corr:.3f}")
     mc3.metric("Min (period)", f"{min_corr:.3f}")
-    mc4.metric(
-        "% Bars Below 0.5",
-        f"{pct_below_05:.1f}%",
-        help="High % indicates unstable relationship",
-    )
+    mc4.metric("% Bars Below 0.5", f"{pct_below_05:.1f}%")
 
-    # Chart
     fig = go.Figure()
-
-    # Red shaded danger zone below 0.5
     fig.add_hrect(
         y0=-1,
         y1=0.5,
@@ -1117,7 +1238,6 @@ def _render_correlation_chart(
         annotation_font_size=10,
         annotation_font_color=CDANGER,
     )
-
     fig.add_trace(
         go.Scatter(
             x=rolling_corr.index,
@@ -1129,7 +1249,6 @@ def _render_correlation_chart(
             fillcolor="rgba(31,119,180,0.12)",
         )
     )
-
     if registered_corr is not None:
         fig.add_hline(
             y=registered_corr,
@@ -1138,7 +1257,6 @@ def _render_correlation_chart(
             annotation_position="right",
             annotation_font_color=CPASS,
         )
-
     fig.add_hline(
         y=0.5,
         line=dict(color=CDANGER, dash="dot", width=1),
@@ -1147,7 +1265,6 @@ def _render_correlation_chart(
         annotation_font_color=CDANGER,
         annotation_font_size=10,
     )
-
     fig.update_layout(
         xaxis_title="Date",
         yaxis_title="Pearson Correlation",
@@ -1162,28 +1279,18 @@ def _render_correlation_chart(
     )
     st.plotly_chart(fig, config=PLOTLY_CONFIG)
 
-    # Stability verdict
     if pct_below_05 > 20:
         st.error(
-            f"Correlation unstable — {pct_below_05:.0f}% of bars fell below 0.5. "
+            f"Correlation unstable -- {pct_below_05:.0f}% of bars fell below 0.5. "
             "Consider re-running pair discovery with stricter filters."
         )
     elif pct_below_05 > 10:
-        st.warning(
-            f"{pct_below_05:.0f}% of bars below 0.5 threshold. "
-            "Relationship shows periods of weakness."
-        )
+        st.warning(f"{pct_below_05:.0f}% of bars below 0.5 threshold.")
     else:
-        st.success(f"Correlation stable — only {pct_below_05:.0f}% of bars below 0.5.")
+        st.success(f"Correlation stable -- only {pct_below_05:.0f}% of bars below 0.5.")
 
 
-# ---------------------------------------------------------------------------
-# Backtest results renderer
-# ---------------------------------------------------------------------------
-
-
-def _render_results(result, metrics, run_id: Optional[int]):
-    # Gate verdict banner
+def _render_backtest_results(result, metrics, run_id: Optional[int]) -> None:
     if metrics.passed_gate:
         st.success(
             f"GATE: PASS  |  Sharpe {metrics.sharpe_ratio:.3f}  |  "
@@ -1207,7 +1314,6 @@ def _render_results(result, metrics, run_id: Optional[int]):
             )
         st.error("GATE: FAIL  |  " + "  |  ".join(failures))
 
-    # Key metrics
     st.subheader("Performance Metrics")
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("Total Return", f"{metrics.total_return_pct:+.2f}%")
@@ -1217,9 +1323,8 @@ def _render_results(result, metrics, run_id: Optional[int]):
     c5.metric("Win Rate", f"{metrics.win_rate_pct:.1f}%")
     c6.metric(
         "Profit Factor",
-        f"{metrics.profit_factor:.2f}" if metrics.profit_factor < 999 else "∞",
+        f"{metrics.profit_factor:.2f}" if metrics.profit_factor < 999 else "inf",
     )
-
     c7, c8, c9, c10, c11, c12 = st.columns(6)
     c7.metric("Total Trades", metrics.total_trades)
     c8.metric("Wins / Losses", f"{metrics.winning_trades} / {metrics.losing_trades}")
@@ -1228,13 +1333,11 @@ def _render_results(result, metrics, run_id: Optional[int]):
     c11.metric("Avg Hold", f"{metrics.avg_hold_hours:.1f}h")
     c12.metric("Kelly Fraction", f"{metrics.kelly_fraction:.3f}")
 
-    # Equity curve
     st.subheader("Equity Curve")
     if result.equity_curve:
         eq_df = pd.DataFrame(result.equity_curve)
         eq_df["timestamp"] = pd.to_datetime(eq_df["timestamp"])
         eq_df = eq_df.sort_values("timestamp")
-
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
@@ -1266,7 +1369,6 @@ def _render_results(result, metrics, run_id: Optional[int]):
     else:
         st.info("No equity curve data.")
 
-    # Trade log
     st.subheader("Trade Log")
     if result.trades:
         trade_rows = []
@@ -1300,7 +1402,7 @@ def _render_results(result, metrics, run_id: Optional[int]):
                 return ""
 
         styled_trades = trade_df.style.map(_colour_pnl, subset=["P&L ($)", "P&L %"])
-        st.dataframe(styled_trades, width="stretch", hide_index=True)
+        st.dataframe(styled_trades, hide_index=True)
     else:
         st.info("No trades generated in this backtest.")
 
@@ -1308,6 +1410,9 @@ def _render_results(result, metrics, run_id: Optional[int]):
 # ---------------------------------------------------------------------------
 # Formatting helpers
 # ---------------------------------------------------------------------------
+
+
+from typing import Dict  # noqa: E402
 
 
 def _fmt_mcap(v) -> str:
@@ -1326,19 +1431,37 @@ def _fmt_mcap(v) -> str:
 def _mcap_ratio_str(mc1, mc2) -> str:
     if not mc1 or not mc2:
         return "N/A"
-    return f"{max(mc1, mc2) / min(mc1, mc2):.1f}×"
+    return f"{max(mc1, mc2) / min(mc1, mc2):.1f}x"
 
 
 def _safe_fmt(value, fmt_fn) -> str:
     if value is None:
-        return "—"
+        return "--"
     try:
         return fmt_fn(value)
     except Exception:
-        return "—"
+        return "--"
 
 
 # ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+
+def main() -> None:
+    _load_css()
+    st.title("Pair Lab")
+
+    pairs = load_all_pairs()
+
+    tab_scanner, tab_backtest = st.tabs(["Scanner", "Backtest"])
+
+    with tab_scanner:
+        _render_scanner_tab(pairs)
+
+    with tab_backtest:
+        _render_backtest_tab(pairs)
+
 
 if __name__ == "__main__" or True:
     main()

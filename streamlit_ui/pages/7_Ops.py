@@ -1,6 +1,9 @@
 """
-Settings — System Configuration
-API connection status and analysis preferences.
+Ops -- System configuration, connection status, and data quality monitoring.
+
+Tabs:
+  Connections & Preferences -- API status, Alpaca status, analysis defaults
+  Data Quality              -- ingestion timestamps, stale data alerts
 """
 
 import json
@@ -8,6 +11,7 @@ import os
 import sys
 from datetime import datetime
 
+import pandas as pd
 import streamlit as st
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -39,7 +43,7 @@ def _save_prefs(symbol: str, timeframe: str) -> None:
 
 
 st.set_page_config(
-    page_title="Settings",
+    page_title="Ops",
     page_icon="⚙️",
     layout="wide",
 )
@@ -72,14 +76,40 @@ def _status_badge(ok: bool, ok_label: str, fail_label: str) -> str:
     )
 
 
-def main() -> None:
-    load_css()
+def _metric_card(label: str, value: str, sub: str = "", color: str = "#1a1a1a") -> str:
+    return (
+        f"<div class='metric-container'>"
+        f'<div style=\'font-family:"DM Sans",sans-serif;font-size:0.72rem;'
+        f"text-transform:uppercase;letter-spacing:0.07em;color:#6b6b6b;"
+        f"margin-bottom:0.3rem;'>{label}</div>"
+        f'<div style=\'font-family:"DM Sans",sans-serif;font-size:1.5rem;'
+        f"font-weight:600;color:{color};'>{value}</div>"
+        + (
+            f'<div style=\'font-family:"DM Mono",monospace;font-size:0.72rem;'
+            f"color:#9e9e9e;margin-top:0.2rem;'>{sub}</div>"
+            if sub
+            else ""
+        )
+        + "</div>"
+    )
 
-    st.markdown("<h1>Settings</h1>", unsafe_allow_html=True)
 
-    api = get_api_client()
+def _format_dt(iso_str) -> str:
+    if not iso_str:
+        return "--"
+    try:
+        dt = datetime.fromisoformat(str(iso_str).replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%d %H:%M UTC")
+    except Exception:
+        return str(iso_str)
 
-    # ── Section 1: Connection Status ──────────────────────────────────────────
+
+# ---------------------------------------------------------------------------
+# Tab renderers
+# ---------------------------------------------------------------------------
+
+
+def _render_connections_tab(api) -> None:
     st.markdown("<h2>Connection Status</h2>", unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns(3)
@@ -104,7 +134,7 @@ def main() -> None:
         account = api.get_alpaca_account()
         alpaca_ok = "error" not in account
         acct_num = account.get("account_number", "") if alpaca_ok else ""
-        mode = "Paper Trading" if alpaca_ok else "—"
+        mode = "Paper Trading" if alpaca_ok else "--"
         st.markdown(
             f"<div class='metric-container'>"
             f'<div style=\'font-family:"DM Sans",sans-serif;font-size:0.72rem;'
@@ -113,7 +143,7 @@ def main() -> None:
             f"{_status_badge(alpaca_ok, '● Connected', '● Unreachable')}"
             f'<div style=\'font-family:"DM Mono",monospace;font-size:0.75rem;'
             f"color:#9e9e9e;margin-top:0.2rem;'>"
-            f"{acct_num or '—'} · {mode}</div>"
+            f"{acct_num or '--'} · {mode}</div>"
             f"</div>",
             unsafe_allow_html=True,
         )
@@ -135,13 +165,12 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    if st.button("↻ Recheck connections", key="recheck_btn"):
+    if st.button("Recheck connections", key="recheck_btn"):
         st.cache_data.clear()
         st.rerun()
 
     st.markdown("---")
 
-    # ── Section 2: Analysis Preferences ──────────────────────────────────────
     st.markdown("<h2>Analysis Preferences</h2>", unsafe_allow_html=True)
     st.markdown(
         "<p style='color:#6b6b6b;font-size:0.88rem;margin-bottom:1rem;'>"
@@ -150,8 +179,6 @@ def main() -> None:
     )
 
     prefs = _load_prefs()
-
-    # Seed session state from persisted prefs (only on first load)
     if "selected_symbol" not in st.session_state:
         st.session_state.selected_symbol = prefs["symbol"]
     if "selected_timeframe" not in st.session_state:
@@ -193,9 +220,7 @@ def main() -> None:
 
     st.markdown("---")
 
-    # ── Section 3: System Info ────────────────────────────────────────────────
     st.markdown("<h2>System Info</h2>", unsafe_allow_html=True)
-
     s1, s2 = st.columns(2)
     with s1:
         api_url = os.getenv("API_BASE_URL", "http://localhost:8001")
@@ -225,6 +250,150 @@ def main() -> None:
             f"</div>",
             unsafe_allow_html=True,
         )
+
+
+def _render_data_quality_tab(api) -> None:
+    if st.button("Refresh", key="refresh_btn"):
+        st.cache_data.clear()
+        st.rerun()
+
+    summary = api.get_data_quality_summary()
+
+    if "error" in summary:
+        st.error("Could not load data quality summary. Is the API running?")
+        return
+
+    total = summary.get("total_symbols", 0)
+    stale = summary.get("stale_symbols", 0)
+    ok = summary.get("ok_symbols", 0)
+    last_ingest = _format_dt(summary.get("last_ingestion_at"))
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.markdown(_metric_card("Tracked Symbols", str(total)), unsafe_allow_html=True)
+    with c2:
+        st.markdown(
+            _metric_card("Up to Date", str(ok), color="#2A7A4B"), unsafe_allow_html=True
+        )
+    with c3:
+        color = "#C0392B" if stale > 0 else "#6b6b6b"
+        st.markdown(
+            _metric_card("Stale", str(stale), color=color), unsafe_allow_html=True
+        )
+    with c4:
+        st.markdown(
+            _metric_card(
+                "Last Ingestion",
+                last_ingest[:10] if last_ingest != "--" else "--",
+                sub=last_ingest[11:] if last_ingest != "--" else "",
+            ),
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("---")
+
+    alerts = api.get_data_quality_alerts()
+    if alerts:
+        st.markdown(
+            f"<h2>Alerts <span style='color:#C0392B;font-size:1rem;font-weight:500'>"
+            f"({len(alerts)} issue{'s' if len(alerts) != 1 else ''})</span></h2>",
+            unsafe_allow_html=True,
+        )
+        alert_df = (
+            pd.DataFrame(alerts)[
+                ["symbol", "last_date", "days_since_last_bar", "record_count"]
+            ]
+            .rename(
+                columns={
+                    "symbol": "Symbol",
+                    "last_date": "Last Bar",
+                    "days_since_last_bar": "Days Stale",
+                    "record_count": "Records",
+                }
+            )
+            .sort_values("Days Stale", ascending=False)
+        )
+        st.dataframe(
+            alert_df,
+            hide_index=True,
+            column_config={
+                "Days Stale": st.column_config.NumberColumn(format="%d days"),
+                "Records": st.column_config.NumberColumn(format="%d"),
+            },
+        )
+        st.markdown("---")
+    else:
+        st.success("All symbols are up to date.")
+        st.markdown("---")
+
+    st.markdown("<h2>All Ingestion Series</h2>", unsafe_allow_html=True)
+    statuses = api.get_ingestion_status()
+
+    if not statuses:
+        st.info("No market data found. Trigger a data ingestion flow first.")
+        return
+
+    df = pd.DataFrame(statuses)
+    stale_filter = st.selectbox("Freshness", ["All", "Stale only", "Fresh only"])
+    if stale_filter == "Stale only":
+        filtered = df[df["is_stale"]]
+    elif stale_filter == "Fresh only":
+        filtered = df[~df["is_stale"]]
+    else:
+        filtered = df
+
+    display = (
+        filtered[
+            ["symbol", "last_date", "days_since_last_bar", "record_count", "is_stale"]
+        ]
+        .rename(
+            columns={
+                "symbol": "Symbol",
+                "last_date": "Last Bar",
+                "days_since_last_bar": "Days Stale",
+                "record_count": "Records",
+                "is_stale": "Stale?",
+            }
+        )
+        .sort_values(["Days Stale", "Symbol"], ascending=[False, True])
+    )
+
+    st.dataframe(
+        display,
+        hide_index=True,
+        column_config={
+            "Days Stale": st.column_config.NumberColumn(format="%d days"),
+            "Records": st.column_config.NumberColumn(format="%d"),
+            "Stale?": st.column_config.CheckboxColumn(),
+        },
+    )
+
+    st.markdown(
+        f'<div style=\'font-family:"DM Mono",monospace;font-size:0.72rem;color:#9e9e9e;'
+        f"margin-top:0.5rem;'>Showing {len(display)} of {len(df)} series . "
+        f"Stale threshold: >2 days since last successful load</div>",
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+
+def main() -> None:
+    load_css()
+    st.markdown("<h1>Ops</h1>", unsafe_allow_html=True)
+
+    api = get_api_client()
+
+    tab_conn, tab_dq = st.tabs(["Connections & Preferences", "Data Quality"])
+
+    with tab_conn:
+        _render_connections_tab(api)
+
+    with tab_dq:
+        _render_data_quality_tab(api)
 
 
 if __name__ == "__main__":

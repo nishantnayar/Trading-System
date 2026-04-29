@@ -12,6 +12,9 @@ Models:
     PairPerformance      - daily cumulative metrics
     BacktestRun          - historical backtest results
     PortfolioRiskState   - single-row portfolio risk state (circuit breaker, peak equity)
+    BasketRegistry       - validated N-stock basket definitions (Johansen cointegration)
+    BasketSpread         - hourly spread/z-score time series for baskets
+    BasketTrade          - open and closed basket trades
 """
 
 from datetime import date, datetime, timezone
@@ -37,6 +40,10 @@ from src.shared.database.base import Base
 
 if TYPE_CHECKING:
     pass
+
+# Basket ORMs live in basket_models.py and are re-exported here so existing imports
+# like ``from strategy_models import BasketRegistry`` keep working.
+from .basket_models import BasketRegistry, BasketSpread, BasketTrade
 
 
 class PairRegistry(Base):
@@ -634,3 +641,17 @@ class PortfolioRiskState(Base):
             "drawdown_threshold": float(self.drawdown_threshold),
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+__all__ = [
+    "BacktestRun",
+    "BasketRegistry",
+    "BasketSpread",
+    "BasketTrade",
+    "PairPerformance",
+    "PairRegistry",
+    "PairSignal",
+    "PairSpread",
+    "PairTrade",
+    "PortfolioRiskState",
+]

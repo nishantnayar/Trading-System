@@ -17,7 +17,7 @@ Rules:
 """
 
 from datetime import datetime, timezone
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from loguru import logger
 
@@ -39,7 +39,7 @@ class SignalGenerator:
         # signal is a PairSignal ORM object (already persisted) or None
     """
 
-    def __init__(self, pair: PairRegistry):
+    def __init__(self, pair: Any):  # Any allows SimpleNamespace shim for baskets
         """
         Args:
             pair: PairRegistry row for the pair being evaluated
@@ -92,6 +92,9 @@ class SignalGenerator:
                 session.add(sig)
                 session.flush()
                 session.refresh(sig)
+                # Detach before transaction commit/close so attributes
+                # remain usable by callers outside this session.
+                session.expunge(sig)
             logger.info(
                 f"Signal [{signal_type}] for pair {self.pair.symbol1}/{self.pair.symbol2} "
                 f"z={current_z:.3f} - {reason}"
@@ -149,13 +152,15 @@ class SignalGenerator:
         if z < -entry_thr:
             return (
                 "LONG_SPREAD",
-                f"z={z:.3f} below -{entry_thr} -> long {self.pair.symbol1}, short {self.pair.symbol2}",
+                f"z={z:.3f} below -{entry_thr} -> "
+                f"long {self.pair.symbol1}, short {self.pair.symbol2}",
             )
 
         if z > entry_thr:
             return (
                 "SHORT_SPREAD",
-                f"z={z:.3f} above +{entry_thr} -> short {self.pair.symbol1}, long {self.pair.symbol2}",
+                f"z={z:.3f} above +{entry_thr} -> "
+                f"short {self.pair.symbol1}, long {self.pair.symbol2}",
             )
 
         return None, None
@@ -181,6 +186,7 @@ class SignalGenerator:
 # ------------------------------------------------------------------
 # Stateless backtest helper (no DB access)
 # ------------------------------------------------------------------
+
 
 class BacktestSignalGenerator:
     """
@@ -243,6 +249,7 @@ class BacktestSignalGenerator:
 # ------------------------------------------------------------------
 # Utility
 # ------------------------------------------------------------------
+
 
 def _hours_since(entry_time: datetime, current_time: datetime) -> float:
     """Return elapsed hours between two datetimes (timezone-aware safe)."""

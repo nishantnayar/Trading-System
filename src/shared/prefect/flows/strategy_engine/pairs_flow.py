@@ -13,10 +13,27 @@ Each run:
 Deploy alongside existing flows in the Prefect work pool.
 """
 
+import logging
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Awaitable, Optional, cast
+
+
+class _IgnoreWinError10054(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if "WinError 10054" in record.getMessage():
+            return False
+        if record.exc_info:
+            import traceback
+
+            tb = "".join(traceback.format_exception(*record.exc_info))
+            if "WinError 10054" in tb or "ConnectionResetError" in tb:
+                return False
+        return True
+
+
+logging.getLogger("asyncio").addFilter(_IgnoreWinError10054())
 
 # Add project root to path when running directly
 if __file__ and Path(__file__).exists():
@@ -30,10 +47,15 @@ from prefect import flow, task
 from src.config.settings import get_settings
 from src.services.alpaca.client import AlpacaClient
 from src.services.notification.email_notifier import get_notifier
+from src.services.strategy_engine.baskets.strategy import BasketStrategy
 from src.services.strategy_engine.pairs.strategy import PairsStrategy
 from src.shared.database.base import db_readonly_session, db_transaction
 from src.shared.database.models.market_data import MarketData
-from src.shared.database.models.strategy_models import PairRegistry, PairTrade
+from src.shared.database.models.strategy_models import (
+    BasketRegistry,
+    PairRegistry,
+    PairTrade,
+)
 
 # ---------------------------------------------------------------------------
 # Run name helper
@@ -108,20 +130,33 @@ async def refresh_pair_prices_task() -> dict:
     Load today's hourly Yahoo bars into market_data for every active pair symbol.
 
     Runs before the strategy cycle so _fetch_prices() always sees bars up to
-    the current hour.  Uses days_back=2 to ensure the current partial trading
-    day is fully covered (yfinance returns all completed 1h candles for today
-    when queried intraday).
+    the current hour.  Uses days_back=14 (2 calendar weeks) to cover the
+    largest z_score_window (60 bars = ~9 trading days at 7 bars/day).
+    2 days was insufficient - caused INSUFFICIENT_DATA on every cycle.
+    Yahoo `end` must be strictly after ``date.today()`` or today's hourly bars
+    are omitted (yfinance treats ``end`` as exclusive).
     """
     with db_readonly_session() as session:
         pairs = (
             session.query(PairRegistry).filter(PairRegistry.is_active.is_(True)).all()
         )
-        symbols = sorted({sym for p in pairs for sym in (p.symbol1, p.symbol2)})
+        pair_syms = {sym for p in pairs for sym in (p.symbol1, p.symbol2)}
         for p in pairs:
             session.expunge(p)
 
+        baskets = (
+            session.query(BasketRegistry)
+            .filter(BasketRegistry.is_active.is_(True))
+            .all()
+        )
+        basket_syms = {sym for b in baskets for sym in (b.symbols or [])}
+        for b in baskets:
+            session.expunge(b)
+
+    symbols = sorted(pair_syms | basket_syms)
+
     if not symbols:
-        logger.info("refresh-pair-prices: no active pairs, skipping")
+        logger.info("refresh-pair-prices: no active pairs or baskets, skipping")
         return {"symbols": [], "loaded": 0}
 
     logger.info("Refreshing hourly bars for %d symbols: %s", len(symbols), symbols)
@@ -131,8 +166,10 @@ async def refresh_pair_prices_task() -> dict:
     import yfinance as yf
     from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-    from_date = date.today() - timedelta(days=2)
-    to_date = date.today()
+    from_date = date.today() - timedelta(days=14)
+    # yfinance `end` is exclusive on the calendar day; today's 1h bars are
+    # dropped if end==today. Use tomorrow so the current session is included.
+    to_date = date.today() + timedelta(days=1)
     total = 0
 
     for symbol in symbols:
@@ -183,6 +220,43 @@ async def refresh_pair_prices_task() -> dict:
 
     logger.info("refresh-pair-prices: %d total records for %s", total, symbols)
     return {"symbols": symbols, "loaded": total}
+
+
+@task(
+    name="run-basket-strategy-cycle",
+    retries=1,
+    retry_delay_seconds=30,
+    log_prints=True,
+)
+async def run_basket_strategy_task(alpaca: AlpacaClient) -> dict:
+    """Run one full BasketStrategy evaluation cycle across all active baskets."""
+    with db_readonly_session() as session:
+        active_count = (
+            session.query(BasketRegistry)
+            .filter(BasketRegistry.is_active.is_(True))
+            .count()
+        )
+
+    if active_count == 0:
+        logger.info("No active baskets found - skipping basket cycle")
+        return {"total_baskets": 0, "with_signal": 0, "errors": 0}
+
+    strategy = BasketStrategy(alpaca)
+    results = await strategy.run_cycle()
+
+    ok = [r for r in results if r.get("status") == "OK"]
+    errors = [r for r in results if r.get("status") == "ERROR"]
+
+    summary = {
+        "total_baskets": len(results),
+        "with_signal": len(ok),
+        "errors": len(errors),
+        "details": results,
+    }
+    logger.info(
+        f"Basket cycle complete: {len(results)} baskets evaluated, {len(ok)} with signal, {len(errors)} errors"
+    )
+    return summary
 
 
 # Degradation thresholds for auto-disabling pairs
@@ -312,8 +386,10 @@ async def intraday_pairs_flow(skip_market_check: bool = False) -> dict:
     try:
         await refresh_pair_prices_task()
         summary = await run_pairs_strategy_task(alpaca)
+        basket_summary = await run_basket_strategy_task(alpaca)
         deactivation = await check_and_disable_failing_pairs_task()
         summary["deactivated_pairs"] = deactivation["deactivated"]
+        summary["basket_summary"] = basket_summary
     except Exception as exc:
         err_msg = str(exc)
         logger.error(f"Unhandled flow error: {err_msg}")
@@ -376,4 +452,4 @@ if __name__ == "__main__":
         asyncio.run(deploy_pairs_flow())
     else:
         # Default: run one cycle immediately (skip market check for manual testing)
-        asyncio.run(intraday_pairs_flow(skip_market_check=True))
+        asyncio.run(intraday_pairs_flow(skip_market_check=True))  # type: ignore[arg-type]

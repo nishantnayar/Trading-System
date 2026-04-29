@@ -18,11 +18,15 @@ from .market_data import MarketData
 from .stock_splits import StockSplit
 from .strategy_models import (
     BacktestRun,
+    BasketRegistry,
+    BasketSpread,
+    BasketTrade,
     PairPerformance,
     PairRegistry,
     PairSignal,
     PairSpread,
     PairTrade,
+    PortfolioRiskState,
 )
 from .symbols import DelistedSymbol, Symbol, SymbolDataStatus
 from .technical_indicators import TechnicalIndicators, TechnicalIndicatorsLatest
@@ -52,4 +56,8 @@ __all__ = [
     "PairTrade",
     "PairPerformance",
     "BacktestRun",
+    "PortfolioRiskState",
+    "BasketRegistry",
+    "BasketSpread",
+    "BasketTrade",
 ]

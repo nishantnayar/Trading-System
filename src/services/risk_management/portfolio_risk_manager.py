@@ -4,8 +4,8 @@ Portfolio Risk Manager
 Three controls applied before every new trade entry:
 
     A. Correlation Guard
-       Blocks a new pair entry if any leg of the candidate pair has Pearson |r| > threshold
-       with any leg of an already-open pair (using recent price series).
+       Blocks a new pair entry if any leg of the candidate pair has Pearson |r| >
+       threshold with any leg of an already-open pair (using recent price series).
 
     B. Portfolio Drawdown Circuit Breaker
        Tracks peak portfolio equity in DB.  If current total equity drops more than
@@ -19,7 +19,9 @@ Three controls applied before every new trade entry:
 Usage (inside PairsStrategy.run_cycle):
     risk_mgr = PortfolioRiskManager()
     circuit_open = risk_mgr.update_and_check_drawdown(total_equity)
-    allowed, reason = risk_mgr.check_correlation_guard(candidate, prices_cache, active_open_pairs)
+    allowed, reason = risk_mgr.check_correlation_guard(
+        candidate, prices_cache, active_open_pairs
+    )
 """
 
 from datetime import datetime, timezone
@@ -65,7 +67,8 @@ class PortfolioRiskManager:
 
         Returns:
             (True, "")            - safe to enter
-            (False, reason_str)   - blocked; reason_str explains which pair/leg caused it
+            (False, reason_str)   - blocked; reason_str explains which pair/leg
+                                    caused it
         """
         if not active_open_pairs:
             return True, ""
@@ -92,7 +95,8 @@ class PortfolioRiskManager:
                         continue
                     if abs(corr) > threshold:
                         reason = (
-                            f"{c_sym} vs {a_sym} (pair {active.symbol1}/{active.symbol2})"
+                            f"{c_sym} vs {a_sym} "
+                            f"(pair {active.symbol1}/{active.symbol2})"
                             f" r={corr:.3f} > threshold {threshold:.2f}"
                         )
                         logger.warning(f"Correlation guard blocked {c1}/{c2}: {reason}")
@@ -128,7 +132,8 @@ class PortfolioRiskManager:
 
         - If current_equity > peak -> update peak, ensure circuit breaker is OFF.
         - If current_equity < peak x (1 - threshold) -> activate circuit breaker.
-        - If circuit breaker is already active -> keep it active (manual reset required).
+        - If circuit breaker is already active -> keep it active (manual reset
+          required).
 
         Returns True if new entries should be blocked (circuit breaker active).
         """
@@ -213,6 +218,7 @@ class PortfolioRiskManager:
     def compute_unrealized_pnl(
         open_trades: list,
         prices_cache: Dict[str, pd.Series],
+        pair_lookup: Optional[Dict[int, PairRegistry]] = None,
     ) -> float:
         """
         Sum unrealized P&L across all open trades using current prices from the cache.
@@ -224,8 +230,17 @@ class PortfolioRiskManager:
         """
         total = 0.0
         for trade in open_trades:
-            p1_series = prices_cache.get(trade.pair.symbol1)
-            p2_series = prices_cache.get(trade.pair.symbol2)
+            # open_trades are detached ORM instances in live flow runs.
+            # Avoid lazy-loading trade.pair on detached objects.
+            pair = pair_lookup.get(trade.pair_id) if pair_lookup else None
+            if pair is None:
+                logger.debug(
+                    "compute_unrealized_pnl: missing pair metadata for pair_id=%s",
+                    trade.pair_id,
+                )
+                continue
+            p1_series = prices_cache.get(pair.symbol1)
+            p2_series = prices_cache.get(pair.symbol2)
             if p1_series is None or p1_series.empty:
                 continue
             if p2_series is None or p2_series.empty:

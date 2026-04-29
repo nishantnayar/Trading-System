@@ -21,7 +21,7 @@ hourly bars).  Alpaca is used only for order execution and account info.
 
 import asyncio
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 from loguru import logger
@@ -118,7 +118,9 @@ class PairsStrategy:
         # Portfolio risk controls - run once per cycle
         risk_mgr = PortfolioRiskManager()
         unrealized_pnl = PortfolioRiskManager.compute_unrealized_pnl(
-            list(open_trades.values()), prices_cache
+            list(open_trades.values()),
+            prices_cache,
+            pair_lookup={p.id: p for p in pairs},
         )
         total_equity = portfolio_equity + unrealized_pnl
         circuit_breaker_active = risk_mgr.update_and_check_drawdown(total_equity)
@@ -162,12 +164,11 @@ class PairsStrategy:
         active_open_pairs: List[PairRegistry],
         circuit_breaker_active: bool,
         risk_mgr: PortfolioRiskManager,
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         sym1, sym2 = pair.symbol1, pair.symbol2
         pair_label = f"{sym1}/{sym2}"
         now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         logger.info(f"Evaluating pair: {pair_label}")
-
         # 1. Use pre-fetched prices from cache (avoids duplicate Alpaca calls)
         prices1 = prices_cache.get(sym1, pd.Series(dtype=float))
         prices2 = prices_cache.get(sym2, pd.Series(dtype=float))
@@ -178,7 +179,7 @@ class PairsStrategy:
 
         if prices1.empty or prices2.empty:
             logger.warning(f"No price data for {pair_label} - skipping")
-            result: Dict = {"pair": pair_label, "status": "NO_DATA"}
+            result: Dict[str, Any] = {"pair": pair_label, "status": "NO_DATA"}
             set_json(f"pairs:cycle:{sym1}_{sym2}", {**result, "ts": now_str})
             return result
 
