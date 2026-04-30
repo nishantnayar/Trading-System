@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+---
+
+## [1.2.0] - In Progress
+
+### Added
+- **Gartley Harmonic Pattern Strategy**: `src/services/strategy_engine/harmonic/` - pattern detector and executor for harmonic entry timing
 - **UI Consolidation (11 pages -> 7)**: Merged redundant pages to reduce sidebar clutter and match trader workflow
   - `4_Pairs_Trading.py` + `8_Basket_Trading.py` -> `4_Strategy_Monitor.py` (Pairs tab + Baskets tab)
   - `6_Backtest_Review.py` + `7_Pair_Scanner.py` -> `6_Pair_Lab.py` (Backtest tab + Scanner tab)

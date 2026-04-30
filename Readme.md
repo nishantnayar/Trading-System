@@ -1,19 +1,22 @@
-# Trading System
-
 <div align="center">
 
-![Python](https://img.shields.io/badge/Python-3.11+-green?style=flat-square&logo=python)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-red?style=flat-square&logo=fastapi)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue?style=flat-square&logo=postgresql)
-![Redis](https://img.shields.io/badge/Redis-7+-red?style=flat-square&logo=redis)
-![Prefect](https://img.shields.io/badge/Prefect-3.4+-purple?style=flat-square&logo=prefect)
+# Trading System
 
-**Production-Grade Algorithmic Trading System**
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgresql.org)
+[![Redis](https://img.shields.io/badge/Redis-7+-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
+[![Prefect](https://img.shields.io/badge/Prefect-3.4+-1D4ED8?style=for-the-badge&logo=prefect&logoColor=white)](https://prefect.io)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.52+-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Documentation](https://img.shields.io/badge/Documentation-MkDocs-blue.svg)](https://nishantnayar.github.io/trading-system)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![CI/CD Pipeline](https://github.com/nishantnayar/trading-system/workflows/Continuous%20Integration/badge.svg)](https://github.com/nishantnayar/trading-system/actions)
-[![Security Scan](https://github.com/nishantnayar/trading-system/workflows/Security%20Scan/badge.svg)](https://github.com/nishantnayar/trading-system/actions)
+[![Documentation](https://img.shields.io/badge/Docs-MkDocs-blue.svg?style=flat-square)](https://nishantnayar.github.io/trading-system)
+
+**Production-grade algorithmic pairs trading platform for equities.**  
+Paper trading via Alpaca. Statistical arbitrage with cointegration-based pair discovery, Kelly criterion sizing, and Gartley harmonic pattern detection.
+
+[Features](#features) - [Architecture](#architecture) - [Quick Start](#quick-start) - [UI Pages](#ui-pages) - [API](#api-endpoints) - [Roadmap](#roadmap)
 
 </div>
 
@@ -21,532 +24,573 @@
 
 ## Overview
 
-A production-grade algorithmic trading platform designed for equities trading with comprehensive market data integration, automated workflow orchestration, and risk controls around pairs trading. The system supports **paper trading** through the Alpaca Markets API and is built on a modular architecture optimized for scalability and maintainability.
+A modular algorithmic trading system built around **statistical pairs trading** and **harmonic pattern detection**. The system ingests market data from Yahoo Finance, stores it in PostgreSQL, runs strategy logic through Prefect-orchestrated workflows, and surfaces everything through a Streamlit dashboard and FastAPI backend.
 
-## Key Features
+All trading runs in **paper mode** via Alpaca Markets. No real capital is at risk.
 
-### Trading & Execution
-- **Paper Trading Integration**: Safe testing environment via Alpaca paper trading API
-- **Account Management**: View account balance, buying power, and portfolio value
-- **Position Management**: Track positions, unrealized P&L, and close positions
-- **Order Management**: View, place, and cancel orders; monitor order status
-- **Pairs Trading Strategy**: Statistical arbitrage with cointegration-based pair discovery, z-score signals, Kelly criterion sizing, and two-legged Alpaca execution
-- **Backtesting Engine**: Historical strategy validation with look-ahead-bias-free replay; Sharpe, drawdown, win rate, profit factor metrics
-- **Live Trading Support**: Production-ready execution infrastructure exists but is configured for **paper** only by default
-- **Risk Management**: Portfolio drawdown circuit breaker, cross-pair correlation guard, per-pair allocation caps in the strategy layer; REST endpoints under `/api/strategies/pairs/risk` for circuit breaker state and thresholds
+---
 
-### Data Management
-- **Multi-Source Data Integration**: Polygon.io, Yahoo Finance, and Alpaca market data
-- **Comprehensive Yahoo Finance Data**: 10 data types including market data, fundamentals, financial statements, corporate actions, ownership data, and ESG scores
-- **Automated Data Ingestion**: Prefect-powered scheduled workflows for daily and weekly data updates
-- **Data Quality Assurance**: Automated validation, completeness checks, and quality monitoring
-- **Technical Indicators**: Automated calculation and storage of SMA, EMA, RSI, MACD, Bollinger Bands with proper time-series resampling
-- **Database-Backed Indicators**: Pre-calculated indicators for 10-100x faster stock screening
-- **Timezone Management**: UTC storage with configurable display timezone (default: Central Time)
+## Features
 
-### Analytics & Monitoring
-- **Real-Time Dashboard**: Streamlit-based web interface with interactive Plotly visualizations
-- **AI-Powered Stock Screener**: Natural language queries with Ollama LLM integration for intelligent stock screening
-- **Performance Analytics**: Comprehensive strategy performance metrics and reporting
-- **Database-First Logging**: Queryable logs stored in PostgreSQL for operational analysis
-- **Workflow Monitoring**: Prefect UI integration for flow execution tracking
-- **Interactive Charts**: Professional financial visualizations with Plotly (candlestick, volume, technical indicators)
+### Trading & Strategy
 
-### Architecture & Development
-- **Modular Monolithic Design**: Service-oriented architecture with clear boundaries
-- **Type Safety**: Full mypy compliance with comprehensive type annotations
-- **Code Quality**: Automated formatting (Black), linting (Flake8), and static analysis
-- **Testing Infrastructure**: Comprehensive test suite with pytest and coverage reporting
-- **CI/CD Pipeline**: Automated testing, security scanning, and deployment workflows
+| Feature | Description |
+|---------|-------------|
+| **Pairs Trading** | Cointegration-based pair discovery, log-spread z-score signals, two-legged Alpaca execution |
+| **Signal Generation** | LONG_SPREAD / SHORT_SPREAD / EXIT / STOP_LOSS / EXPIRE with max hold-period enforcement |
+| **Position Sizing** | Kelly criterion - bootstrap 2% fixed (first 20 trades), then Half-Kelly; hard 10% cap per leg |
+| **Gartley Patterns** | Harmonic pattern detection for entry timing across individual equities |
+| **Backtesting Engine** | Look-ahead-bias-free replay; Sharpe, max drawdown, win rate, profit factor metrics |
+| **Slippage Modeling** | Configurable bps slippage + commission per trade applied to all backtest fills |
+| **Risk Controls** | Portfolio drawdown circuit breaker, cross-pair correlation guard, per-pair allocation caps |
+| **Paper Trading** | Full Alpaca paper account integration - account, positions, orders, trade history |
 
-## System Architecture
+### Data & Analytics
 
-The system employs a **modular monolithic architecture** with the following service boundaries:
+| Feature | Description |
+|---------|-------------|
+| **Yahoo Finance** | Primary data source - EOD adjusted bars, intraday 1h bars, fundamentals, financials, ESG |
+| **10 Data Types** | Market data, company info, key stats, dividends, splits, institutional holders, financials, officers, analyst recommendations, ESG |
+| **Technical Indicators** | SMA, EMA, RSI, MACD, Bollinger Bands pre-calculated and stored in PostgreSQL |
+| **Automated Ingestion** | Prefect flows for daily market data, weekly company data, and intraday price refresh |
+| **Data Quality** | Completeness checks, gap detection, automated validation |
+| **Redis Caching** | Debug metadata per cycle (bar counts, z-scores, signals) with 48h TTL; no-op if Redis is down |
 
-- **Data Ingestion Service**: Market data collection, validation, and storage
-- **Strategy Engine**: Trading strategy execution and signal generation
-- **Execution Service**: Order management and trade execution
-- **Risk Management Service**: Position sizing, risk limits, and compliance checks
-- **Analytics Service**: Performance analysis and reporting
-- **Notification Service**: Alerting and event notifications
+### Platform
+
+| Feature | Description |
+|---------|-------------|
+| **Streamlit Dashboard** | 7-page professional web UI with paper/ink design system |
+| **FastAPI Backend** | 60+ REST endpoints across trading, analytics, strategy, and market data |
+| **AI Stock Screener** | Natural language queries via local Ollama LLM with multi-turn chat |
+| **Prefect Orchestration** | 8 scheduled flows for data, analytics, strategy, and database maintenance |
+| **Database Logging** | Queryable structured logs stored in PostgreSQL via Loguru |
+| **Email Notifications** | Trade opened/closed, stop-loss, flow errors - ASCII subject lines, no-op when unconfigured |
+
+---
+
+## Architecture
+
+```
+                      +------------------+
+                      |   Streamlit UI   |   localhost:8501
+                      |   (7 pages)      |
+                      +--------+---------+
+                               |
+                      +--------v---------+
+                      |   FastAPI API    |   localhost:8001
+                      |   (60+ routes)   |
+                      +--------+---------+
+                               |
+           +-------------------+-------------------+
+           |                   |                   |
+  +--------v--------+ +--------v--------+ +--------v--------+
+  | Strategy Engine | | Data Ingestion  | | Risk Management |
+  | Pairs / Gartley | | Yahoo Finance   | | Circuit Breaker |
+  +--------+--------+ +--------+--------+ +--------+--------+
+           |                   |                   |
+           +-------------------+-------------------+
+                               |
+                      +--------v---------+
+                      |   PostgreSQL     |   Primary store
+                      |   + Redis        |   Debug cache
+                      +------------------+
+                               |
+                      +--------v---------+
+                      |   Prefect        |   Workflow orchestration
+                      |   (8 flows)      |   localhost:4200
+                      +------------------+
+                               |
+                      +--------v---------+
+                      |   Alpaca API     |   Order execution only
+                      |   (paper mode)   |
+                      +------------------+
+```
+
+> **Data flow**: Yahoo Finance -> PostgreSQL -> Strategy Engine -> Alpaca (orders only)
+> Alpaca is **not** used for price data. All price data comes from Yahoo Finance.
 
 ### Technology Stack
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Runtime** | Python 3.11+ | Core application runtime |
-| **API Framework** | FastAPI 0.100+ | RESTful API services |
-| **Database** | PostgreSQL 15+ | Primary data storage and logging |
-| **Cache** | Redis 7+ | Caching and message queuing (optional) |
-| **Orchestration** | Prefect 3.4+ | Workflow automation and scheduling (optional) |
-| **Frontend** | Streamlit | Web dashboard and user interface |
-| **Data Processing** | pandas, NumPy | Market data analysis and manipulation |
-| **Visualization** | Plotly | Interactive charts and analytics |
-| **AI/ML** | Ollama | Local LLM for natural language stock screening (optional) |
-| **Technical Analysis** | pandas-ta | Technical indicator calculations |
+| Layer | Technology | Notes |
+|-------|-----------|-------|
+| Language | Python 3.11+ | Full type annotations, mypy-clean |
+| API | FastAPI 0.100+ | Async, OpenAPI docs at `/docs` |
+| Database | PostgreSQL 15+ | Primary store; `data_ingestion`, `analytics`, `strategy_engine` schemas |
+| Cache | Redis 7+ | Optional; graceful no-op when unavailable |
+| Orchestration | Prefect 3.4+ | Optional; 8 flows, separate `prefect` DB |
+| Frontend | Streamlit 1.52+ | Paper/ink design, Playfair Display / DM Sans / DM Mono |
+| Visualization | Plotly | Candlestick, equity curves, z-score overlays |
+| Data | pandas 2.0+, NumPy | All market data processing |
+| Market Data | yfinance 0.2.40+ | Yahoo Finance (primary); Polygon.io (supplemental) |
+| Execution | alpaca-trade-api | Orders and account only |
+| Indicators | pandas-ta-classic | SMA, EMA, RSI, MACD, BB |
+| AI | Ollama | Local LLM for stock screener (optional) |
+| Statistics | statsmodels, scipy | Cointegration, OLS, half-life |
 
-## Prerequisites
+---
 
-| Requirement | Version | Purpose |
-|-------------|---------|---------|
-| Python | 3.11+ | Core runtime environment |
-| PostgreSQL | 15+ | Primary database |
-| Redis | 7+ | Caching layer (optional) |
-| Alpaca API | - | Trading and market data access (free paper trading account) |
-| Prefect | 3.4+ | Workflow orchestration (optional, recommended for automation) |
-| Ollama | Latest | Local LLM for AI-powered stock screener (optional) |
-| Polygon.io API | - | Historical market data (free tier: 5 calls/min) |
-| Yahoo Finance | - | Free market data and fundamentals (via yfinance library) |
+## Quick Start
 
-> **Note**: Alpaca paper trading accounts are free and recommended for initial testing and development.
+### Prerequisites
 
-## Installation
+- Python 3.11+
+- PostgreSQL 15+
+- Git
 
-### 1. Clone Repository
+Optional: Redis 7+, Prefect 3.4+, Ollama (for AI screener)
+
+### 1. Clone and Install
 
 ```bash
 git clone https://github.com/nishantnayar/trading-system.git
 cd trading-system
-```
-
-### 2. Environment Setup
-
-```bash
-# Activate conda environment
-conda activate your-environment-name
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Configuration
+### 2. Configure Environment
 
-Create a `.env` file in the project root:
+Create `.env` in the project root:
 
 ```bash
-# Alpaca Trading API (Paper Trading)
-ALPACA_API_KEY=your_api_key_here
-ALPACA_SECRET_KEY=your_secret_key_here
+# --- Alpaca (Paper Trading) ---
+ALPACA_API_KEY=your_api_key
+ALPACA_SECRET_KEY=your_secret_key
 ALPACA_BASE_URL=https://paper-api.alpaca.markets
 ALPACA_DATA_URL=https://data.alpaca.markets
+IS_PAPER_TRADING=True
 
-# Database Configuration
+# --- Database ---
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_password
 TRADING_DB_NAME=trading_system
 
-# Redis Configuration (optional)
+# --- Redis (optional) ---
 REDIS_URL=redis://localhost:6379/0
 
-# Application Configuration
+# --- App ---
 DEBUG=false
 LOG_LEVEL=INFO
 
-# Prefect Configuration (optional, but recommended for automated workflows)
+# --- Prefect (optional) ---
 PREFECT_API_URL=http://localhost:4200/api
 PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://postgres:password@localhost:5432/prefect
-PREFECT_LOGGING_LEVEL=INFO
 PREFECT_WORK_POOL_NAME=default-agent-pool
 
-# Ollama Configuration (optional, for AI-powered stock screener)
+# --- Email Notifications (optional) ---
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+NOTIFICATION_FROM=your_email@gmail.com
+NOTIFICATION_TO=your_email@gmail.com
+
+# --- Ollama AI Screener (optional) ---
 OLLAMA_BASE_URL=http://localhost:11434
 ```
 
-### 4. Database Initialization
+> Get a free Alpaca paper trading account at [alpaca.markets](https://alpaca.markets).
+
+### 3. Initialize Database
 
 ```bash
-# Initialize database schema
 python scripts/setup_databases.py
-```
 
-**Verify Database Setup**:
-```bash
-# Test database connections
+# Verify connections
 python scripts/test_database_connections.py
 ```
 
-Expected output should show successful connections to both `trading_system` and `prefect` databases.
+### 4. Start the Application
 
-### 5. Start Services
-
-#### Option A: Start Main Application
 ```bash
-# Start FastAPI server and Streamlit UI
+# Start both FastAPI and Streamlit together
 python main.py
 ```
 
-#### Option B: Start Components Separately
+Or start them separately:
+
 ```bash
-# Terminal 1: Start FastAPI server
+# Terminal 1 - API server
 python -m src.web.main
 
-# Terminal 2: Start Streamlit UI
+# Terminal 2 - Streamlit dashboard
 streamlit run streamlit_ui/streamlit_app.py
 ```
 
-### 6. Verify Installation
+### 5. Access the Interfaces
+
+| Interface | URL | Description |
+|-----------|-----|-------------|
+| Streamlit Dashboard | http://localhost:8501 | Main trading UI |
+| API Documentation | http://localhost:8001/docs | Swagger / OpenAPI |
+| Prefect UI | http://localhost:4200 | Workflow monitoring |
+
+---
+
+## UI Pages
+
+The Streamlit dashboard is organized into 7 pages matching the trader workflow:
+
+| Page | Description |
+|------|-------------|
+| **1 - Portfolio** | Account balance, buying power, open positions, order history, place market/limit orders |
+| **2 - Analysis** | Candlestick charts, technical indicators (SMA, EMA, RSI, MACD, BB), symbol lookup |
+| **3 - Screener** | AI-powered natural language screener + traditional filters (MACD, BB, SMA crossover, RSI, volatility) with multi-turn chat |
+| **4 - Strategy Monitor** | Live pairs trading status, z-score chart, active pair details, basket strategy monitoring |
+| **5 - P&L Report** | Closed trade P&L, per-pair breakdown, cumulative equity chart |
+| **6 - Pair Lab** | Pair Scanner (backtest all pairs, rank by Sharpe) + Backtest tab (run individual backtests, equity curve, trade log) |
+| **7 - Ops** | System connections status, data quality checks, scanner/analysis preferences |
+
+---
+
+## Workflow Orchestration
+
+Prefect 3.4+ manages all scheduled work. Flows run automatically once deployed.
+
+### Scheduled Flows
+
+| Flow | Schedule (UTC) | Purpose |
+|------|---------------|---------|
+| Daily Market Data | 22:15 Mon-Fri | Fetch Yahoo Finance hourly bars, trigger indicator sub-flow |
+| Weekly Company Info | Fri 23:00 | Company metadata, officer info |
+| Weekly Company Data | Sat 01:30 | Combined company info + key statistics |
+| Weekly Pair Discovery | Sat 03:30 | Cointegration scan, update `pair_registry` |
+| Weekly Database Backup | Sat 05:00 | pg_dump `data_ingestion` + `analytics` to `backups/` |
+| Intraday Pairs Trading | 14:00-21:00 hourly Mon-Fri | Refresh prices, run strategy cycle, execute signals |
+
+### Prefect Setup
 
 ```bash
-# Check API health
-curl http://localhost:8001/health
+# Start Prefect server
+prefect server start
 
-# Or open in browser
-# http://localhost:8001/docs - API documentation
-# http://localhost:8501 - Streamlit dashboard
+# Deploy Yahoo Finance flows
+python src/shared/prefect/flows/data_ingestion/yahoo_flows.py
+
+# Deploy pairs trading flow
+python src/shared/prefect/flows/strategy_engine/pairs_flow.py --deploy
+
+# Start worker (separate terminal)
+prefect worker start --pool default-agent-pool
 ```
 
-### 7. Access Interfaces
+See [Prefect Deployment](docs/development/prefect-deployment.md) and [Operations Runbook](docs/development/prefect-deployment-operations.md) for full details.
 
-- **Web Dashboard**: http://localhost:8501 (Streamlit UI)
-- **API Documentation**: http://localhost:8001/docs (FastAPI Swagger UI)
-- **Prefect UI** (if enabled): http://localhost:4200 (Prefect Dashboard)
+---
+
+## Pairs Trading
+
+The pairs trading strategy uses statistical arbitrage on cointegrated equity pairs.
+
+### How It Works
+
+1. **Pair Discovery** - Weekly scan uses Engle-Granger cointegration test, Pearson correlation, and OLS hedge ratio to rank candidate pairs by `rank_score = (1 - coint_pvalue) x |correlation| x z_score_abs_mean`
+2. **Signal Generation** - Hourly intraday cycle computes log-spread z-score; signals fire at entry threshold (default 2.0 sigma), exit at 0.5 sigma, stop-loss at 3.0 sigma
+3. **Position Sizing** - Kelly criterion bootstrap (2% fixed) for first 20 trades, then Half-Kelly; hard 10% cap per leg; 5% max allocation per pair
+4. **Execution** - Two-legged Alpaca paper orders (long one leg, short the other)
+
+### Active Pairs (as of 2026-04-01)
+
+| Pair | Sector | Hedge Ratio | Allocation Cap |
+|------|--------|-------------|---------------|
+| EWBC / FNB | Banking | - | 5% per leg |
+| COLB / FNB | Banking | - | 5% per leg |
+
+> FNB appears in both pairs - a deliberate concentration to monitor. Do not activate additional FNB pairs without reducing caps.
+
+### Backtest Parameters
+
+```
+Entry threshold:  2.0 sigma
+Exit threshold:   0.5 sigma
+Stop-loss:        3.0 sigma
+Max hold period:  3x half-life (hours)
+Z-score window:   capped at 60 bars
+Default lookback: 180 days
+Slippage:         5 bps (configurable)
+```
+
+### Pass/Fail Gate
+
+Backtests must clear all three gates before a pair is activated:
+
+| Metric | Threshold |
+|--------|-----------|
+| Sharpe Ratio | > 0.5 |
+| Max Drawdown | < 15% |
+| Win Rate | > 45% |
+
+---
+
+## API Endpoints
+
+### Trading & Account
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/account` | Alpaca account info, buying power, portfolio value |
+| `GET` | `/positions` | Open positions with unrealized P&L |
+| `GET` | `/orders` | Orders (filterable by status) |
+| `GET` | `/trades` | Closed trade history |
+| `GET` | `/clock` | Market open/closed status |
+| `POST` | `/orders` | Place market or limit order |
+| `POST` | `/positions/{symbol}/close` | Close a position |
+| `DELETE` | `/orders/{order_id}` | Cancel an order |
+
+### Pairs Strategy
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/strategies/pairs/status` | Active pair count, total P&L |
+| `GET` | `/api/strategies/pairs/active` | Live pair list with z-scores |
+| `GET` | `/api/strategies/pairs/performance` | Sharpe, win rate, drawdown aggregate |
+| `GET` | `/api/strategies/pairs/{pair_id}/details` | Registry stats + open trade + last signal |
+| `GET` | `/api/strategies/pairs/{pair_id}/history` | Spread time-series |
+| `POST` | `/api/strategies/pairs/backtest` | Run backtest, return results |
+| `GET` | `/api/strategies/pairs/backtest/history` | Past backtest runs |
+| `POST` | `/api/strategies/pairs/{pair_id}/close` | Manually close open trade |
+| `GET` | `/api/strategies/pairs/risk` | Circuit breaker state and thresholds |
+
+### Market Data
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/market-data/symbols` | Available symbols |
+| `GET` | `/api/market-data/data/{symbol}` | Historical OHLCV |
+| `GET` | `/api/market-data/data/{symbol}/latest` | Latest data point |
+| `GET` | `/api/market-data/data/{symbol}/ohlc` | OHLC summary |
+| `GET` | `/api/market-data/stats` | Ingestion statistics |
+
+Full API reference: http://localhost:8001/docs
+
+---
 
 ## Project Structure
 
 ```
 trading-system/
-├── README.md                          # Project documentation
-├── ARCHITECTURE.md                    # System architecture details
-├── src/                               # Source code
-│   ├── config/                        # Configuration management
-│   ├── services/                      # Service modules
-│   │   ├── data_ingestion/            # Market data collection
-│   │   ├── strategy_engine/           # Trading strategies
-│   │   ├── execution/                 # Order management
-│   │   ├── risk_management/           # Risk controls
-│   │   ├── analytics/                 # Performance analysis
-│   │   └── notification/              # Alerts & notifications
-│   ├── shared/                        # Shared utilities
-│   │   ├── prefect/                   # Workflow orchestration
-│   │   │   ├── flows/                 # Prefect flow definitions
-│   │   │   ├── tasks/                 # Reusable tasks
-│   │   │   └── config.py              # Prefect configuration
-│   │   └── logging/                   # Logging utilities
-│   └── web/                           # Web interface
-│       └── api/                       # REST API endpoints
-├── tests/                             # Test suite
-├── docs/                              # Documentation
-├── deployment/                        # Deployment configurations
-├── config/                            # Application configuration
-└── scripts/                           # Utility scripts
+|-- main.py                          # Entry point (starts FastAPI + Streamlit)
+|-- src/
+|   |-- config/                      # Settings (all env vars), database config
+|   |-- services/
+|   |   |-- alpaca/                  # Alpaca client (execution only)
+|   |   |-- analytics/               # Indicator calculator, service, storage
+|   |   |-- data_ingestion/          # Historical loader, symbol management
+|   |   |-- notification/            # Email notifier (no-op when unconfigured)
+|   |   |-- polygon/                 # Polygon.io client (supplemental data)
+|   |   |-- risk_management/         # Portfolio risk manager
+|   |   |-- strategy_engine/
+|   |   |   |-- backtesting/         # Engine, metrics, report
+|   |   |   |-- baskets/             # Basket strategy
+|   |   |   |-- harmonic/            # Gartley pattern detector + executor
+|   |   |   `-- pairs/               # Signal generator, position sizer, executor, strategy
+|   |   `-- yahoo/                   # Yahoo Finance client, loader, models
+|   |-- shared/
+|   |   |-- database/                # ORM models (16 tables), base, mixins
+|   |   |-- logging/                 # Loguru config, DB sink, formatters
+|   |   |-- prefect/
+|   |   |   |-- flows/               # Data ingestion, analytics, strategy, maintenance flows
+|   |   |   `-- tasks/               # Reusable Prefect tasks
+|   |   |-- redis/                   # Redis client with set_json/get_json helpers
+|   |   |-- utils/                   # Timezone utilities (UTC/Central)
+|   |   `-- market_data.py           # get_price_series() - reads yahoo_adjusted_1h
+|   `-- web/
+|       |-- main.py                  # FastAPI app (register new routers here)
+|       `-- api/                     # 60+ route files
+|-- streamlit_ui/
+|   |-- streamlit_app.py             # Dashboard home (market clock, account metrics)
+|   |-- pages/
+|   |   |-- 1_Portfolio.py
+|   |   |-- 2_Analysis.py
+|   |   |-- 3_Screener.py
+|   |   |-- 4_Strategy_Monitor.py
+|   |   |-- 5_PnL_Report.py
+|   |   |-- 6_Pair_Lab.py
+|   |   `-- 7_Ops.py
+|   |-- api_client.py                # FastAPI wrapper for Streamlit pages
+|   |-- css_config.py                # Design tokens (paper/ink theme)
+|   `-- utils.py                     # Shared Streamlit helpers
+|-- tests/
+|   |-- unit/                        # No DB/network; mock everything
+|   `-- integration/                 # Requires trading_system_test DB
+|-- scripts/                         # Setup, backfill, backup, migration scripts
+|-- docs/                            # MkDocs documentation (60+ pages)
+|-- config/                          # scanner_prefs.json, analysis_prefs.json (gitignored)
+`-- deployment/                      # Docker and deployment configurations
 ```
 
-## API Endpoints
-
-### Trading & Account Management
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/account` | Retrieve Alpaca account information |
-| `GET` | `/positions` | List all open positions |
-| `GET` | `/orders` | List orders (filterable by status) |
-| `GET` | `/trades` | Recent trade history |
-| `GET` | `/clock` | Market open/closed status |
-| `POST` | `/positions/{symbol}/close` | Close a position |
-| `DELETE` | `/orders/{order_id}` | Cancel an order |
-| `POST` | `/orders` | Place a new order |
-
-### Market Data & Analytics
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/market-data/stats` | Market data statistics |
-| `GET` | `/api/market-data/symbols` | Available symbols |
-| `GET` | `/api/market-data/data/{symbol}` | Historical data |
-| `GET` | `/api/market-data/data/{symbol}/latest` | Latest data point |
-| `GET` | `/api/market-data/data/{symbol}/ohlc` | OHLC summary |
-
-## Workflow Orchestration
-
-The system includes Prefect-powered workflow orchestration for automated data ingestion and scheduled tasks.
-
-### Available Flows
-
-1. **Daily Market Data Update**
-   - Schedule: Daily at 22:15 UTC (Mon-Fri)
-   - Function: Fetches hourly market data from Yahoo Finance
-   - Scope: All active symbols
-
-2. **Weekly Company Information Update**
-   - Schedule: Friday at 23:00 UTC (after US close and daily Yahoo)
-   - Function: Updates company metadata and information
-
-3. **Weekly Key Statistics Update**
-   - Schedule: Not deployed by default (use combined Weekly Company Data Update)
-   - Function: Updates financial statistics
-
-4. **Weekly Company Data Update** (Combined)
-   - Schedule: Saturday 01:30 UTC (Friday evening US; staggered after company-only job)
-   - Function: Sequential execution of company info and key statistics updates
-
-### Prefect Setup
-
-The system uses Prefect 3.4+ for workflow orchestration. Prefect is **optional** but recommended for automated data ingestion.
-
-#### Quick Start
-
-1. **Install Prefect** (if not already installed):
-   ```bash
-   pip install prefect>=3.4.0
-   ```
-
-2. **Configure Prefect Database**:
-   ```bash
-   # Set Prefect database connection (if using separate database)
-   prefect config set PREFECT_API_DATABASE_CONNECTION_URL="postgresql+asyncpg://postgres:password@localhost:5432/prefect"
-   
-   # Initialize Prefect database schema
-   prefect database upgrade
-   ```
-
-3. **Start Prefect Server**:
-   ```bash
-   prefect server start
-   ```
-   Access UI at: http://localhost:4200
-
-4. **Deploy Data Ingestion Flows**:
-   ```bash
-   # Deploy Yahoo Finance flows (daily and weekly schedules)
-   python src/shared/prefect/flows/data_ingestion/yahoo_flows.py
-   ```
-
-5. **Start Worker** (in a separate terminal):
-   ```bash
-   prefect worker start --pool default-agent-pool
-   ```
-
-6. **Verify Deployment**:
-   ```bash
-   # List all deployments
-   prefect deployment ls
-   
-   # Check flow runs
-   prefect flow-run ls --limit 10
-   ```
-
-#### Available Prefect Flows
-
-**✅ Implemented:**
-- **Daily Market Data Update**: Runs daily at 22:15 UTC (Mon-Fri) — Fetches hourly market data from Yahoo (unadjusted and adjusted, `data_source='yahoo'` and `data_source='yahoo_adjusted'`), then triggers **Technical Indicators** as a sub-flow (no standalone cron to avoid race conditions on Prefect restart)
-- **Weekly Company Information Update**: Runs Friday at 23:00 UTC (after US close)
-- **Weekly Key Statistics Update**: Covered by combined flow; standalone not deployed by default
-- **Weekly Company Data Update**: Combined flow Saturday 01:30 UTC (staggered Yahoo load)
-- **Weekly Pair Discovery**: Saturday 03:30 UTC (after weekly Yahoo; DB reads `market_data`)
-- **Weekly Database Backup**: Saturday 05:00 UTC — Backs up `data_ingestion` and `analytics` schemas to `backups/` via pg_dump
-
-**Scripts:** To backfill adjusted prices historically, run `python scripts/backpopulate_yahoo_adjusted.py --all-symbols --days 365` (see [Data Sources: Yahoo](docs/data-ingestion/data-sources-yahoo.md)). For manual backup, run `python scripts/backup_trading_db.py`.
-
-**📋 Planned:**
-- Data validation and quality monitoring flows
-
-#### Prefect Configuration
-
-Add to your `.env` file:
-```bash
-# Prefect Configuration
-PREFECT_API_URL=http://localhost:4200/api
-PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://postgres:password@localhost:5432/prefect
-PREFECT_LOGGING_LEVEL=INFO
-PREFECT_WORK_POOL_NAME=default-agent-pool
-```
-
-For detailed deployment instructions, see:
-- [Prefect Deployment](docs/development/prefect-deployment.md) - Overview and index
-- [Prefect Deployment Operations](docs/development/prefect-deployment-operations.md) - Step-by-step runbook
+---
 
 ## Development
 
-### Code Quality Standards
+### Code Quality
 
-The project enforces code quality through automated tooling:
-
-- **Black**: Code formatting (88 character line length)
-- **isort**: Import sorting (Black-compatible)
-- **Flake8**: Linting and style enforcement
-- **mypy**: Static type checking
-- **pre-commit**: Git hooks for automated checks
-
-### Setup Development Environment
+All checks run automatically on every CI commit. Run locally before pushing:
 
 ```bash
-# Install pre-commit hooks
-pre-commit install
+# Check (CI mode)
+black --check .
+isort --check-only .
+mypy src/ --ignore-missing-imports
 
-# Format code
-black .
-
-# Sort imports
-isort .
-
-# Lint code
-flake8 .
-
-# Type check
-mypy src/
+# Auto-fix formatting
+black . && isort .
 ```
-
-All quality checks run automatically via CI/CD on every commit.
 
 ### Testing
 
 ```bash
-# Run all tests
-pytest
+# Unit tests only (no DB required)
+pytest -m "unit and trading" -v
 
-# Run with coverage
+# Full suite (requires trading_system_test DB)
+python scripts/run_tests.py all
+
+# With coverage
 pytest --cov=src --cov-report=html
-
-# Run specific test suites
-pytest tests/unit/
-pytest tests/integration/
 ```
 
-### Documentation
+Test rules:
+- Unit tests live in `tests/unit/`, integration tests in `tests/integration/`
+- Never use real DB or network in unit tests - mock everything
+- `asyncio_mode = auto` is set - do not add `@pytest.mark.asyncio` to individual methods
+- Never test against a DB whose name does not end in `_test`
+
+### Database Safety
+
+- Test DB is `trading_system_test` (set via `TRADING_DB_NAME` env var)
+- `conftest.py` enforces the `_test` suffix - do not bypass it
+- Never drop tables if `market_data` has > 1000 rows (production guard)
+
+---
+
+## Data Source Architecture
+
+**Alpaca is used for order execution only.** All price data comes from Yahoo Finance.
+
+### `market_data.data_source` Values
+
+| Value | Written by | Used by |
+|-------|-----------|---------|
+| `yahoo_adjusted` | Daily Prefect flow, backpopulate scripts | Backtesting, indicators, pair discovery |
+| `yahoo_adjusted_1h` | `refresh_pair_prices_task` in `pairs_flow.py` | `get_price_series()` in strategy |
+| `yahoo` | Daily Prefect flow | General market data |
+
+### Intraday Price Flow
+
+```
+pairs_flow.py
+    -> refresh_pair_prices_task()
+        -> yfinance (interval='1h', 2 days)
+            -> market_data (data_source='yahoo_adjusted_1h')
+                -> get_price_series(symbol, limit)
+                    -> strategy cycle
+```
+
+### Redis Debug Keys
 
 ```bash
-# Serve documentation locally
-mkdocs serve
+# Check bar counts for a symbol
+redis-cli get pairs:bars:EWBC
 
-# Build documentation
-mkdocs build
+# Check last cycle result for a pair
+redis-cli get pairs:cycle:EWBC_FNB
 ```
+
+---
 
 ## Configuration
 
-### Strategy Configuration
+### Pairs Signal Thresholds
 
-Edit `config/strategies.yaml`:
+Configurable via `POST /api/strategies/pairs/config` or directly in the DB:
 
-```yaml
-strategies:
-  - name: "momentum_strategy"
-    enabled: true
-    parameters:
-      lookback_period: 20
-      momentum_threshold: 0.02
-      max_position_size: 0.1
-    risk_limits:
-      max_drawdown: 0.05
-      max_daily_loss: 0.02
+```
+entry_threshold:  2.0 sigma  (default)
+exit_threshold:   0.5 sigma
+stop_threshold:   3.0 sigma
+expire_hours:     3x half-life
+z_score_window:   60 bars (capped)
 ```
 
-### Risk Management
+### Backtesting Defaults
 
-Risk management settings are configured per-strategy in `config/strategies.yaml`:
-
-```yaml
-strategies:
-  - name: "momentum_strategy"
-    risk_limits:
-      max_drawdown: 0.05
-      max_daily_loss: 0.02
-      max_positions: 10
-      max_sector_exposure: 0.3
-
-global_settings:
-  max_total_exposure: 0.8
+```
+lookback_days:    180
+slippage_bps:     5
+commission:       $0.00
 ```
 
-> **Note**: Risk management module implementation is planned for v1.1.0. Currently, risk limits are defined in strategy configuration files.
-
-## Security
-
-- Never commit `.env` files to version control
-- Use paper trading credentials for development and testing
-- System defaults to paper trading mode
-- All trades in paper mode are simulated with virtual funds
+---
 
 ## Documentation
 
-### Quick Links
+| Resource | Link |
+|----------|------|
+| Getting Started | [docs/getting-started.md](docs/getting-started.md) |
+| Architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| API Reference | [docs/api/](docs/api/) |
+| Database Schema | [docs/development/database.md](docs/development/database.md) |
+| Prefect Deployment | [docs/development/prefect-deployment.md](docs/development/prefect-deployment.md) |
+| Data Sources | [docs/data-ingestion/data-sources.md](docs/data-ingestion/data-sources.md) |
+| Testing Guide | [docs/development/testing.md](docs/development/testing.md) |
+| Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) |
+| Changelog | [CHANGELOG.md](CHANGELOG.md) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
-| Resource | Description | Link |
-|----------|-------------|------|
-| **Getting Started** | Complete setup and installation guide | [docs/getting-started.md](docs/getting-started.md) |
-| **User Guide** | Complete user documentation | [MkDocs](https://nishantnayar.github.io/Trading-System/) |
-| **API Reference** | REST API documentation | [docs/api/](docs/api/) |
-| **Troubleshooting** | Common issues and solutions | [docs/troubleshooting.md](docs/troubleshooting.md) |
-| **Contributing** | Contribution guidelines | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| **Changelog** | Version history and changes | [CHANGELOG.md](CHANGELOG.md) |
+```bash
+# Serve docs locally
+mkdocs serve
+```
 
-### Technical Documentation
-
-| Resource | Description | Link |
-|----------|-------------|------|
-| **Architecture** | Detailed system architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| **Database** | Database schema and management | [docs/development/database.md](docs/development/database.md) |
-| **Logging** | Logging architecture and configuration | [docs/development/logging.md](docs/development/logging.md) |
-| **Prefect** | Workflow orchestration | [docs/development/prefect-deployment.md](docs/development/prefect-deployment.md) |
-| **Data Sources** | Market data integration guide | [docs/data-ingestion/data-sources.md](docs/data-ingestion/data-sources.md) |
-| **Testing** | Testing strategy and guidelines | [docs/development/testing.md](docs/development/testing.md) |
+---
 
 ## Roadmap
 
-| Version | Status | Key Features |
-|---------|--------|--------------|
-| v1.0.0 | ✅ Released | Paper trading, market data integration (Polygon.io, Yahoo Finance), Streamlit dashboard, Prefect orchestration, database-first logging, technical indicators |
-| v1.1.0 | ✅ Released (2026-03-28) | Pairs trading strategy engine, backtesting framework, Backtest Review UI, Pairs Trading UI, professional UI redesign, order placement, real Alpaca data throughout |
-| v1.2.0 | 📋 Planned | Risk management service, advanced analytics flows, data quality monitoring, enhanced monitoring |
-| v1.3.0 | 🔮 Future | Microservices architecture, cloud deployment, distributed execution, multi-asset support |
+| Version | Status | Highlights |
+|---------|--------|-----------|
+| v1.0.0 | Released | Paper trading, Yahoo Finance ingestion, Streamlit dashboard, Prefect orchestration, technical indicators |
+| v1.1.0 | Released 2026-03-28 | Pairs trading engine, backtesting, slippage modeling, professional UI redesign, order placement |
+| v1.2.0 | In Progress | Gartley harmonic patterns, 7-page UI consolidation, AI screener multi-turn chat, persistent UI prefs |
+| v1.3.0 | Planned | Risk management service, advanced analytics flows, data quality monitoring, email notifications |
+| v2.0.0 | Future | Microservices, cloud deployment, distributed execution, multi-asset strategies |
 
-### Implementation Status
+---
 
-**✅ Completed (v1.1.0):**
-- Paper trading integration with Alpaca (account, positions, orders, trades)
-- Multi-source data ingestion (Polygon.io, Yahoo Finance — 10 data types)
-- Streamlit dashboard with professional paper/ink design system
-- Pairs trading strategy: cointegration-based pair discovery, z-score signals, Kelly criterion sizing, two-legged Alpaca execution
-- Backtesting engine with look-ahead-bias-free replay and pass/fail gates
-- Backtest Review and Pairs Trading monitoring pages
-- Database-first logging system
-- Technical indicators calculation and storage
-- Prefect workflow orchestration (Yahoo Finance daily/weekly flows, pairs trading intraday flow)
-- Timezone management (UTC storage, Central Time display)
-- AI-powered stock screener (with Ollama integration)
-- Order placement UI with market and limit order support
+## Security
 
-**📋 Planned (v1.2.0):**
-- Risk management service (portfolio-level drawdown limits, compliance checks)
-- Advanced analytics and reporting
-- Automated data quality monitoring
-- Email/SMS notifications
-- Real-time data streaming
+- Never commit `.env` to version control
+- All trading defaults to paper mode (`IS_PAPER_TRADING=True`)
+- Use paper trading credentials for all development and testing
+- Alpaca paper accounts use simulated virtual funds only
+
+---
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/feature-name`)
-3. Commit changes (`git commit -m 'Add feature'`)
-4. Push to branch (`git push origin feature/feature-name`)
-5. Open a Pull Request
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Follow the code quality standards: `black . && isort . && mypy src/`
+4. Add tests for new functionality
+5. Open a Pull Request against `main`
 
-## Support
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
-- **Issues**: [GitHub Issues](https://github.com/nishantnayar/trading-system/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/nishantnayar/trading-system/discussions)
-- **Email**: nishant.nayar@hotmail.com
+---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
 
 ## Risk Disclaimer
 
-**This software is for educational and research purposes only. Trading involves substantial risk of loss and is not suitable for all investors. Past performance is not indicative of future results. Use at your own risk.**
-
-## Acknowledgments
-
-- **Alpaca Markets** - Trading API infrastructure and paper trading platform
-- **FastAPI** - Modern web framework
-- **Polygon.io** - Market data services
-- **Yahoo Finance** - Free market data and fundamentals
-- **Prefect** - Workflow orchestration platform
-- **Streamlit** - Interactive web dashboard framework
-- **Ollama** - Local LLM for AI features
-- **Python Community** - Open-source ecosystem
+> **This software is for educational and research purposes only.**
+> Trading involves substantial risk of loss. Past performance is not indicative of future results.
+> The system defaults to paper trading with simulated funds. Use at your own risk.
 
 ---
 
@@ -554,7 +598,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Developed by [Nishant Nayar](https://github.com/nishantnayar)
 
-[![GitHub](https://img.shields.io/badge/GitHub-nishantnayar-black?style=flat-square&logo=github)](https://github.com/nishantnayar)
-[![Email](https://img.shields.io/badge/Email-nishant.nayar@hotmail.com-blue?style=flat-square&logo=mail)](mailto:nishant.nayar@hotmail.com)
+[![GitHub](https://img.shields.io/badge/GitHub-nishantnayar-181717?style=flat-square&logo=github)](https://github.com/nishantnayar)
+[![Email](https://img.shields.io/badge/Email-nishant.nayar@hotmail.com-0078D4?style=flat-square&logo=microsoftoutlook)](mailto:nishant.nayar@hotmail.com)
+
+*Built with FastAPI, Streamlit, PostgreSQL, Prefect, and Alpaca Markets*
 
 </div>
