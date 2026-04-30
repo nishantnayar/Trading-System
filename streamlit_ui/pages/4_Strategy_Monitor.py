@@ -26,6 +26,7 @@ from src.shared.database.models.strategy_models import (  # noqa: E402
     BasketRegistry,
     BasketSpread,
     BasketTrade,
+    HarmonicTrade,
 )
 
 # ---------------------------------------------------------------------------
@@ -964,6 +965,334 @@ def _render_baskets_tab() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Harmonic data helpers
+# ---------------------------------------------------------------------------
+
+
+@st.cache_data(ttl=30)
+def load_harmonic_open_trades() -> List[dict]:
+    try:
+        with db_readonly_session() as session:
+            trades = (
+                session.query(HarmonicTrade)
+                .filter(HarmonicTrade.status == "OPEN")
+                .order_by(HarmonicTrade.entry_time.desc())
+                .all()
+            )
+            result = []
+            for t in trades:
+                entry = t.entry_time
+                if entry and entry.tzinfo is None:
+                    entry = entry.replace(tzinfo=timezone.utc)
+                hold_hours = (
+                    round(
+                        (datetime.now(timezone.utc) - entry).total_seconds() / 3600, 1
+                    )
+                    if entry
+                    else None
+                )
+                result.append(
+                    {
+                        "id": t.id,
+                        "symbol": t.symbol,
+                        "pattern": t.pattern,
+                        "direction": t.direction,
+                        "side": t.side,
+                        "qty": t.qty,
+                        "entry_price": float(t.entry_price) if t.entry_price else None,
+                        "entry_time": (
+                            entry.strftime("%Y-%m-%d %H:%M") if entry else "--"
+                        ),
+                        "stop_loss": float(t.stop_loss) if t.stop_loss else None,
+                        "target_1": float(t.target_1) if t.target_1 else None,
+                        "target_2": float(t.target_2) if t.target_2 else None,
+                        "d_price": float(t.d_price) if t.d_price else None,
+                        "hold_hours": hold_hours,
+                        "status": t.status,
+                    }
+                )
+            return result
+    except Exception as e:
+        st.error(f"Failed to load harmonic trades: {e}")
+        return []
+
+
+@st.cache_data(ttl=60)
+def load_harmonic_closed_trades(limit: int = 50) -> List[dict]:
+    try:
+        with db_readonly_session() as session:
+            trades = (
+                session.query(HarmonicTrade)
+                .filter(HarmonicTrade.status.in_(["CLOSED", "STOPPED"]))
+                .order_by(HarmonicTrade.exit_time.desc())
+                .limit(limit)
+                .all()
+            )
+            result = []
+            for t in trades:
+                entry = t.entry_time
+                ex = t.exit_time
+                if entry and entry.tzinfo is None:
+                    entry = entry.replace(tzinfo=timezone.utc)
+                if ex and ex.tzinfo is None:
+                    ex = ex.replace(tzinfo=timezone.utc)
+                hold_hours = (
+                    round((ex - entry).total_seconds() / 3600, 1)
+                    if entry and ex
+                    else None
+                )
+                result.append(
+                    {
+                        "symbol": t.symbol,
+                        "pattern": t.pattern,
+                        "direction": t.direction,
+                        "side": t.side,
+                        "qty": t.qty,
+                        "entry_price": float(t.entry_price) if t.entry_price else None,
+                        "exit_price": float(t.exit_price) if t.exit_price else None,
+                        "exit_reason": t.exit_reason or "--",
+                        "hold_hours": hold_hours,
+                        "pnl": float(t.pnl) if t.pnl is not None else None,
+                        "pnl_pct": float(t.pnl_pct) if t.pnl_pct is not None else None,
+                        "status": t.status,
+                        "exit_time": (ex.strftime("%Y-%m-%d %H:%M") if ex else "--"),
+                    }
+                )
+            return result
+    except Exception as e:
+        st.error(f"Failed to load harmonic trade history: {e}")
+        return []
+
+
+@st.cache_data(ttl=60)
+def load_harmonic_summary() -> dict:
+    try:
+        with db_readonly_session() as session:
+            open_count = (
+                session.query(HarmonicTrade)
+                .filter(HarmonicTrade.status == "OPEN")
+                .count()
+            )
+            closed = (
+                session.query(HarmonicTrade)
+                .filter(HarmonicTrade.status.in_(["CLOSED", "STOPPED"]))
+                .all()
+            )
+            closed_pnl = sum(float(t.pnl) for t in closed if t.pnl is not None)
+            wins = sum(1 for t in closed if t.pnl is not None and float(t.pnl) > 0)
+            win_rate = wins / len(closed) if closed else 0.0
+            return {
+                "open_trades": open_count,
+                "closed_trades": len(closed),
+                "closed_pnl": closed_pnl,
+                "win_rate": win_rate,
+            }
+    except Exception as e:
+        st.error(f"Failed to load harmonic summary: {e}")
+        return {
+            "open_trades": 0,
+            "closed_trades": 0,
+            "closed_pnl": 0.0,
+            "win_rate": 0.0,
+        }
+
+
+def _render_xabcd_chart(trade: dict) -> go.Figure:
+    """Mini XABCD price-level chart for a single harmonic trade row."""
+    labels = ["X", "A", "B", "C", "D"]
+    prices = [
+        trade.get("d_price"),  # placeholder - only D is stored on open trades
+    ]
+    # We only have D, stop, and targets from the open trade dict.
+    # Draw a simple horizontal level chart instead.
+    d = trade["d_price"] or 0
+    sl = trade["stop_loss"] or 0
+    t1 = trade["target_1"] or 0
+    t2 = trade["target_2"] or 0
+
+    fig = go.Figure()
+    for y, color, label in [
+        (t2, "#2A7A4B", "T2"),
+        (t1, "#58A87A", "T1"),
+        (d, "#1f77b4", "D (entry)"),
+        (sl, "#C0392B", "SL"),
+    ]:
+        fig.add_hline(
+            y=y,
+            line_color=color,
+            line_dash="dot",
+            line_width=1.5,
+            annotation_text=f"{label} {y:.2f}",
+            annotation_position="right",
+        )
+    fig.update_layout(
+        height=140,
+        margin=dict(l=0, r=70, t=10, b=10),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        showlegend=False,
+    )
+    return fig
+
+
+def _render_harmonic_tab() -> None:
+    st.caption(
+        "Gartley harmonic pattern trades. "
+        "Patterns detected daily from EOD price data (yahoo_adjusted)."
+    )
+
+    summary = load_harmonic_summary()
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Open Trades", summary["open_trades"])
+    m2.metric("Closed Trades", summary["closed_trades"])
+    m3.metric(
+        "Closed P&L",
+        f"${summary['closed_pnl']:+,.2f}",
+    )
+    m4.metric("Win Rate", f"{summary['win_rate'] * 100:.1f}%")
+
+    st.divider()
+
+    # ---- Open trades ----
+    st.subheader("Open Trades")
+    open_trades = load_harmonic_open_trades()
+
+    if not open_trades:
+        st.info(
+            "No open harmonic trades. "
+            "Run the harmonic flow or wait for the next scheduled scan."
+        )
+    else:
+        hcols = st.columns([1.2, 1.2, 1.0, 1.0, 1.2, 1.0, 1.2, 1.2, 1.0, 3.0])
+        for col, h in zip(
+            hcols,
+            [
+                "Symbol",
+                "Pattern",
+                "Direction",
+                "Side",
+                "Entry Price",
+                "Qty",
+                "Stop Loss",
+                "Target 1",
+                "Hold (h)",
+                "Levels",
+            ],
+        ):
+            col.markdown(f"**{h}**")
+        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+
+        for t in open_trades:
+            cols = st.columns([1.2, 1.2, 1.0, 1.0, 1.2, 1.0, 1.2, 1.2, 1.0, 3.0])
+            dir_color = "#2A7A4B" if t["direction"] == "bullish" else "#C0392B"
+            cols[0].markdown(f"**{t['symbol']}**")
+            cols[1].write(t["pattern"].capitalize())
+            cols[2].markdown(
+                f'<span style="color:{dir_color};font-weight:bold">'
+                f"{t['direction'].capitalize()}</span>",
+                unsafe_allow_html=True,
+            )
+            cols[3].write(t["side"].upper())
+            cols[4].write(f"${t['entry_price']:.4f}" if t["entry_price"] else "--")
+            cols[5].write(t["qty"])
+            cols[6].markdown(
+                (
+                    f'<span style="color:#C0392B">' f"${t['stop_loss']:.4f}</span>"
+                    if t["stop_loss"]
+                    else "--"
+                ),
+                unsafe_allow_html=True,
+            )
+            cols[7].markdown(
+                (
+                    f'<span style="color:#2A7A4B">' f"${t['target_1']:.4f}</span>"
+                    if t["target_1"]
+                    else "--"
+                ),
+                unsafe_allow_html=True,
+            )
+            cols[8].write(f"{t['hold_hours']}h" if t["hold_hours"] else "--")
+            if t["d_price"]:
+                cols[9].plotly_chart(
+                    _render_xabcd_chart(t),
+                    config={"displayModeBar": False},
+                    use_container_width=True,
+                )
+            else:
+                cols[9].write("--")
+        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+
+    st.divider()
+
+    # ---- Trade history ----
+    st.subheader("Trade History (Last 50)")
+    history = load_harmonic_closed_trades(limit=50)
+
+    if not history:
+        st.info("No closed harmonic trades yet.")
+    else:
+        hcols = st.columns([1.2, 1.2, 1.0, 1.2, 1.2, 1.5, 1.0, 1.2, 1.2, 1.5])
+        for col, h in zip(
+            hcols,
+            [
+                "Symbol",
+                "Pattern",
+                "Direction",
+                "Entry Price",
+                "Exit Price",
+                "Exit Reason",
+                "Hold (h)",
+                "P&L",
+                "P&L %",
+                "Exit Time",
+            ],
+        ):
+            col.markdown(f"**{h}**")
+        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+
+        for t in history:
+            cols = st.columns([1.2, 1.2, 1.0, 1.2, 1.2, 1.5, 1.0, 1.2, 1.2, 1.5])
+            pnl = t["pnl"]
+            pnl_color = (
+                "#2A7A4B" if pnl and pnl > 0 else ("#C0392B" if pnl and pnl < 0 else "")
+            )
+            dir_color = "#2A7A4B" if t["direction"] == "bullish" else "#C0392B"
+            pnl_str = _fmt_pnl(pnl)
+            pnl_pct_str = f"{t['pnl_pct']:+.3f}%" if t["pnl_pct"] is not None else "--"
+            cols[0].markdown(f"**{t['symbol']}**")
+            cols[1].write(t["pattern"].capitalize())
+            cols[2].markdown(
+                f'<span style="color:{dir_color}">{t["direction"].capitalize()}</span>',
+                unsafe_allow_html=True,
+            )
+            cols[3].write(f"${t['entry_price']:.4f}" if t["entry_price"] else "--")
+            cols[4].write(f"${t['exit_price']:.4f}" if t["exit_price"] else "--")
+            cols[5].write(t["exit_reason"])
+            cols[6].write(f"{t['hold_hours']}h" if t["hold_hours"] else "--")
+            if pnl_color:
+                cols[7].markdown(
+                    f'<span style="color:{pnl_color};font-weight:bold">'
+                    f"{pnl_str}</span>",
+                    unsafe_allow_html=True,
+                )
+                cols[8].markdown(
+                    f'<span style="color:{pnl_color}">{pnl_pct_str}</span>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                cols[7].write(pnl_str)
+                cols[8].write(pnl_pct_str)
+            cols[9].write(t["exit_time"])
+        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+
+    if st.button("Refresh Harmonic Data"):
+        st.cache_data.clear()
+        st.rerun()
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -972,13 +1301,16 @@ def main() -> None:
     _load_css()
     st.title("Strategy Monitor")
 
-    tab_pairs, tab_baskets = st.tabs(["Pairs", "Baskets"])
+    tab_pairs, tab_baskets, tab_harmonic = st.tabs(["Pairs", "Baskets", "Harmonic"])
 
     with tab_pairs:
         _render_pairs_tab()
 
     with tab_baskets:
         _render_baskets_tab()
+
+    with tab_harmonic:
+        _render_harmonic_tab()
 
 
 if __name__ == "__main__" or True:
