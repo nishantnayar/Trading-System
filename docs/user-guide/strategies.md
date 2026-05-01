@@ -1,13 +1,13 @@
 # Strategy Management
 
-> **✅ Implementation Status**: Live in v1.1.0 — Pairs Trading active (paper trading)
-> **Active Pair**: QRVO/SWKS — Semiconductor sector, rank score 0.8845
+> **✅ Implementation Status**: Live in v1.2.0 — Pairs Trading and Gartley Harmonic Strategy active (paper trading)
+> **Active Pairs**: EWBC/FNB (Regional Banks) and COLB/FNB (Regional Banks)
 
-This guide covers the pairs trading strategy: discovery, backtesting, activation, and live monitoring.
+This guide covers the implemented trading strategies: pairs trading discovery, backtesting, activation, live monitoring, and Gartley harmonic pattern detection.
 
 ## Overview
 
-The Strategy Engine will provide a comprehensive framework for creating, testing, and deploying algorithmic trading strategies. Strategies are defined using configuration files and can be backtested, optimized, and deployed to live trading.
+The Strategy Engine provides a framework for creating, testing, and deploying algorithmic trading strategies. Two strategies are live in paper trading as of v1.2.0: statistical arbitrage via pairs trading, and Gartley harmonic pattern detection for entry timing. Strategies are discovered, backtested, and activated through the Streamlit UI.
 
 ## Strategy Architecture
 
@@ -116,33 +116,49 @@ Trades based on oversold/overbought conditions:
 3. Generates sell signal when RSI > overbought threshold
 4. Manages positions based on RSI levels
 
-#### Pairs Trading Strategy ✅ Live (v1.1.0)
+#### Pairs Trading Strategy ✅ Live (v1.2.0)
 
 Statistical arbitrage using cointegrated stock pairs. Pairs are discovered automatically from DB data via `scripts/discover_pairs.py` and stored in `strategy_engine.pair_registry`.
 
-**Active pair**: QRVO/SWKS (Semiconductors)
+**Active pairs**: EWBC/FNB and COLB/FNB (Regional Banks), `max_allocation_pct = 0.05` per leg
 
 | Parameter | Value |
 |---|---|
-| Hedge ratio (β) | 0.9231 |
-| Half-life | 18.4 hours |
-| Correlation | 0.8697 |
-| Cointegration p-value | 0.0024 |
-| Z-score window | 40 bars |
+| Spread formula | `log(P1) - hedge_ratio * log(P2)` |
+| Z-score window | capped at 60 bars |
 | Entry threshold | ±2.0 σ |
 | Exit threshold | ±0.5 σ |
 | Stop loss | ±3.0 σ |
-| Rank score | 0.8845 |
+| Expiry | 3x half-life hours |
+| Max allocation | 5% per leg |
+
+**Rank Score Formula** (updated 2026-04-01):
+
+```
+rank_score = (1 - coint_pvalue) x |correlation| x z_score_abs_mean
+```
+
+`z_score_abs_mean` is the mean absolute z-score over the discovery window (capped at 60 bars). This directly measures tradeability — pairs with low `z_score_abs_mean` are cointegrated but their spreads barely move and never cross entry thresholds.
 
 **How It Works:**
-1. Every hour (market hours), the Prefect flow fetches the last 500 hourly bars from Alpaca
-2. Computes `spread = log(P1) − β × log(P2)` and rolling z-score
-3. **LONG_SPREAD** (z < −2.0): buy QRVO, short SWKS — spread expected to rise back to mean
-4. **SHORT_SPREAD** (z > +2.0): short QRVO, buy SWKS
-5. **EXIT** (|z| < 0.5): close both legs, take profit
-6. **STOP_LOSS** (|z| > 3.0) or **EXPIRE** (hold > 3× half-life): force close
+1. Every hour (market hours), `refresh_pair_prices_task` fetches 2 days of 1-hour Yahoo Finance bars via yfinance and upserts them into `market_data` as `data_source='yahoo_adjusted_1h'`
+2. `get_price_series()` reads these bars from the DB for each active pair
+3. Computes `spread = log(P1) - hedge_ratio * log(P2)` and rolling z-score (window capped at 60 bars)
+4. **LONG_SPREAD** (z < -2.0): buy leg 1, short leg 2 — spread expected to rise back to mean
+5. **SHORT_SPREAD** (z > +2.0): short leg 1, buy leg 2
+6. **EXIT** (|z| < 0.5): close both legs, take profit
+7. **STOP_LOSS** (|z| > 3.0) or **EXPIRE** (hold > 3x half-life): force close
 
-**Position sizing**: Half-Kelly criterion (bootstrap: 2% fixed for first 20 trades)
+**Position sizing**: Half-Kelly criterion (bootstrap: 2% fixed for first 20 trades, hard cap 10% per leg)
+
+**Active Pairs Policy**:
+- EWBC/FNB and COLB/FNB are active; FNB/USB excluded despite passing backtest (FNB concentration risk)
+- Do not activate more than 2 FNB pairs simultaneously without reducing allocation caps
+
+**Troubleshooting INSUFFICIENT_DATA**:
+- Strategy reads from `yahoo_adjusted_1h` in the DB, not directly from Alpaca or Yahoo
+- Check `redis-cli get pairs:bars:{SYMBOL}` — the `count` field shows how many bars were fetched
+- Ensure `refresh_pair_prices_task` ran and migration `21_add_yahoo_adjusted_1h_source.sql` was applied
 
 ---
 
@@ -152,21 +168,28 @@ Statistical arbitrage using cointegrated stock pairs. Pairs are discovered autom
 python scripts/discover_pairs.py
 ```
 
-Runs Engle-Granger cointegration on all active symbols grouped by sector. Output: ranked table of candidate pairs. Top pairs are automatically upserted into `pair_registry` with `is_active=False`. Activate from the Backtest Review UI.
+Runs Engle-Granger cointegration on all active symbols grouped by sector. Output: ranked table of candidate pairs sorted by `rank_score`. Top pairs are automatically upserted into `pair_registry` with `is_active=False`. Activate from the Pair Lab UI (Scanner tab).
+
+**Backtest Window Guidance:**
+- Default UI window is 180 days — long enough to include regime changes
+- If a pair fails on 180 days but equity curve shows recovery after month 3, try 90 days
+- A pair failing harder on a shorter window means spread divergence is recent and ongoing — skip it
 
 ---
 
-### 3. Backtesting Framework ✅ Live (v1.1.0)
+### 3. Backtesting Framework ✅ Live (v1.2.0)
 
-Access via **Streamlit → Backtest Review** page (`streamlit_ui/pages/Backtest_Review.py`).
+Access via **Streamlit → Pair Lab** page (`streamlit_ui/pages/6_Pair_Lab.py`), Backtest tab.
 
 **Features:**
 - Pair selector with rank score labels — activate/deactivate directly from UI
-- Run backtest in-process against historical `market_data` DB
+- Run backtest in-process against historical `market_data` DB (`yahoo_adjusted` source)
 - Fills simulated at next-bar open to avoid look-ahead bias
+- Slippage & commission modeling: configurable slippage bps (0-20, default 5) and commission per trade
 - Pass/fail gate: Sharpe > 0.5, win rate > 45%, max drawdown < 15%
 - Equity curve, trade log, run history comparison across parameter sets
 - **Stock Analysis** tabs: Risk Flags (7 checks), Fundamentals, Normalised Price Chart, Rolling Correlation
+- Persistent preferences saved to `config/scanner_prefs.json` (lookback days, slippage bps)
 
 **Backtest gate thresholds:**
 
@@ -176,23 +199,42 @@ Access via **Streamlit → Backtest Review** page (`streamlit_ui/pages/Backtest_
 | Win rate | > 45% |
 | Max drawdown | < 15% |
 
-**QRVO/SWKS backtest result** (180 days to 2026-03-27):
-- Sharpe: 0.516 ✅ | Win rate: 61.5% ✅ | Max drawdown: 8.2% ✅ | Trades: 26
+**Slippage & Commission Modeling** (v1.2.0):
+- `BacktestEngine` accepts `slippage_bps` (default 5) and `commission_per_trade` (default $0)
+- Buys filled higher, sells filled lower by slippage bps — applied to all 4 fills per round-trip
+- Commission deducted from gross P&L in each trade
+- `BacktestResult` carries `slippage_bps` and `commission_per_trade` for reproducibility
 
-**Example Backtest Configuration:**
-```python
-backtest_config = {
-    "strategy": "momentum_strategy",
-    "symbols": ["AAPL", "MSFT", "GOOGL"],
-    "start_date": "2023-01-01",
-    "end_date": "2024-01-01",
-    "initial_capital": 100000,
-    "commission": 0.001,  # 0.1% per trade
-    "slippage": 0.0005    # 0.05% slippage
-}
+### 4. Gartley Harmonic Pattern Strategy ✅ Live (v1.2.0)
+
+Located at `src/services/strategy_engine/harmonic/`. Detects XABCD Gartley harmonic patterns in price series and generates entry/exit signals based on Fibonacci retracement levels.
+
+**Pattern Structure (Bullish Gartley):**
 ```
+X -> A  (initial leg, downward)
+A -> B  (retracement upward, 61.8% of XA)
+B -> C  (pullback downward, 38.2-88.6% of AB)
+C -> D  (extension downward, 127.2-161.8% of BC; D at 78.6% retracement of XA)
+```
+Bearish Gartley is the mirror: X below A, pattern inverted.
 
-### 4. Live Strategy Deployment
+**Fibonacci Ratios Used:**
+| Leg | Ratio |
+|---|---|
+| AB/XA | 61.8% |
+| BC/AB | 38.2% - 88.6% |
+| CD/BC | 127.2% - 161.8% |
+| XD/XA (Gartley defining) | 78.6% |
+
+**Tolerance**: +/- 3% on each ratio check.
+
+**Key Files:**
+- `src/services/strategy_engine/harmonic/gartley_detector.py` — `GartleyDetector` class; call `find_patterns()` on a price series
+- `src/services/strategy_engine/harmonic/harmonic_executor.py` — executes trades on detected patterns
+
+---
+
+### 5. Live Strategy Deployment
 
 Deploy validated strategies to live trading:
 
@@ -219,7 +261,7 @@ deployment:
     email_notifications: true
 ```
 
-### 5. Performance Tracking
+### 6. Performance Tracking
 
 Real-time and historical performance monitoring:
 
@@ -238,7 +280,7 @@ Real-time and historical performance monitoring:
 - Trade history and analysis
 - Performance attribution
 
-### 6. Strategy Optimization
+### 7. Strategy Optimization
 
 Optimize strategy parameters for better performance:
 
@@ -349,24 +391,26 @@ sequenceDiagram
 
 ## Implementation Roadmap
 
-### v1.1.0 (In Progress) 🚧
-- ✅ Strategy configuration system
-- 🚧 Basic strategy framework
-- 🚧 Simple moving average strategies
-- 🚧 Backtesting engine
-- 🚧 Performance metrics calculation
+### v1.1.0 ✅ Complete
+- ✅ Pairs trading strategy — discovery, backtest, activation, live execution
+- ✅ BacktestEngine with pass/fail gate (Sharpe, win rate, drawdown)
+- ✅ Half-Kelly position sizing with bootstrap mode
+- ✅ Email notifications for trade events
 
-### v1.2.0 (Planned) 📋
-- Advanced strategies (mean reversion, momentum, pairs trading)
+### v1.2.0 ✅ Complete
+- ✅ Gartley harmonic pattern detector and executor
+- ✅ UI consolidation (11 pages → 7 pages with tabbed views)
+- ✅ Slippage & commission modeling in backtest engine
+- ✅ Updated rank score formula using `z_score_abs_mean`
+- ✅ z_score_window capped at 60 bars
+- ✅ Active pairs: EWBC/FNB and COLB/FNB (Regional Banks)
+- ✅ Persistent UI preferences (`config/scanner_prefs.json`, `config/analysis_prefs.json`)
+- ✅ mypy 0 errors across 107 source files
+
+### v1.3.0 (Planned) 📋
+- Live trading mode
 - Machine learning integration
 - Multi-asset strategies
-- Real-time signal generation
-- Advanced optimization tools
-
-### v1.3.0 (Future) 🔮
-- Custom strategy scripting language
-- Strategy marketplace
-- Social trading features
 - Advanced risk analytics
 - Portfolio optimization
 
@@ -458,5 +502,5 @@ print(f"Max Drawdown: {performance['max_drawdown']:.2%}")
 
 ---
 
-**Last Updated**: 4/3/2026  
-**Status**: 🚧 Planned for v1.1.0
+**Last Updated**: 4/30/2026  
+**Status**: ✅ Live in v1.2.0

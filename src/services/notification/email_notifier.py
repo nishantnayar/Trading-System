@@ -148,6 +148,16 @@ class EmailNotifier:
         )
         await self._send(subject, body)
 
+    async def send_ops_alert(
+        self,
+        anomalies: list,
+        summary: str,
+        cycle_summary: dict,
+    ) -> None:
+        subject = f"[{self._mode}] [WARN] Ops Monitor - {len(anomalies)} anomaly(s)"
+        body = self._ops_alert_html(anomalies, summary, cycle_summary)
+        await self._send(subject, body)
+
     async def send_discovery_summary(
         self,
         pairs_found: int,
@@ -285,6 +295,26 @@ class EmailNotifier:
             "<p>This pair was automatically deactivated due to sustained poor performance. "
             "It remains in the registry with <code>is_active=False</code>. "
             "Run a fresh backtest before reactivating.</p>" + self._table(rows),
+        )
+
+    def _ops_alert_html(
+        self, anomalies: list, summary: str, cycle_summary: dict
+    ) -> str:
+        anomaly_rows = "".join(
+            self._row(f"#{i + 1}", a, "#8b1a1a") for i, a in enumerate(anomalies)
+        )
+        meta_rows = (
+            self._row("Pairs evaluated", str(cycle_summary.get("total_pairs", "-")))
+            + self._row("Signals", str(cycle_summary.get("with_signal", "-")))
+            + self._row("Errors", str(cycle_summary.get("errors", "-")))
+        )
+        return self._base_html(
+            "[WARN] Ops Monitor Alert",
+            f"<p>{summary}</p>"
+            + "<h3>Anomalies</h3>"
+            + self._table(anomaly_rows)
+            + "<h3>Cycle Snapshot</h3>"
+            + self._table(meta_rows),
         )
 
     def _discovery_summary_html(self, pairs_found: int, pairs_upserted: list) -> str:
