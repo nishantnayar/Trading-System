@@ -8,17 +8,17 @@ A production-grade algorithmic trading system designed for local deployment, foc
 **Email**: nishant.nayar@hotmail.com  
 **Repository**: https://github.com/nishantnayar/trading-system  
 **Documentation**: https://nishantnayar.github.io/trading-system  
-**Last Updated**: 4/3/2026  
-**Status**: ✅ Core Features Implemented (v1.0.0) | 🚧 Enhanced Features In Progress (v1.1.0)
+**Last Updated**: 5/1/2026  
+**Status**: ✅ v1.2.0 — Pairs Trading and Gartley Harmonic Strategy live in paper trading | v1.3.0 Agentic AI layer in design
 
 ## System Requirements
 
-- **Asset Class**: Equities trading via Alpaca API
-- **Data Frequency**: Hourly data ingestion
-- **Trading Mode**: Paper trading initially, live trading later
+- **Asset Class**: Equities — paper trading via Alpaca API (order execution only)
+- **Price Data**: Yahoo Finance via `yfinance` (EOD `yahoo_adjusted`, intraday `yahoo_adjusted_1h`)
+- **Data Frequency**: Hourly intraday ingestion (strategy cycle); daily EOD ingestion (Prefect)
+- **Trading Mode**: Paper trading (live trading planned)
 - **Deployment**: Local machine (Windows 10)
-- **Architecture**: Microservices with orchestration
-- **Data Growth**: Designed to handle growing datasets with Polars
+- **Architecture**: Microservices with Prefect orchestration
 
 ## Technology Stack
 
@@ -68,6 +68,9 @@ The system is organized into the following architectural components:
 Data Ingestion → Strategy Engine → Risk Management → Execution
      ↓                ↓                ↓              ↓
 Analytics Service ← Notification Service ← Redis ← PostgreSQL
+                          ↑
+                    Agent Layer (v1.3.0)
+                  (observes, reasons, alerts)
 ```
 
 ### Prefect Flow Orchestration
@@ -211,21 +214,51 @@ strategies:
 
 ## Future Enhancements
 
-### Phase 1 (Current)
-- Paper trading with single strategy
-- Basic monitoring and alerts
-- Simple web interface
+### Phase 1 ✅ Complete (v1.2.0)
+- Paper trading with pairs strategy (EWBC/FNB, COLB/FNB) and Gartley harmonic pattern
+- Email notifications, Redis caching, 7-page Streamlit UI
+- Backtest engine with slippage/commission, Half-Kelly position sizing
 
-### Phase 2
-- Live trading capabilities
-- Multiple strategy support
-- Advanced analytics
-- Mobile-responsive interface
+### Phase 2 — Agentic AI Layer (v1.3.0, In Design)
 
-### Phase 3
-- Machine learning integration
-- Advanced risk management
-- Multi-asset support
+The system will gain an **Agent Layer** that reasons over trading state rather than applying fixed rules.
+Three agents are planned, introduced in order of increasing autonomy and risk:
+
+#### Agent 1: Ops Monitor Agent (low risk, first to ship)
+- Runs as a post-cycle Prefect task after each `pairs_flow` execution
+- Reads Redis `pairs:cycle:*` keys, DB trade state, and recent logs
+- Detects anomalies: data staleness, z-scores perpetually near zero, no trades in N days,
+  `INSUFFICIENT_DATA` errors, single-leg fills
+- Emits a structured reasoning summary via `EmailNotifier` when anomalies are found
+- No write access to orders or positions — observe-only
+
+#### Agent 2: Strategy Review Agent (shadow mode first)
+- Runs alongside the deterministic signal generator — does NOT replace it initially
+- Receives z-score, spread trend, Redis cycle data, and upcoming earnings/news (via tools)
+- Produces a structured verdict: `AGREE`, `CAUTION`, or `SKIP` with a one-sentence rationale
+- In shadow mode: verdict is logged and emailed but does not gate execution
+- Promoted to gate mode (can suppress a trade) only after N weeks of shadow validation
+
+#### Agent 3: Pair Discovery Agent (research use)
+- Invoked manually or via a Prefect flow during pair discovery runs
+- Reviews cointegration candidates using fundamentals and recent news via tool calls
+- Rejects pairs with structural reasons for correlation (acquisitions, index rebalance, sector ETF overlap)
+- Writes a brief rationale per candidate to the DB for audit trail
+
+#### Design Principles
+- **Observe before act**: all agents start in read-only / shadow mode
+- **Deterministic fallback**: if an agent errors, the rule-based system runs unchanged
+- **Auditable**: every agent decision is persisted with its inputs and reasoning
+- **Tool-gated execution**: order placement is a named tool that requires explicit agent invocation,
+  never implicit side effects
+- **Claude API**: agents are implemented via the Anthropic SDK (`claude-sonnet-4-6` default);
+  prompt caching enabled on system prompts to reduce cost per hourly cycle
+
+### Phase 3 (Future)
+- Live trading mode
+- Additional strategy types (momentum, mean reversion)
+- Advanced portfolio-level risk analytics
+- Multi-asset and cross-sector strategies
 - Cloud deployment options
 
 ## Getting Started

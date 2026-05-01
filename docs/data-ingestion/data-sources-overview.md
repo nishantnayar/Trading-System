@@ -18,11 +18,13 @@ The trading system supports multiple market data sources to provide:
 
 ### Supported Data Sources
 
-| Source | OHLCV | Fundamentals | Dividends | Splits | Real-time | Cost |
-|--------|-------|--------------|-----------|---------|-----------|------|
-| **Polygon.io** | ✅ | ❌ | ✅ | ✅ | ✅ | Paid (Free tier: 5 calls/min) |
-| **Yahoo Finance** | ✅ | ✅ | ✅ | ✅ | ⚠️ Delayed | Free (Unlimited) |
-| **Alpaca** | ✅ | ❌ | ❌ | ❌ | ✅ | Free with account |
+| Source | OHLCV | Fundamentals | Dividends | Splits | Real-time | Role | Cost |
+|--------|-------|--------------|-----------|---------|-----------|------|------|
+| **Yahoo Finance** | ✅ | ✅ | ✅ | ✅ | ⚠️ Delayed | **Primary price data** | Free (Unlimited) |
+| **Polygon.io** | ✅ | ❌ | ✅ | ✅ | ✅ | Historical research | Paid (Free tier: 5 calls/min) |
+| **Alpaca** | ❌* | ❌ | ❌ | ❌ | ✅ | **Order execution only** | Free with account |
+
+> **Important (updated 2026-04-03)**: Alpaca is used **only for order placement** (`place_order`, `get_positions`, `get_clock`). All price data — including intraday bars for the live strategy — comes from Yahoo Finance via `yfinance`.
 
 For detailed integration guides, see:
 - [Polygon.io Integration](data-sources-polygon.md)
@@ -36,10 +38,21 @@ For detailed integration guides, see:
 ### Design Principles
 
 1. **Independent Services**: Each data source has its own service module
-2. **Unified Storage**: All market data stored in `data_ingestion.market_data` with `data_source` field (e.g. `yahoo`, `yahoo_adjusted`, `polygon`, `alpaca`)
-3. **Source Tracking**: Track which provider supplied each data point; Yahoo stores both unadjusted (`yahoo`) and adjusted (`yahoo_adjusted`) OHLCV
+2. **Unified Storage**: All market data stored in `data_ingestion.market_data` with a `data_source` field
+3. **Source Tracking**: Track which provider supplied each data point
 4. **Separate Loaders**: Each source has dedicated loader class
 5. **Consistent Interface**: Similar API patterns across sources
+
+### `data_source` Values in `market_data`
+
+| Value | Written by | Used by | Notes |
+|---|---|---|---|
+| `yahoo_adjusted` | Daily Prefect flow, backpopulate scripts | Backtesting, indicators, pair discovery | EOD/multi-day adjusted bars |
+| `yahoo_adjusted_1h` | `refresh_pair_prices_task` in `pairs_flow.py` | `get_price_series()` in pairs strategy | Intraday 1h bars, refreshed before each hourly cycle |
+| `yahoo` | Daily Prefect flow | General market data | Unadjusted bars |
+| `polygon` | Polygon ingestion flow | Research / historical | Requires paid Polygon.io account |
+
+> **DB migration required**: Run `scripts/21_add_yahoo_adjusted_1h_source.sql` to add `yahoo_adjusted_1h` to the `data_source` CHECK constraint before running the live strategy.
 
 ### Directory Structure
 

@@ -259,6 +259,18 @@ async def run_basket_strategy_task(alpaca: AlpacaClient) -> dict:
     return summary
 
 
+@task(
+    name="run-ops-monitor",
+    retries=0,
+    log_prints=True,
+)
+async def run_ops_monitor_task(cycle_summary: dict) -> None:
+    """Run the Ops Monitor Agent post-cycle. Never raises."""
+    from src.services.agent import ops_monitor_agent
+
+    await ops_monitor_agent.run(cycle_summary)
+
+
 # Degradation thresholds for auto-disabling pairs
 _MIN_TRADES_TO_EVALUATE = 5  # skip pairs with fewer closed trades
 _EVAL_WINDOW = 10  # look at the most recent N closed trades
@@ -390,6 +402,7 @@ async def intraday_pairs_flow(skip_market_check: bool = False) -> dict:
         deactivation = await check_and_disable_failing_pairs_task()
         summary["deactivated_pairs"] = deactivation["deactivated"]
         summary["basket_summary"] = basket_summary
+        await run_ops_monitor_task(summary)
     except Exception as exc:
         err_msg = str(exc)
         logger.error(f"Unhandled flow error: {err_msg}")

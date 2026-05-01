@@ -95,6 +95,13 @@ class Settings(BaseSettings):
     smtp_from_email: Optional[str] = Field(default=None, alias="SMTP_FROM_EMAIL")
     smtp_to_email: Optional[str] = Field(default=None, alias="SMTP_TO_EMAIL")
 
+    # Ollama Agent Configuration
+    ollama_base_url: str = Field(
+        default="http://localhost:11434", alias="OLLAMA_BASE_URL"
+    )
+    ollama_model: str = Field(default="llama3.2:3b", alias="OLLAMA_MODEL")
+    agent_enabled: bool = Field(default=True, alias="AGENT_ENABLED")
+
     # Prefect Configuration (Essential)
     prefect_api_url: str = Field(
         default="http://localhost:4200/api", alias="PREFECT_API_URL"
