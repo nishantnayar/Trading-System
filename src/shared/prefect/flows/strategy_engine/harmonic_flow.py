@@ -83,6 +83,11 @@ _DEFAULT_UNIVERSE = [
     "COP",
     "SLB",
     "EOG",
+    "NVDA",
+    "AMD",
+    "TSLA",
+    "WMT",
+    "JNJ",
 ]
 
 _EOD_BARS = 252  # ~1 year of daily bars for pattern detection
