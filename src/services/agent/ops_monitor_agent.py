@@ -94,7 +94,7 @@ def _call_ollama(context: dict) -> Optional[dict]:
             ],
             options={"temperature": 0.0},
         )
-        content = response["message"]["content"].strip()
+        content = (response["message"]["content"] or "").strip()
         # Strip markdown code fences if model wraps output
         if content.startswith("```"):
             content = content.split("```")[1]
