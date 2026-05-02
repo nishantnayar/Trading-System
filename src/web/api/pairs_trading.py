@@ -10,7 +10,7 @@ import os
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-import yaml  # type: ignore
+import yaml
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 

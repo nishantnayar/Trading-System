@@ -455,6 +455,15 @@ async def intraday_harmonic_flow(skip_market_check: bool = False) -> dict:
 
         patterns = scan_patterns_task(symbol_prices)
 
+        if settings.harmonic_long_only:
+            before = len(patterns)
+            patterns = [p for p in patterns if p.direction == "bullish"]
+            skipped = before - len(patterns)
+            if skipped:
+                logger.info(
+                    "HARMONIC_LONG_ONLY: dropped {} bearish pattern(s)", skipped
+                )
+
         if patterns:
             entry_summary = await open_trades_task(alpaca, patterns, symbol_prices)
         else:

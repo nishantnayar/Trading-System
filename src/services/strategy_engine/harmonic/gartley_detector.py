@@ -109,7 +109,7 @@ def find_swing_points(
     highs: List[SwingPoint] = []
     lows: List[SwingPoint] = []
 
-    vals = prices.values
+    vals = prices.to_numpy()
     times = prices.index
 
     for i in range(order, len(vals) - order):

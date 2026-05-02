@@ -95,6 +95,9 @@ class Settings(BaseSettings):
     smtp_from_email: Optional[str] = Field(default=None, alias="SMTP_FROM_EMAIL")
     smtp_to_email: Optional[str] = Field(default=None, alias="SMTP_TO_EMAIL")
 
+    # Harmonic Strategy Configuration
+    harmonic_long_only: bool = Field(default=True, alias="HARMONIC_LONG_ONLY")
+
     # Ollama Agent Configuration
     ollama_base_url: str = Field(
         default="http://localhost:11434", alias="OLLAMA_BASE_URL"
