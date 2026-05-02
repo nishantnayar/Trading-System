@@ -9,7 +9,7 @@ A production-grade algorithmic trading system designed for local deployment, foc
 **Repository**: https://github.com/nishantnayar/trading-system  
 **Documentation**: https://nishantnayar.github.io/trading-system  
 **Last Updated**: 5/1/2026  
-**Status**: ✅ v1.2.0 — Pairs Trading and Gartley Harmonic Strategy live in paper trading | v1.3.0 Agentic AI layer in design
+**Status**: ✅ v1.2.0 — Pairs Trading and Gartley Harmonic Strategy live in paper trading | v1.3.0 Ops Monitor Agent live (2026-05-01)
 
 ## System Requirements
 

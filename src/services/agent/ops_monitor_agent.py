@@ -9,7 +9,7 @@ Never raises -- all errors are caught so the agent never blocks the flow.
 """
 
 import json
-from typing import Any, Dict, Optional
+from typing import Optional
 
 import ollama
 from loguru import logger
@@ -23,22 +23,21 @@ _MAX_STALE_BAR_HOURS = 3     # alert if last bar is older than this many hours
 _LOW_BAR_COUNT = 20          # alert if a symbol has fewer bars than this
 
 
-_SYSTEM_PROMPT = """You are an anomaly detection assistant for an algorithmic pairs trading system.
-
-You will receive a JSON snapshot of the current cycle state. Your job is to:
-1. Identify any operational anomalies that warrant human attention.
-2. Return a JSON object with two fields:
-   - "anomalies": a list of short strings describing each problem found (empty list if none)
-   - "summary": one sentence summarising the overall cycle health
-
-Anomalies to look for:
-- Pairs with z_score near zero (|z| < 0.1) -- spread may have collapsed
-- Symbols with very few bars (bar_count < 20) -- data ingestion may be failing
-- Stale bar timestamps (last_bar_hours_ago > 3 during market hours)
-- Cycle errors (error count > 0)
-- No active pairs evaluated
-
-Respond with valid JSON only. No explanation outside the JSON object."""
+_SYSTEM_PROMPT = (
+    "You are an anomaly detection assistant for a pairs trading system.\n\n"
+    "You will receive a JSON snapshot of the current cycle state. Your job is to:\n"
+    "1. Identify any operational anomalies that warrant human attention.\n"
+    "2. Return a JSON object with two fields:\n"
+    '   - "anomalies": a list of short strings (empty list if none)\n'
+    '   - "summary": one short sentence (under 15 words) on overall cycle health\n\n'
+    "Anomalies to look for:\n"
+    "- Pairs with z_score near zero (|z| < 0.1) -- spread may have collapsed\n"
+    "- Symbols with very few bars (bar_count < 20) -- data ingestion failing\n"
+    "- Stale bar timestamps (last_bar_hours_ago > 3 during market hours)\n"
+    "- Cycle errors (error count > 0)\n"
+    "- No active pairs evaluated\n\n"
+    "Respond with valid JSON only. No explanation outside the JSON object."
+)
 
 
 def _build_context(cycle_summary: dict) -> dict:
@@ -73,10 +72,29 @@ def _build_context(cycle_summary: dict) -> dict:
         except Exception as exc:
             logger.debug("ops_monitor: redis bars scan failed: %s", exc)
 
+    # Compact redis data to key fields only to keep prompt small
+    pairs_compact = [
+        {
+            "pair": p.get("pair", p.get("symbol1", "") + "/" + p.get("symbol2", "")),
+            "status": p.get("status"),
+            "z_score": p.get("z_score"),
+            "signal": p.get("signal"),
+        }
+        for p in pairs_state
+    ]
+    bars_compact = [
+        {
+            "symbol": b.get("symbol"),
+            "count": b.get("count"),
+            "last_close": b.get("last_close"),
+        }
+        for b in bars_state
+    ]
+
     return {
         "cycle_summary": cycle_summary,
-        "pairs_cycle_state": pairs_state,
-        "bars_state": bars_state,
+        "pairs_cycle_state": pairs_compact,
+        "bars_state": bars_compact,
     }
 
 
@@ -84,6 +102,9 @@ def _call_ollama(context: dict) -> Optional[dict]:
     """Call local Ollama and return parsed JSON response."""
     settings = get_settings()
     prompt = json.dumps(context, default=str, indent=2)
+    # Trim prompt to avoid truncated JSON responses on small-context models
+    if len(prompt) > 2000:
+        prompt = prompt[:2000] + "\n... (truncated)"
 
     try:
         response = ollama.chat(
@@ -92,14 +113,19 @@ def _call_ollama(context: dict) -> Optional[dict]:
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
-            options={"temperature": 0.0},
+            format="json",
+            options={"temperature": 0.0, "num_predict": 512, "num_ctx": 4096},
         )
-        content = (response["message"]["content"] or "").strip()
-        # Strip markdown code fences if model wraps output
+        msg = response.message if hasattr(response, "message") else response["message"]
+        raw = msg.content if hasattr(msg, "content") else msg["content"]
+        content = (raw or "").strip()
+        # Strip markdown code fences (with or without language tag)
         if content.startswith("```"):
-            content = content.split("```")[1]
+            parts = content.split("```")
+            content = parts[1] if len(parts) >= 2 else content
             if content.startswith("json"):
                 content = content[4:]
+            content = content.strip()
         return dict(json.loads(content))
     except json.JSONDecodeError as exc:
         logger.warning("ops_monitor: LLM returned non-JSON: %s", exc)

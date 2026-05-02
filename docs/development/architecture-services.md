@@ -1,6 +1,6 @@
 # Trading System Services Architecture
 
-> **Status**: ✅ Core Services Implemented (v1.2.0) | Paper trading live with Pairs + Gartley strategies | v1.3.0 Agent Layer in design
+> **Status**: ✅ Core Services Implemented (v1.2.0) | Paper trading live with Pairs + Gartley strategies | v1.3.0 Ops Monitor Agent live (2026-05-01)
 
 ## Overview
 
@@ -172,7 +172,7 @@ The Trading System is built on a microservices architecture with six core servic
 - Deterministic fallback: agent errors do not block rule-based execution
 - Shadow mode enforced at the Prefect task level -- verdict logged, execution unaffected
 
-**Status**: Design phase (v1.3.0)
+**Status**: ✅ Ops Monitor Agent live (v1.3.0, 2026-05-01). Strategy Reviewer and Pair Discovery Agent planned.
 
 ## Service Communication
 
@@ -199,7 +199,7 @@ Analytics Service ← Notification Service ← Redis ← PostgreSQL
 | **Risk Management** | ✅ Partial | v1.2.0 | Half-Kelly sizing, allocation caps, stop-loss/expiry circuit breakers |
 | **Analytics** | ✅ Implemented | v1.0.0 | Performance metrics, technical indicators, backtesting |
 | **Notification** | ✅ Implemented | v1.2.0 | Email alerts for all trade lifecycle events |
-| **Agent Layer** | 🔷 In Design | v1.3.0 | Ops monitor, strategy reviewer (shadow), pair discovery evaluator |
+| **Agent Layer** | ✅ Ops Monitor live | v1.3.0 | Ops Monitor Agent running post-cycle; Strategy Reviewer + Pair Discovery planned |
 
 ---
 
