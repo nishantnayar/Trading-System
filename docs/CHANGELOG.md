@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-05-01) - Agentic AI Layer v1.3.0
+
+- **Ops Monitor Agent** (`src/services/agent/ops_monitor_agent.py`):
+  - Runs as a post-cycle Prefect task after every `intraday-pairs-trading` execution
+  - Reads Redis `pairs:cycle:*` and `pairs:bars:*` keys and the cycle summary dict
+  - Calls a local Ollama LLM (`llama3.2:3b` default) with `format="json"` to guarantee
+    valid JSON output and `num_ctx=4096` to handle full context
+  - Detects anomalies: z_score near zero, low bar counts, cycle errors, no active pairs
+  - Sends an email alert via `EmailNotifier.send_ops_alert` when anomalies are found
+  - Never raises -- all errors are caught so the agent never blocks the flow
+  - Controlled by `AGENT_ENABLED` env var (default `True`)
+
+- **EmailNotifier** (`src/services/notification/email_notifier.py`):
+  - Added `send_ops_alert(anomalies, summary, cycle_summary)` public method
+  - Added `_ops_alert_html` HTML template for ops alert emails
+  - Subject format: `[PAPER] [WARN] Ops Monitor - N anomaly(s)`
+
+- **Prefect flow** (`src/shared/prefect/flows/strategy_engine/pairs_flow.py`):
+  - Added `run_ops_monitor_task` Prefect task (retries=0, never blocks flow on error)
+  - Wired as the final step of `intraday_pairs_flow` after deactivation check
+
+- **Settings** (`src/config/settings.py`):
+  - Added `OLLAMA_BASE_URL` (default `http://localhost:11434`)
+  - Added `OLLAMA_MODEL` (default `llama3.2:3b`)
+  - Added `AGENT_ENABLED` (default `True`)
+
+- **Architecture docs** updated:
+  - `docs/development/architecture-overview.md`: Phase 2 section with full agent design
+  - `docs/development/architecture-services.md`: Service #7 Agent Layer entry
+
 ### Documentation (2026-04-29)
 - Updated `streamlit_ui/README.md`, `docs/development/architecture-ui.md`, `docs/user-guide/dashboard.md`, `CHANGELOG.md`, and `docs/CHANGELOG.md` to reflect the UI consolidation from 11 pages to 7.
 - Page reference table, navigation tree, and page architecture sections all updated with new page names, file paths, and tab descriptions.
