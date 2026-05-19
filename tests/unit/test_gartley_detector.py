@@ -199,6 +199,7 @@ class TestGartleyPatternToDict:
             "stop_loss",
             "target_1",
             "target_2",
+            "quality_score",
         }
         assert expected_keys == set(d.keys())
         assert d["direction"] == "bullish"

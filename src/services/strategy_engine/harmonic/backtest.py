@@ -140,7 +140,7 @@ class HarmonicBacktester:
         # Collapse intraday bars to one close per calendar date (last bar of each day).
         # The DB stores yahoo_adjusted as hourly bars (~7/day); the detector needs
         # daily bars to find meaningful multi-week swing patterns.
-        norm = prices.index.normalize()
+        norm = pd.DatetimeIndex(prices.index).normalize()
         prices = prices.groupby(norm).last()
         idx = pd.DatetimeIndex(prices.index)
         if idx.tz is None:
@@ -158,7 +158,7 @@ class HarmonicBacktester:
             return []
 
         vals = prices.to_numpy(dtype=float)
-        times = prices.index
+        times = pd.DatetimeIndex(prices.index)
 
         trades: List[BacktestTrade] = []
         # Track the last D-bar index where we opened so we don't double-enter
