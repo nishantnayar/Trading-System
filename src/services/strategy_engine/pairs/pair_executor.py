@@ -92,10 +92,18 @@ class PairExecutor:
         # Place both orders concurrently
         try:
             order1_task = self.alpaca.place_order(
-                symbol=sym1, qty=qty1, side=side1, order_type="market", time_in_force="day"
+                symbol=sym1,
+                qty=qty1,
+                side=side1,
+                order_type="market",
+                time_in_force="day",
             )
             order2_task = self.alpaca.place_order(
-                symbol=sym2, qty=qty2, side=side2, order_type="market", time_in_force="day"
+                symbol=sym2,
+                qty=qty2,
+                side=side2,
+                order_type="market",
+                time_in_force="day",
             )
             order1, order2 = await asyncio.gather(order1_task, order2_task)
 
@@ -165,32 +173,57 @@ class PairExecutor:
             f"reason={exit_reason} z={exit_z}"
         )
 
-        try:
-            close1 = self.alpaca.close_position(sym1)
-            close2 = self.alpaca.close_position(sym2)
-            await asyncio.gather(close1, close2)
-        except Exception as e:
-            logger.error(f"Failed to close positions for {sym1}/{sym2}: {e}")
-            return False
+        # Close each leg independently -- tolerate "no position" errors (already flat).
+        # A missing position on one leg must not block updating the DB on the other.
+        # Alpaca paper API uses HTTP 404 / error code 40410000 for "position does not exist".
+        close_ok = True
+        for sym in [sym1, sym2]:
+            try:
+                await self.alpaca.close_position(sym)
+            except Exception as e:
+                err = str(e).lower()
+                already_flat = (
+                    "position does not exist" in err
+                    or "no open position" in err
+                    or "no position" in err
+                    or "40410000" in err
+                    or "404" in err
+                )
+                if already_flat:
+                    logger.warning(
+                        f"close_pair_trade: no open position for {sym} (already flat?) -- continuing"
+                    )
+                else:
+                    logger.error(f"Failed to close position for {sym}: {e}")
+                    close_ok = False
 
-        pnl, pnl_pct = _compute_pnl(trade, current_price1, current_price2)
+        # Only update the DB to CLOSED/STOPPED when Alpaca confirmed both legs.
+        # If close_ok is False, leave status as OPEN so the next cycle retries
+        # automatically rather than orphaning a live position in Alpaca.
+        if close_ok:
+            pnl, pnl_pct = _compute_pnl(trade, current_price1, current_price2)
+            with db_transaction() as session:
+                db_trade = session.query(PairTrade).filter_by(id=trade.id).first()
+                if db_trade:
+                    db_trade.exit_time = datetime.now(timezone.utc)
+                    db_trade.exit_z_score = exit_z
+                    db_trade.exit_price1 = current_price1
+                    db_trade.exit_price2 = current_price2
+                    db_trade.exit_reason = exit_reason
+                    db_trade.pnl = pnl
+                    db_trade.pnl_pct = pnl_pct
+                    db_trade.status = (
+                        "STOPPED" if exit_reason == "STOP_LOSS" else "CLOSED"
+                    )
+            logger.info(f"Trade id={trade.id} closed: pnl={pnl:.2f} ({pnl_pct:.2f}%)")
+        else:
+            pnl, pnl_pct = None, None
+            logger.warning(
+                f"close_pair_trade: Alpaca close failed for trade id={trade.id} "
+                f"({sym1}/{sym2}) -- DB left as OPEN, will retry next cycle"
+            )
 
-        with db_transaction() as session:
-            db_trade = session.query(PairTrade).filter_by(id=trade.id).first()
-            if db_trade:
-                db_trade.exit_time = datetime.now(timezone.utc)
-                db_trade.exit_z_score = exit_z
-                db_trade.exit_price1 = current_price1
-                db_trade.exit_price2 = current_price2
-                db_trade.exit_reason = exit_reason
-                db_trade.pnl = pnl
-                db_trade.pnl_pct = pnl_pct
-                db_trade.status = "STOPPED" if exit_reason == "STOP_LOSS" else "CLOSED"
-
-        logger.info(
-            f"Trade id={trade.id} closed: pnl={pnl:.2f} ({pnl_pct:.2f}%)"
-        )
-        return True
+        return close_ok
 
     # ------------------------------------------------------------------
     # Emergency stop
@@ -212,7 +245,9 @@ class PairExecutor:
                 await self.alpaca.close_position(sym)
                 logger.info(f"Emergency close sent for {sym}")
             except Exception as e:
-                logger.warning(f"Emergency close for {sym} raised: {e} (may already be flat)")
+                logger.warning(
+                    f"Emergency close for {sym} raised: {e} (may already be flat)"
+                )
 
         # Mark all OPEN trades for this pair as STOPPED
         with db_transaction() as session:
@@ -244,6 +279,7 @@ class PairExecutor:
 # ---------------------------------------------------------------------------
 # P&L helper
 # ---------------------------------------------------------------------------
+
 
 def _compute_pnl(
     trade: PairTrade,

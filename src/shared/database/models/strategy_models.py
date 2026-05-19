@@ -696,6 +696,9 @@ class HarmonicTrade(Base):
     pnl: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
     pnl_pct: Mapped[Optional[float]] = mapped_column(Numeric(8, 4))
 
+    # Pattern quality at detection time (0.0-1.0); used by learning agent
+    quality_score: Mapped[Optional[float]] = mapped_column(Numeric(6, 4))
+
     status: Mapped[str] = mapped_column(String(10), default="OPEN", nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -741,6 +744,9 @@ class HarmonicTrade(Base):
             "exit_reason": self.exit_reason,
             "pnl": float(self.pnl) if self.pnl else None,
             "pnl_pct": float(self.pnl_pct) if self.pnl_pct else None,
+            "quality_score": (
+                float(self.quality_score) if self.quality_score is not None else None
+            ),
             "status": self.status,
         }
 

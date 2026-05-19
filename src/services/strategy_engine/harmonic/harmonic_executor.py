@@ -141,6 +141,7 @@ class HarmonicExecutor:
             stop_loss=pattern.stop_loss,
             target_1=pattern.targets[0],
             target_2=pattern.targets[1],
+            quality_score=getattr(pattern, "quality_score", None),
             status="OPEN",
         )
 

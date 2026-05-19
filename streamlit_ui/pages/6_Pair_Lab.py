@@ -24,6 +24,11 @@ from src.services.strategy_engine.backtesting.metrics import (  # noqa: E402
     MetricsCalculator,
 )
 from src.services.strategy_engine.backtesting.report import BacktestReport  # noqa: E402
+from src.services.strategy_engine.harmonic.backtest import (  # noqa: E402
+    BacktestSummary,
+    HarmonicBacktester,
+    run_universe_backtest,
+)
 from src.shared.database.base import db_readonly_session, db_transaction  # noqa: E402
 from src.shared.database.models.company_info import CompanyInfo  # noqa: E402
 from src.shared.database.models.dividends import Dividend  # noqa: E402
@@ -1444,6 +1449,237 @@ def _safe_fmt(value, fmt_fn) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Harmonic Lab helpers
+# ---------------------------------------------------------------------------
+
+_HARMONIC_UNIVERSE = [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "JPM",
+    "BAC",
+    "GS",
+    "MS",
+    "WFC",
+    "XOM",
+    "CVX",
+    "COP",
+    "SLB",
+    "EOG",
+    "NVDA",
+    "AMD",
+    "TSLA",
+    "WMT",
+    "JNJ",
+]
+
+
+@st.cache_data(ttl=300)
+def _load_harmonic_prices(
+    symbol: str, start_ts: pd.Timestamp, end_ts: pd.Timestamp
+) -> pd.Series:
+    with db_readonly_session() as session:
+        rows = (
+            session.query(MarketData.timestamp, MarketData.close)
+            .filter(
+                MarketData.symbol == symbol,
+                MarketData.data_source == "yahoo_adjusted",
+                MarketData.timestamp >= start_ts,
+                MarketData.timestamp <= end_ts,
+                MarketData.close.isnot(None),
+            )
+            .order_by(MarketData.timestamp)
+            .all()
+        )
+    if not rows:
+        return pd.Series(dtype=float)
+    idx = pd.DatetimeIndex([r.timestamp for r in rows], tz="UTC")
+    return pd.Series([float(r.close) for r in rows], index=idx)
+
+
+def _render_harmonic_equity_curve(trades_df: pd.DataFrame) -> None:
+    closed = trades_df[trades_df["pnl"].notna()].copy()
+    if closed.empty:
+        st.info("No closed trades to plot.")
+        return
+    closed = closed.sort_values("exit_date")
+    closed["cum_pnl"] = closed["pnl"].cumsum()
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=closed["exit_date"],
+            y=closed["cum_pnl"],
+            mode="lines+markers",
+            name="Cumulative P&L",
+            line={"color": "#2196F3"},
+        )
+    )
+    fig.add_hline(y=0, line_dash="dash", line_color="gray")
+    fig.update_layout(
+        title="Equity Curve (simulated, per-share P&L)",
+        xaxis_title="Exit Date",
+        yaxis_title="Cumulative P&L ($)",
+        height=320,
+        margin={"t": 40, "b": 30},
+    )
+    st.plotly_chart(fig, width='stretch')
+
+
+def _render_harmonic_lab_tab() -> None:
+    st.subheader("Harmonic Pattern Backtest")
+    st.caption(
+        "Walk-forward simulation: detects Gartley patterns on EOD data, "
+        "simulates fills at close of D bar, exits at TARGET_1 / TARGET_2 / STOP_LOSS."
+    )
+
+    # --- Config ---
+    with st.expander("Parameters", expanded=True):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            symbols = st.multiselect(
+                "Symbols",
+                options=_HARMONIC_UNIVERSE,
+                default=_HARMONIC_UNIVERSE,
+                help="Leave empty to use all 20 defaults.",
+            )
+            if not symbols:
+                symbols = _HARMONIC_UNIVERSE
+        with col2:
+            lookback = st.slider(
+                "Lookback bars (pattern window)", 60, 504, 252, step=21
+            )
+            swing_order = st.slider("Swing order (bars each side)", 3, 10, 5)
+        with col3:
+            today = date.today()
+            start_date = st.date_input(
+                "Start date", value=today - timedelta(days=365 * 2)
+            )
+            end_date = st.date_input("End date", value=today)
+            long_only = st.checkbox("Long only (bullish patterns)", value=True)
+
+    run_btn = st.button("Run Harmonic Backtest", type="primary")
+    if not run_btn:
+        st.info("Configure parameters above and click **Run Harmonic Backtest**.")
+        return
+
+    # --- Load prices ---
+    start_ts = pd.Timestamp(start_date, tz="UTC") - pd.Timedelta(days=lookback * 2)
+    end_ts = pd.Timestamp(end_date, tz="UTC")
+
+    progress = st.progress(0, text="Loading price data...")
+    symbol_prices: dict = {}
+    for i, sym in enumerate(symbols):
+        prices = _load_harmonic_prices(sym, start_ts, end_ts)
+        if not prices.empty:
+            symbol_prices[sym] = prices
+        progress.progress((i + 1) / len(symbols), text=f"Loading {sym}...")
+
+    if not symbol_prices:
+        st.error(
+            "No price data found. Ensure yahoo_adjusted data exists for the selected period."
+        )
+        return
+
+    progress.progress(1.0, text="Running backtests...")
+
+    # --- Run backtests ---
+    results = run_universe_backtest(
+        symbol_prices,
+        start_date=start_date,
+        end_date=end_date,
+        lookback_bars=lookback,
+        swing_order=swing_order,
+        long_only=long_only,
+    )
+    progress.empty()
+
+    all_trades = []
+    for sym, summary in results.items():
+        for t in summary.trades:
+            all_trades.append(t.to_dict())
+
+    trades_df = pd.DataFrame(all_trades) if all_trades else pd.DataFrame()
+
+    # --- Summary table ---
+    st.markdown("#### Universe Summary")
+    summary_rows = []
+    for sym, s in results.items():
+        summary_rows.append(
+            {
+                "Symbol": sym,
+                "Trades": s.total_trades,
+                "Win %": f"{s.win_rate * 100:.1f}",
+                "Total P&L": f"{s.total_pnl:.2f}",
+                "Avg P&L": f"{s.avg_pnl:.2f}",
+                "Profit Factor": "inf" if s.profit_factor == float("inf") else f"{s.profit_factor:.2f}",
+                "Sharpe": f"{s.sharpe:.2f}",
+                "Max DD": f"{s.max_drawdown * 100:.1f}%",
+                "Avg Hold": f"{s.avg_hold_bars:.0f}",
+                "T1 %": f"{s.target1_rate * 100:.0f}",
+                "T2 %": f"{s.target2_rate * 100:.0f}",
+                "SL %": f"{s.stop_rate * 100:.0f}",
+            }
+        )
+
+    if summary_rows:
+        sum_df = pd.DataFrame(summary_rows).set_index("Symbol")
+        sum_df = sum_df.sort_values("Sharpe", ascending=False)
+        st.dataframe(sum_df, width='stretch')
+    else:
+        st.warning("No patterns detected across the universe for the selected period.")
+        return
+
+    # --- Equity curve (all symbols combined) ---
+    if not trades_df.empty:
+        st.markdown("#### Combined Equity Curve")
+        _render_harmonic_equity_curve(trades_df)
+
+    # --- Per-symbol drill-down ---
+    st.markdown("#### Trade Detail")
+    selected_sym = st.selectbox(
+        "Symbol",
+        options=[s for s in results if results[s].total_trades > 0],
+    )
+    if selected_sym:
+        sym_trades = [t for t in all_trades if t["symbol"] == selected_sym]
+        detail_df = pd.DataFrame(sym_trades)
+        if not detail_df.empty:
+            cols_order = [
+                "entry_date",
+                "exit_date",
+                "direction",
+                "entry_price",
+                "exit_price",
+                "exit_reason",
+                "hold_bars",
+                "target_1",
+                "target_2",
+                "stop_loss",
+                "quality_score",
+                "pnl",
+                "pnl_pct",
+            ]
+            detail_df = detail_df[[c for c in cols_order if c in detail_df.columns]]
+            for dt_col in ("entry_date", "exit_date"):
+                if dt_col in detail_df.columns:
+                    detail_df[dt_col] = pd.to_datetime(detail_df[dt_col]).dt.strftime(
+                        "%Y-%m-%d"
+                    )
+            st.dataframe(detail_df, width='stretch', height=350)
+
+            # Download
+            csv = detail_df.to_csv(index=False)
+            st.download_button(
+                label="Download trades CSV",
+                data=csv,
+                file_name=f"harmonic_backtest_{selected_sym}.csv",
+                mime="text/csv",
+            )
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -1454,13 +1690,18 @@ def main() -> None:
 
     pairs = load_all_pairs()
 
-    tab_scanner, tab_backtest = st.tabs(["Scanner", "Backtest"])
+    tab_scanner, tab_backtest, tab_harmonic = st.tabs(
+        ["Scanner", "Backtest", "Harmonic Lab"]
+    )
 
     with tab_scanner:
         _render_scanner_tab(pairs)
 
     with tab_backtest:
         _render_backtest_tab(pairs)
+
+    with tab_harmonic:
+        _render_harmonic_lab_tab()
 
 
 if __name__ == "__main__" or True:

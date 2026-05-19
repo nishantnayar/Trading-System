@@ -856,7 +856,7 @@ def _render_baskets_tab() -> None:
                     ),
                     xaxis=dict(title=""),
                 )
-                st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+                st.plotly_chart(fig, width='stretch', config=PLOTLY_CONFIG)
 
     st.divider()
 
@@ -1218,7 +1218,7 @@ def _render_harmonic_tab() -> None:
                 cols[9].plotly_chart(
                     _render_xabcd_chart(t),
                     config={"displayModeBar": False},
-                    use_container_width=True,
+                    width='stretch',
                 )
             else:
                 cols[9].write("--")

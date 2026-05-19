@@ -70,6 +70,8 @@ class GartleyPattern:
     targets: List[float] = field(default_factory=list)
     # Set by caller before passing to HarmonicExecutor
     symbol: str = ""
+    # 0.0-1.0: how cleanly each Fibonacci ratio hit its ideal target
+    quality_score: float = 0.0
 
     @property
     def d_price(self) -> float:
@@ -91,6 +93,7 @@ class GartleyPattern:
             "stop_loss": self.stop_loss,
             "target_1": self.targets[0] if len(self.targets) > 0 else None,
             "target_2": self.targets[1] if len(self.targets) > 1 else None,
+            "quality_score": self.quality_score,
         }
 
 
@@ -196,6 +199,47 @@ def _direction_valid(
 
 
 # ---------------------------------------------------------------------------
+# Pattern quality scoring
+# ---------------------------------------------------------------------------
+def _score_pattern(
+    X: SwingPoint, A: SwingPoint, B: SwingPoint, C: SwingPoint, D: SwingPoint
+) -> float:
+    """
+    Return a quality score in [0.0, 1.0] measuring how cleanly each Fibonacci
+    ratio hit its ideal target.  1.0 = perfect ratios; lower = more deviation.
+
+    Scores each of the four ratio constraints linearly within the tolerance
+    window, then averages them.  Range constraints (BC/AB, CD/BC) use the
+    midpoint of the ideal range as the ideal target.
+    """
+    xa = A.price - X.price
+    ab = B.price - A.price
+    bc = C.price - B.price
+    ad = A.price - D.price
+
+    def _linear_score(value: float, ideal: float, tol: float) -> float:
+        deviation = abs(value - ideal)
+        return max(0.0, 1.0 - deviation / tol)
+
+    ab_xa = _ratio(ab, xa)
+    bc_ab = _ratio(bc, ab)
+    cd = D.price - C.price
+    cd_bc = _ratio(cd, bc)
+    ad_xa = _ratio(ad, xa)
+
+    bc_mid = (_BC_AB_MIN + _BC_AB_MAX) / 2
+    bc_tol = (_BC_AB_MAX - _BC_AB_MIN) / 2 + _FIB_TOL
+    cd_mid = (_CD_BC_MIN + _CD_BC_MAX) / 2
+    cd_tol = (_CD_BC_MAX - _CD_BC_MIN) / 2 + _FIB_TOL
+    s_ab = _linear_score(ab_xa, _AB_XA, _FIB_TOL)
+    s_bc = _linear_score(bc_ab, bc_mid, bc_tol)
+    s_cd = _linear_score(cd_bc, cd_mid, cd_tol)
+    s_xd = _linear_score(ad_xa, _XD_XA, _FIB_TOL)
+
+    return round((s_ab + s_bc + s_cd + s_xd) / 4, 4)
+
+
+# ---------------------------------------------------------------------------
 # Target and stop-loss calculation
 # ---------------------------------------------------------------------------
 def _compute_levels(
@@ -260,53 +304,85 @@ class GartleyDetector:
         """
         Return a list of GartleyPattern objects found in the price series,
         ordered most-recent D point first.
+
+        Searches non-consecutive combinations of swing highs and lows so that
+        the XABCD legs can span different lengths -- the standard approach for
+        harmonic pattern detection on real market data.
+
+        Bullish: X=low, A=high, B=low, C=high, D=low
+        Bearish: X=high, A=low, B=high, C=low, D=high
         """
         highs, lows = find_swing_points(self.prices, order=self.swing_order)
-        swings = _merge_and_sort(highs, lows)
 
-        if len(swings) < 5:
+        if len(highs) < 2 or len(lows) < 3:
             logger.debug(
-                "Not enough swing points ({}) to search for Gartley patterns",
-                len(swings),
+                "Not enough swing points (highs={}, lows={}) for Gartley search",
+                len(highs),
+                len(lows),
             )
             return []
 
         patterns: List[GartleyPattern] = []
+        seen: set = set()
 
-        # Slide a window of 5 consecutive swing points
-        for i in range(len(swings) - 4):
-            X, A, B, C, D = swings[i : i + 5]
-
-            direction = _direction_valid(X, A, B, C, D)
-            if direction is None:
-                continue
-
-            if not _validate_gartley(X, A, B, C, D):
-                continue
-
-            stop_loss, targets = _compute_levels(direction, X, A, D)
-
-            pattern = GartleyPattern(
-                direction=direction,
-                X=X,
-                A=A,
-                B=B,
-                C=C,
-                D=D,
-                stop_loss=stop_loss,
-                targets=targets,
-            )
-            patterns.append(pattern)
-            logger.info(
-                "Gartley {} found: D={:.4f} at {} | SL={:.4f} | T1={:.4f} | T2={:.4f}",
-                direction,
-                D.price,
-                D.timestamp,
-                stop_loss,
-                targets[0],
-                targets[1],
-            )
-
+        # Bullish: lows=[X,B,D] highs=[A,C]; Bearish: highs=[X,B,D] lows=[A,C]
+        for direction, outer, inner in (
+            ("bullish", lows, highs),
+            ("bearish", highs, lows),
+        ):
+            for xi, X in enumerate(outer):
+                for ai, A in enumerate(inner):
+                    if A.index <= X.index:
+                        continue
+                    for bi, B in enumerate(outer):
+                        if B.index <= A.index:
+                            continue
+                        for ci, C in enumerate(inner):
+                            if C.index <= B.index:
+                                continue
+                            for di, D in enumerate(outer):
+                                if D.index <= C.index:
+                                    continue
+                                if not _validate_gartley(X, A, B, C, D):
+                                    continue
+                                key = (X.index, A.index, B.index, C.index, D.index)
+                                if key in seen:
+                                    continue
+                                seen.add(key)
+                                stop_loss, targets = _compute_levels(direction, X, A, D)
+                                quality = _score_pattern(X, A, B, C, D)
+                                pattern = GartleyPattern(
+                                    direction=direction,
+                                    X=X,
+                                    A=A,
+                                    B=B,
+                                    C=C,
+                                    D=D,
+                                    stop_loss=stop_loss,
+                                    targets=targets,
+                                    quality_score=quality,
+                                )
+                                patterns.append(pattern)
+                                logger.info(
+                                    "Gartley {} found: D={:.4f} at {} | "
+                                    "SL={:.4f} | T1={:.4f} | T2={:.4f}",
+                                    direction,
+                                    D.price,
+                                    D.timestamp,
+                                    stop_loss,
+                                    targets[0],
+                                    targets[1],
+                                )
+                                if len(patterns) >= self.max_patterns:
+                                    break
+                            if len(patterns) >= self.max_patterns:
+                                break
+                        if len(patterns) >= self.max_patterns:
+                            break
+                    if len(patterns) >= self.max_patterns:
+                        break
+                if len(patterns) >= self.max_patterns:
+                    break
             if len(patterns) >= self.max_patterns:
                 break
 
