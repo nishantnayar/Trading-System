@@ -366,7 +366,7 @@ class YahooClient:
 
             # Fetch dividends
             if start_date and end_date:
-                divs = ticker.dividends.loc[str(start_date) : str(end_date)]  # type: ignore
+                divs = ticker.dividends.loc[str(start_date) : str(end_date)]
             else:
                 divs = ticker.dividends
 
@@ -415,7 +415,7 @@ class YahooClient:
 
             # Fetch splits
             if start_date and end_date:
-                splits = ticker.splits.loc[str(start_date) : str(end_date)]  # type: ignore
+                splits = ticker.splits.loc[str(start_date) : str(end_date)]
             else:
                 splits = ticker.splits
 
