@@ -155,6 +155,11 @@ class PairExecutor:
         """
         Close both legs of an open trade.
 
+        Alpaca is the source of truth for position state.  We fetch current
+        positions first so we never send a close order for a leg that is already
+        flat, and we only treat a close as a genuine failure when Alpaca confirms
+        the position exists but the close call still fails.
+
         Args:
             trade:          Open PairTrade to close
             exit_z:         Current z-score at exit
@@ -163,7 +168,7 @@ class PairExecutor:
             current_price2: Fill price for symbol2 (for P&L calc)
 
         Returns:
-            True if both legs closed successfully.
+            True if both legs are confirmed flat (closed or were already flat).
         """
         sym1 = self.pair.symbol1
         sym2 = self.pair.symbol2
@@ -173,33 +178,34 @@ class PairExecutor:
             f"reason={exit_reason} z={exit_z}"
         )
 
-        # Close each leg independently -- tolerate "no position" errors (already flat).
-        # A missing position on one leg must not block updating the DB on the other.
-        # Alpaca paper API uses HTTP 404 / error code 40410000 for "position does not exist".
+        # Ask Alpaca what it actually holds right now.
+        try:
+            positions = await self.alpaca.get_positions()
+            alpaca_syms = {p["symbol"] for p in positions}
+        except Exception as e:
+            logger.error(
+                f"close_pair_trade: could not fetch Alpaca positions for trade "
+                f"id={trade.id} ({sym1}/{sym2}): {e}"
+            )
+            return False
+
+        # For each leg: skip the close call if Alpaca has no position (already flat).
         close_ok = True
         for sym in [sym1, sym2]:
+            if sym not in alpaca_syms:
+                logger.warning(
+                    f"close_pair_trade: {sym} not in Alpaca positions -- already flat, skipping"
+                )
+                continue
             try:
                 await self.alpaca.close_position(sym)
             except Exception as e:
-                err = str(e).lower()
-                already_flat = (
-                    "position does not exist" in err
-                    or "no open position" in err
-                    or "no position" in err
-                    or "40410000" in err
-                    or "404" in err
+                logger.error(
+                    f"close_pair_trade: Alpaca confirmed position for {sym} exists "
+                    f"but close failed: {e}"
                 )
-                if already_flat:
-                    logger.warning(
-                        f"close_pair_trade: no open position for {sym} (already flat?) -- continuing"
-                    )
-                else:
-                    logger.error(f"Failed to close position for {sym}: {e}")
-                    close_ok = False
+                close_ok = False
 
-        # Only update the DB to CLOSED/STOPPED when Alpaca confirmed both legs.
-        # If close_ok is False, leave status as OPEN so the next cycle retries
-        # automatically rather than orphaning a live position in Alpaca.
         if close_ok:
             pnl, pnl_pct = _compute_pnl(trade, current_price1, current_price2)
             with db_transaction() as session:
@@ -217,7 +223,6 @@ class PairExecutor:
                     )
             logger.info(f"Trade id={trade.id} closed: pnl={pnl:.2f} ({pnl_pct:.2f}%)")
         else:
-            pnl, pnl_pct = None, None
             logger.warning(
                 f"close_pair_trade: Alpaca close failed for trade id={trade.id} "
                 f"({sym1}/{sym2}) -- DB left as OPEN, will retry next cycle"

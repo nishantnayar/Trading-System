@@ -428,6 +428,8 @@ async def deploy_pairs_flow() -> None:
     source_path = str(project_root)
     flow_file = "src/shared/prefect/flows/strategy_engine/pairs_flow.py"
 
+    from prefect.client.schemas.schedules import CronSchedule
+
     from src.shared.prefect.config import PrefectConfig
 
     deployment = await cast(
@@ -440,7 +442,7 @@ async def deploy_pairs_flow() -> None:
     await deployment.deploy(
         name="Intraday Pairs Trading",
         work_pool_name=PrefectConfig.get_work_pool_name(),
-        cron="0 14-21 * * 1-5",  # hourly 9 AM-5 PM ET (14-21 UTC), Mon-Fri
+        schedules=[CronSchedule(cron="0 14-21 * * 1-5")],
         parameters={"skip_market_check": False},
         tags=["strategy-engine", "pairs-trading", "scheduled"],
         description="Hourly intraday pairs trading strategy  -  evaluates z-scores and places paper orders via Alpaca",

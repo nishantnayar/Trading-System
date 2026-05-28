@@ -113,6 +113,12 @@ class PairsStrategy:
         # Load open trades for all pairs (used by circuit breaker P&L and
         # correlation guard's active-pair list).
         open_trades = self._load_all_open_trades(pairs)
+
+        # Reconcile: void any DB-open trades whose Alpaca positions never filled.
+        await self._reconcile_open_trades(open_trades, pairs)
+        # Reload after reconciliation in case any were voided.
+        open_trades = self._load_all_open_trades(pairs)
+
         active_open_pairs = [p for p in pairs if open_trades.get(p.id)]
 
         # Portfolio risk controls - run once per cycle
@@ -417,6 +423,52 @@ class PairsStrategy:
                     session.expunge(t)
                     result[t.pair_id] = t
             return result
+
+    async def _reconcile_open_trades(
+        self,
+        open_trades: Dict[int, PairTrade],
+        pairs: List[PairRegistry],
+    ) -> None:
+        """
+        Void DB-open trades whose legs are no longer in Alpaca.
+
+        Happens when a day-order entry expires unfilled: the DB records the trade
+        as OPEN but Alpaca has no position. Without reconciliation the next EXIT
+        signal tries to close a non-existent position and generates a warn email.
+        """
+        if not open_trades:
+            return
+        try:
+            positions = await self.alpaca.get_positions()
+        except Exception as e:
+            logger.warning(
+                "_reconcile_open_trades: could not fetch Alpaca positions: {}", e
+            )
+            return
+
+        alpaca_syms = {p["symbol"] for p in positions}
+        pair_lookup = {p.id: p for p in pairs}
+        now = datetime.now(timezone.utc)
+
+        for pair_id, trade in open_trades.items():
+            pair = pair_lookup.get(pair_id)
+            if not pair:
+                continue
+            sym1, sym2 = pair.symbol1, pair.symbol2
+            if sym1 not in alpaca_syms and sym2 not in alpaca_syms:
+                logger.warning(
+                    "Reconcile: trade id={} {}/{} is OPEN in DB but neither leg exists "
+                    "in Alpaca -- voiding as UNFILLED",
+                    trade.id,
+                    sym1,
+                    sym2,
+                )
+                with db_transaction() as session:
+                    db_trade = session.query(PairTrade).filter_by(id=trade.id).first()
+                    if db_trade and db_trade.status == "OPEN":
+                        db_trade.status = "CLOSED"
+                        db_trade.exit_time = now
+                        db_trade.exit_reason = "UNFILLED"
 
     def _get_open_trade(self, pair: PairRegistry) -> Optional[PairTrade]:
         with db_readonly_session() as session:
