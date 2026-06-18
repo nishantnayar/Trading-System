@@ -151,9 +151,11 @@ class PairExecutor:
         exit_reason: str = "EXIT",
         current_price1: Optional[float] = None,
         current_price2: Optional[float] = None,
-    ) -> bool:
+    ) -> tuple[bool, float, float]:
         """
         Close both legs of an open trade.
+
+        Returns (success, pnl, pnl_pct). pnl/pnl_pct are 0.0 when success is False.
 
         Alpaca is the source of truth for position state.  We fetch current
         positions first so we never send a close order for a leg that is already
@@ -187,7 +189,7 @@ class PairExecutor:
                 f"close_pair_trade: could not fetch Alpaca positions for trade "
                 f"id={trade.id} ({sym1}/{sym2}): {e}"
             )
-            return False
+            return False, 0.0, 0.0
 
         # For each leg: skip the close call if Alpaca has no position (already flat).
         close_ok = True
@@ -228,7 +230,9 @@ class PairExecutor:
                 f"({sym1}/{sym2}) -- DB left as OPEN, will retry next cycle"
             )
 
-        return close_ok
+        if close_ok:
+            return True, float(pnl or 0.0), float(pnl_pct or 0.0)
+        return False, 0.0, 0.0
 
     # ------------------------------------------------------------------
     # Emergency stop

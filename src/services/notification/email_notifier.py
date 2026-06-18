@@ -96,11 +96,12 @@ class EmailNotifier:
         pnl: float,
         pnl_pct: float,
         hold_hours: float,
+        strategy: str = "Pairs Trading",
     ) -> None:
         pnl_tag = "[+PNL]" if pnl >= 0 else "[-PNL]"
         subject = f"[{self._mode}] Trade Closed - {pair} {pnl_tag} ${pnl:+.2f}"
         body = self._trade_closed_html(
-            pair, exit_reason, z_score, pnl, pnl_pct, hold_hours
+            pair, exit_reason, z_score, pnl, pnl_pct, hold_hours, strategy
         )
         await self._send(subject, body)
 
@@ -110,9 +111,10 @@ class EmailNotifier:
         z_score: float,
         pnl: float,
         pnl_pct: float,
+        strategy: str = "Pairs Trading",
     ) -> None:
         subject = f"[{self._mode}] [WARN] STOP-LOSS - {pair} ${pnl:+.2f}"
-        body = self._stop_loss_html(pair, z_score, pnl, pnl_pct)
+        body = self._stop_loss_html(pair, z_score, pnl, pnl_pct, strategy)
         await self._send(subject, body)
 
     async def send_trade_failed(
@@ -234,10 +236,12 @@ class EmailNotifier:
         pnl: float,
         pnl_pct: float,
         hold_hours: float,
+        strategy: str = "Pairs Trading",
     ) -> str:
         pnl_color = "#1a6e3c" if pnl >= 0 else "#8b1a1a"
         rows = (
-            self._row("Pair", pair)
+            self._row("Strategy", strategy)
+            + self._row("Pair", pair)
             + self._row("Exit Reason", exit_reason)
             + self._row("Z-Score (exit)", f"{z_score:+.4f}")
             + self._row("Hold Time", f"{hold_hours:.1f} hours")
@@ -249,10 +253,16 @@ class EmailNotifier:
         )
 
     def _stop_loss_html(
-        self, pair: str, z_score: float, pnl: float, pnl_pct: float
+        self,
+        pair: str,
+        z_score: float,
+        pnl: float,
+        pnl_pct: float,
+        strategy: str = "Pairs Trading",
     ) -> str:
         rows = (
-            self._row("Pair", pair)
+            self._row("Strategy", strategy)
+            + self._row("Pair", pair)
             + self._row("Trigger", "STOP_LOSS", "#8b1a1a")
             + self._row("Z-Score (exit)", f"{z_score:+.4f}")
             + self._row("Realised P&L", f"${pnl:+.2f}  ({pnl_pct:+.2f}%)", "#8b1a1a")

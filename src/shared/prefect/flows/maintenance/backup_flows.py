@@ -37,7 +37,17 @@ async def backup_trading_db_flow() -> dict:
 
     Runs after weekend data ingestion jobs (company info, key statistics).
     """
-    from scripts.backup_trading_db import run_backup
+    import importlib.util
+
+    _script = (
+        Path(__file__).parent.parent.parent.parent.parent.parent
+        / "scripts"
+        / "backup_trading_db.py"
+    )
+    _spec = importlib.util.spec_from_file_location("backup_trading_db", _script)
+    _mod = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
+    _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+    run_backup = _mod.run_backup
 
     logger.info("Starting database backup (data_ingestion, analytics)")
     path = run_backup()

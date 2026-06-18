@@ -310,7 +310,7 @@ class PairsStrategy:
         elif signal.signal_type in ("EXIT", "STOP_LOSS", "EXPIRE"):
             open_trade = self._get_open_trade(pair)
             if open_trade:
-                success = await executor.close_pair_trade(
+                success, pnl, pnl_pct = await executor.close_pair_trade(
                     trade=open_trade,
                     exit_z=current_z,
                     exit_reason=signal.signal_type,
@@ -320,12 +320,10 @@ class PairsStrategy:
                 if success:
                     action = f"CLOSE ({signal.signal_type})"
                     hold_hours = 0.0
-                    if open_trade.entry_time and open_trade.exit_time:
+                    if open_trade.entry_time:
                         hold_hours = (
-                            open_trade.exit_time - open_trade.entry_time
+                            datetime.now(timezone.utc) - open_trade.entry_time
                         ).total_seconds() / 3600
-                    pnl = float(open_trade.pnl or 0)
-                    pnl_pct = float(open_trade.pnl_pct or 0)
                     if signal.signal_type == "STOP_LOSS":
                         await notifier.send_stop_loss(
                             pair=pair_label,

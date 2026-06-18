@@ -74,7 +74,17 @@ async def run_pair_discovery_task(
 
     # Import the discovery logic from the scripts module.
     # run_discovery handles all DB I/O, filtering, and upsert.
-    from scripts.discover_pairs import run_discovery
+    import importlib.util
+
+    _script = (
+        Path(__file__).parent.parent.parent.parent.parent.parent
+        / "scripts"
+        / "discover_pairs.py"
+    )
+    _spec = importlib.util.spec_from_file_location("discover_pairs", _script)
+    _mod = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
+    _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+    run_discovery = _mod.run_discovery
 
     logger.info(
         f"Starting pair discovery: days_back={days_back}, "
@@ -227,6 +237,7 @@ if __name__ == "__main__":
     if "--deploy" in _sys.argv:
         asyncio.run(deploy_pair_discovery_flow())
     else:
+
         async def _run() -> None:
             await weekly_pair_discovery_flow()
 

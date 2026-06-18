@@ -88,7 +88,10 @@ def _fmt_dt(s: str) -> str:
     return s[:16].replace("T", " ")
 
 
-# ── Allocation pie ────────────────────────────────────────────────────────────
+# ── Allocation bar chart ──────────────────────────────────────────────────────
+
+_COLOR_LONG = "#55A868"
+_COLOR_SHORT = "#C44E52"
 
 
 def render_allocation(positions: list) -> None:
@@ -102,41 +105,52 @@ def render_allocation(positions: list) -> None:
     labels = [p.get("symbol", "") for p in positions]
     values = [abs(float(p.get("market_value", 0))) for p in positions]
 
+    total = sum(values) or 1.0
+    pcts = [v / total * 100 for v in values]
+    sides = [p.get("side", "long") for p in positions]
+    colors = [_COLOR_LONG if s == "long" else _COLOR_SHORT for s in sides]
+
+    # Sort descending so largest bar is at top
+    order = sorted(range(len(labels)), key=lambda i: values[i], reverse=True)
+    labels = [labels[i] for i in order]
+    values = [values[i] for i in order]
+    pcts = [pcts[i] for i in order]
+    colors = [colors[i] for i in order]
+
+    custom = [f"${v:,.0f} ({p:.1f}%)" for v, p in zip(values, pcts)]
+
     fig = go.Figure(
         data=[
-            go.Pie(
-                labels=labels,
-                values=values,
-                hole=0.42,
-                textinfo="label+percent",
-                hovertemplate="<b>%{label}</b><br>$%{value:,.2f}<extra></extra>",
-                marker=dict(
-                    colors=[
-                        "#1a1a1a",
-                        "#6b6b6b",
-                        "#9e9e9e",
-                        "#c8c8c8",
-                        "#e0e0dc",
-                        "#2A7A4B",
-                        "#C0392B",
-                        "#D97706",
-                    ],
-                ),
+            go.Bar(
+                x=values,
+                y=labels,
+                orientation="h",
+                marker_color=colors,
+                text=custom,
+                textposition="outside",
+                cliponaxis=False,
+                hovertemplate="<b>%{y}</b><br>$%{x:,.2f}<extra></extra>",
             )
         ]
     )
     fig.update_layout(
-        margin=dict(t=10, b=10, l=10, r=10),
-        height=280,
+        margin=dict(t=8, b=8, l=60, r=120),
+        height=max(160, len(labels) * 44),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        showlegend=True,
-        legend=dict(
-            font=dict(family="DM Sans", size=11, color="#6b6b6b"),
-            bgcolor="rgba(0,0,0,0)",
+        showlegend=False,
+        xaxis=dict(
+            showticklabels=False,
+            showgrid=False,
+            zeroline=False,
+            range=[0, max(values) * 1.35],
+        ),
+        yaxis=dict(
+            autorange="reversed",
+            tickfont=dict(family="DM Sans", size=14, color="#111111"),
         ),
     )
-    st.plotly_chart(fig, config=PLOTLY_CONFIG)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
 
 # ── Positions table ───────────────────────────────────────────────────────────
@@ -369,11 +383,12 @@ def main() -> None:
 
     st.markdown("---")
 
-    # ── Positions + allocation side by side ──
-    pos_col, pie_col = st.columns([3, 1])
-    with pos_col:
-        render_positions(positions, api)
-    with pie_col:
+    # ── Positions table ──
+    render_positions(positions, api)
+
+    # ── Allocation chart (full width, below positions) ──
+    if positions:
+        st.markdown("---")
         st.markdown("<h2>Allocation</h2>", unsafe_allow_html=True)
         render_allocation(positions)
 
