@@ -50,7 +50,7 @@ The Trading System is built on a microservices architecture with six core servic
 - Detect Gartley XABCD harmonic patterns in price series
 - Execute paper trades via Alpaca API (orders only; price data from Yahoo Finance)
 - Manage pair registry, activation state, and backtest run history
-- Position sizing via Half-Kelly (bootstrap: 2% fixed for first 20 trades; hard cap 10% per leg)
+- Position sizing via Half-Kelly (bootstrap: 2% fixed for first 20 trades; hard cap 12% per leg)
 
 **Prefect Flows**:
 - `pairs_flow.py`: Hourly cycle — refresh prices, run signal generation, execute trades
@@ -62,7 +62,7 @@ The Trading System is built on a microservices architecture with six core servic
 - `src/services/strategy_engine/pairs/position_sizer.py` — `KellySizer`
 - `src/services/strategy_engine/harmonic/gartley_detector.py`
 
-**Status**: ✅ Live (v1.2.0) — EWBC/FNB and COLB/FNB active in paper trading
+**Status**: ✅ Live (v1.2.0) — CFG/KEY, NWS/NWSA, BK/STT active in paper trading (as of 2026-06-24)
 
 ### 3. Execution Service ✅
 **Purpose**: Execute trades and manage orders
@@ -93,7 +93,7 @@ The Trading System is built on a microservices architecture with six core servic
 
 **Components**:
 - Half-Kelly position sizing (live in strategy engine)
-- Per-pair allocation cap (`max_allocation_pct`, hard cap 10% per leg)
+- Per-pair allocation cap (`max_allocation_pct`, hard cap 12% per leg)
 - Circuit breaker: stop-loss at ±3.0 sigma, expiry at 3x half-life
 - Risk API endpoints (FastAPI) for position risk queries
 
@@ -194,7 +194,7 @@ Analytics Service ← Notification Service ← Redis ← PostgreSQL
 | Service | Status | Version | Key Features |
 |---------|--------|---------|--------------|
 | **Data Ingestion** | ✅ Implemented | v1.0.0 | Multi-source (Yahoo/Polygon), Prefect flows, `yahoo_adjusted_1h` for intraday |
-| **Strategy Engine** | ✅ Live | v1.2.0 | Pairs trading (EWBC/FNB, COLB/FNB), Gartley harmonic, backtest with slippage |
+| **Strategy Engine** | ✅ Live | v1.2.0 | Pairs trading (CFG/KEY, NWS/NWSA, BK/STT), Gartley harmonic, backtest with slippage |
 | **Execution** | ✅ Implemented | v1.0.0 | Alpaca order placement (paper), position tracking (price data from Yahoo Finance) |
 | **Risk Management** | ✅ Partial | v1.2.0 | Half-Kelly sizing, allocation caps, stop-loss/expiry circuit breakers |
 | **Analytics** | ✅ Implemented | v1.0.0 | Performance metrics, technical indicators, backtesting |

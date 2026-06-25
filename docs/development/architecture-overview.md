@@ -215,7 +215,7 @@ strategies:
 ## Future Enhancements
 
 ### Phase 1 ✅ Complete (v1.2.0)
-- Paper trading with pairs strategy (EWBC/FNB, COLB/FNB) and Gartley harmonic pattern
+- Paper trading with pairs strategy (CFG/KEY, NWS/NWSA, BK/STT) and Gartley harmonic pattern
 - Email notifications, Redis caching, 7-page Streamlit UI
 - Backtest engine with slippage/commission, Half-Kelly position sizing
 

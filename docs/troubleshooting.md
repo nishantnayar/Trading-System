@@ -884,7 +884,7 @@ python scripts/setup_databases.py
 - uses: actions/upload-artifact@v3
 
 # ✅ New (current)
-- uses: actions/upload-artifact@v4
+- uses: actions/upload-artifact@v5
 ```
 
 **Error**: `Permission denied (publickey)`

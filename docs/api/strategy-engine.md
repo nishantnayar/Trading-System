@@ -307,7 +307,7 @@ per_leg_capital = half_kelly × equity / 2
 shares = floor(per_leg_capital / current_price)
 ```
 
-Hard cap: 10% of portfolio per leg.
+Hard cap: 12% of portfolio per leg.
 
 ---
 

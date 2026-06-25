@@ -1,7 +1,7 @@
 # Strategy Management
 
 > **✅ Implementation Status**: Live in v1.2.0 — Pairs Trading and Gartley Harmonic Strategy active (paper trading)
-> **Active Pairs**: EWBC/FNB (Regional Banks) and COLB/FNB (Regional Banks)
+> **Active Pairs**: CFG/KEY, NWS/NWSA, BK/STT (as of 2026-06-24)
 
 This guide covers the implemented trading strategies: pairs trading discovery, backtesting, activation, live monitoring, and Gartley harmonic pattern detection.
 
@@ -120,7 +120,7 @@ Trades based on oversold/overbought conditions:
 
 Statistical arbitrage using cointegrated stock pairs. Pairs are discovered automatically from DB data via `scripts/discover_pairs.py` and stored in `strategy_engine.pair_registry`.
 
-**Active pairs**: EWBC/FNB and COLB/FNB (Regional Banks), `max_allocation_pct = 0.05` per leg
+**Active pairs**: CFG/KEY, NWS/NWSA, BK/STT -- no `max_allocation_pct` set (uncapped, bounded only by the hard cap below)
 
 | Parameter | Value |
 |---|---|
@@ -130,7 +130,7 @@ Statistical arbitrage using cointegrated stock pairs. Pairs are discovered autom
 | Exit threshold | ±0.5 σ |
 | Stop loss | ±3.0 σ |
 | Expiry | 3x half-life hours |
-| Max allocation | 5% per leg |
+| Max allocation | 12% per leg (hard cap; per-pair `max_allocation_pct` can set a lower cap) |
 
 **Rank Score Formula** (updated 2026-04-01):
 
@@ -149,11 +149,13 @@ rank_score = (1 - coint_pvalue) x |correlation| x z_score_abs_mean
 6. **EXIT** (|z| < 0.5): close both legs, take profit
 7. **STOP_LOSS** (|z| > 3.0) or **EXPIRE** (hold > 3x half-life): force close
 
-**Position sizing**: Half-Kelly criterion (bootstrap: 2% fixed for first 20 trades, hard cap 10% per leg)
+**Position sizing**: Half-Kelly criterion (bootstrap: 2% fixed for first 20 trades, hard cap 12% per leg)
 
-**Active Pairs Policy**:
-- EWBC/FNB and COLB/FNB are active; FNB/USB excluded despite passing backtest (FNB concentration risk)
-- Do not activate more than 2 FNB pairs simultaneously without reducing allocation caps
+**Active Pairs Policy** (as of 2026-06-24):
+- CFG/KEY, NWS/NWSA, BK/STT are active, uncapped per-pair allocation
+- KLAC/LRCX was tried and deactivated after failing both 180d and 90d backtests (worsening over time)
+- EWBC/FNB and COLB/FNB are deactivated; their old 5% per-pair caps still apply if reactivated
+- Do not activate more than 2 FNB-leg pairs simultaneously without reducing allocation caps (FNB concentration risk)
 
 **Troubleshooting INSUFFICIENT_DATA**:
 - Strategy reads from `yahoo_adjusted_1h` in the DB, not directly from Alpaca or Yahoo
