@@ -19,7 +19,7 @@ Half-Kelly formula:
 
 Hard limits (always enforced):
     - Minimum: 1 share per leg
-    - Maximum: 10% of portfolio per leg
+    - Maximum: 12% of portfolio per leg
 """
 
 import math
@@ -37,7 +37,7 @@ BOOTSTRAP_TRADES = 20
 BOOTSTRAP_FRACTION = 0.02   # 2% per leg
 
 # Hard cap per leg
-MAX_LEG_FRACTION = 0.10     # 10% per leg
+MAX_LEG_FRACTION = 0.12     # 12% per leg
 
 
 class KellySizer:
