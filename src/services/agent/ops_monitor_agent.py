@@ -31,12 +31,19 @@ _SYSTEM_PROMPT = (
     "2. Return a JSON object with two fields:\n"
     '   - "anomalies": a list of short strings (empty list if none)\n'
     '   - "summary": one short sentence (under 15 words) on overall cycle health\n\n'
-    "Anomalies to look for:\n"
-    "- Pairs with z_score near zero (|z| < 0.1) -- spread may have collapsed\n"
-    "- Symbols with very few bars (bar_count < 20) -- data ingestion failing\n"
-    "- Stale bar timestamps (last_bar_hours_ago > 3 during market hours)\n"
-    "- Cycle errors (error count > 0)\n"
-    "- No active pairs evaluated\n\n"
+    "A pair simply appearing in the snapshot is NOT an anomaly. NO_SIGNAL and OK\n"
+    "are normal, expected statuses -- most cycles produce no trading signal.\n"
+    "Only flag a SPECIFIC pair or symbol if ITS OWN data shows one of:\n"
+    "- z_score near zero (|z| < 0.1) -- spread may have collapsed\n"
+    "- bar_count < 20 for that symbol -- data ingestion failing\n"
+    "- last_bar_hours_ago > 3 during market hours -- stale data\n"
+    "- that pair's status is ERROR\n"
+    "Also flag cycle-level issues only when actually present:\n"
+    "- cycle_summary.errors > 0\n"
+    "- cycle_summary.total_pairs == 0 (no active pairs evaluated)\n\n"
+    "Each anomaly string must name the specific pair/symbol and the specific\n"
+    "condition observed. Do not list a pair as an anomaly without a reason\n"
+    "drawn directly from its data fields.\n"
     "Respond with valid JSON only. No explanation outside the JSON object."
 )
 
@@ -92,8 +99,12 @@ def _build_context(cycle_summary: dict) -> dict:
         for b in bars_state
     ]
 
+    cycle_summary_compact = {
+        k: v for k, v in cycle_summary.items() if k not in ("details", "basket_summary")
+    }
+
     return {
-        "cycle_summary": cycle_summary,
+        "cycle_summary": cycle_summary_compact,
         "pairs_cycle_state": pairs_compact,
         "bars_state": bars_compact,
     }
