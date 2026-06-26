@@ -104,6 +104,7 @@ class Settings(BaseSettings):
     )
     ollama_model: str = Field(default="llama3.2:3b", alias="OLLAMA_MODEL")
     agent_enabled: bool = Field(default=True, alias="AGENT_ENABLED")
+    agent_timeout_seconds: int = Field(default=30, alias="AGENT_TIMEOUT_SECONDS")
 
     # Prefect Configuration (Essential)
     prefect_api_url: str = Field(

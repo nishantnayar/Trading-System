@@ -7,6 +7,7 @@ need to guard against connection errors.
 
 import json
 import logging
+import time
 from typing import Any, Optional
 
 import redis
@@ -18,20 +19,29 @@ logger = logging.getLogger(__name__)
 # TTL for all debug keys - 48 hours
 _TTL_SECONDS = 48 * 3600
 
+# How long to wait before retrying a connection after a failure
+_RETRY_COOLDOWN_SECONDS = 60
+
 _client: Optional[Any] = None
+_last_failure_time: float = 0.0
 
 
 def get_redis() -> Optional[Any]:
     """
     Return a shared Redis connection, or None if Redis is unreachable.
 
-    The connection is created once and reused.  If Redis is down the first
-    time this is called, every subsequent call returns None so callers
-    can skip Redis writes gracefully.
+    The connection is created once and reused.  If Redis is down, the
+    failure is cached for _RETRY_COOLDOWN_SECONDS so callers don't pay
+    the connection timeout cost on every call - only retry after the
+    cooldown elapses.
     """
-    global _client
+    global _client, _last_failure_time
     if _client is not None:
         return _client
+
+    now = time.monotonic()
+    if now - _last_failure_time < _RETRY_COOLDOWN_SECONDS:
+        return None
 
     settings = get_settings()
     try:
@@ -50,6 +60,7 @@ def get_redis() -> Optional[Any]:
         )
     except Exception as exc:
         logger.warning("Redis unavailable - debug caching disabled: %s", exc)
+        _last_failure_time = now
         return None
 
     return _client

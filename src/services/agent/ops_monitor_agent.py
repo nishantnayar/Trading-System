@@ -8,6 +8,7 @@ anomalies. Sends an email alert if anything warrants attention.
 Never raises -- all errors are caught so the agent never blocks the flow.
 """
 
+import asyncio
 import json
 from typing import Optional
 
@@ -18,9 +19,9 @@ from src.config.settings import get_settings
 from src.shared.redis.client import get_redis
 
 # Anomaly thresholds
-_MAX_ZERO_ZSCORE_PAIRS = 1   # alert if this many pairs have |z| < 0.1
-_MAX_STALE_BAR_HOURS = 3     # alert if last bar is older than this many hours
-_LOW_BAR_COUNT = 20          # alert if a symbol has fewer bars than this
+_MAX_ZERO_ZSCORE_PAIRS = 1  # alert if this many pairs have |z| < 0.1
+_MAX_STALE_BAR_HOURS = 3  # alert if last bar is older than this many hours
+_LOW_BAR_COUNT = 20  # alert if a symbol has fewer bars than this
 
 
 _SYSTEM_PROMPT = (
@@ -148,7 +149,17 @@ async def run(cycle_summary: dict) -> Optional[dict]:
 
     try:
         context = _build_context(cycle_summary)
-        result = _call_ollama(context)
+        try:
+            result = await asyncio.wait_for(
+                asyncio.to_thread(_call_ollama, context),
+                timeout=settings.agent_timeout_seconds,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "ops_monitor: Ollama call exceeded %ds timeout, skipping",
+                settings.agent_timeout_seconds,
+            )
+            return None
 
         if result is None:
             return None
@@ -156,9 +167,7 @@ async def run(cycle_summary: dict) -> Optional[dict]:
         anomalies: list = result.get("anomalies", [])
         summary: str = result.get("summary", "")
 
-        logger.info(
-            "ops_monitor: %d anomaly(s) detected. %s", len(anomalies), summary
-        )
+        logger.info("ops_monitor: %d anomaly(s) detected. %s", len(anomalies), summary)
 
         if anomalies:
             from src.services.notification.email_notifier import get_notifier
