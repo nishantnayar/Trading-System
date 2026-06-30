@@ -131,10 +131,15 @@ class BasketStrategy:
         # 3. Persist spread snapshot
         self._store_spread(basket, spread_series, z_series, prices, weights)
 
-        # 4. Generate signal (reuse SignalGenerator with a fake PairRegistry shim)
+        # 4. Generate signal (reuse SignalGenerator with a fake PairRegistry shim).
+        # persist=False: basket signals must never write to pair_signal -- its FK
+        # is to pair_registry, and basket ids are not pair ids, so persisting here
+        # can violate that FK. open_trade is fetched from BasketTrade directly
+        # since SignalGenerator's own lookup only knows about PairTrade.
         fake_pair = _make_fake_pair(basket)
         sig_gen = SignalGenerator(fake_pair)
-        signal = sig_gen.generate(current_z, persist=True)
+        open_trade = self._get_open_trade(basket)
+        signal = sig_gen.generate(current_z, open_trade=open_trade, persist=False)
 
         if signal is None:
             return {
@@ -190,7 +195,6 @@ class BasketStrategy:
                     action = "OPEN_FAILED"
 
         elif signal.signal_type in ("EXIT", "STOP_LOSS", "EXPIRE"):
-            open_trade = self._get_open_trade(basket)
             if open_trade:
                 closed = await self._close_basket_trade(
                     basket, open_trade, current_z, signal.signal_type, current_prices

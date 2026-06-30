@@ -55,6 +55,7 @@ class SignalGenerator:
         current_z: float,
         current_time: Optional[datetime] = None,
         persist: bool = True,
+        open_trade: Optional[Any] = None,
     ) -> Optional[PairSignal]:
         """
         Evaluate z-score and produce a signal if thresholds are crossed.
@@ -63,6 +64,13 @@ class SignalGenerator:
             current_z:    Latest z-score value
             current_time: Timestamp for the signal (default: now UTC)
             persist:      Write signal to DB (set False for backtesting)
+            open_trade:   Pre-fetched open trade to evaluate against (only
+                          entry_time is read). When None, looked up from
+                          PairTrade via self.pair.id. Callers with their own
+                          trade table (e.g. baskets/BasketTrade) should pass
+                          it explicitly instead of relying on the PairTrade
+                          lookup, since self.pair.id may not be a real
+                          pair_registry id.
 
         Returns:
             PairSignal instance if a signal was generated, else None.
@@ -71,7 +79,8 @@ class SignalGenerator:
         if current_time is None:
             current_time = datetime.now(timezone.utc)
 
-        open_trade = self._get_open_trade()
+        if open_trade is None:
+            open_trade = self._get_open_trade()
 
         signal_type, reason = self._evaluate(current_z, open_trade, current_time)
 
