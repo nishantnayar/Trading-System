@@ -46,11 +46,11 @@ mkdocs-material>=9.0.0
 pymdown-extensions>=10.0
 
 # Streamlit UI
-streamlit>=1.52.0
+streamlit>=1.58.0
 plotly>=5.17.0
 streamlit-plotly-events>=0.0.6
 streamlit-option-menu>=0.3.6
-streamlit-aggrid>=0.3.4
+streamlit-aggrid>=1.2.1
 streamlit-lightweight-charts>=0.1.0
 
 # Local LLM Integration
