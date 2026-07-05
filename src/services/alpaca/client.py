@@ -5,15 +5,18 @@ Alpaca Trading API Client
 import logging
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import pandas as pd
 from alpaca.common.exceptions import APIError
 from alpaca.data.enums import Adjustment
 from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.models import BarSet
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.client import TradingClient
+from alpaca.trading.enums import QueryOrderStatus
+from alpaca.trading.models import Clock, Order, Position, TradeAccount
 from alpaca.trading.requests import (
     GetOrdersRequest,
     LimitOrderRequest,
@@ -75,17 +78,17 @@ class AlpacaClient:
     async def get_account(self) -> Dict[str, Any]:
         """Get account information"""
         try:
-            account = self.client.get_account()
+            account = cast(TradeAccount, self.client.get_account())
             return {
                 "id": str(account.id),
                 "account_number": account.account_number,
                 "status": account.status,
                 "currency": account.currency,
-                "buying_power": float(account.buying_power),
-                "cash": float(account.cash),
-                "portfolio_value": float(account.portfolio_value),
-                "equity": float(account.equity),
-                "last_equity": float(account.last_equity),
+                "buying_power": float(account.buying_power or 0),
+                "cash": float(account.cash or 0),
+                "portfolio_value": float(account.portfolio_value or 0),
+                "equity": float(account.equity or 0),
+                "last_equity": float(account.last_equity or 0),
                 "created_at": (
                     account.created_at.isoformat() if account.created_at else None
                 ),
@@ -93,11 +96,11 @@ class AlpacaClient:
                 "transfers_blocked": account.transfers_blocked,
                 "account_blocked": account.account_blocked,
                 "shorting_enabled": account.shorting_enabled,
-                "multiplier": float(account.multiplier),
-                "long_market_value": float(account.long_market_value),
-                "short_market_value": float(account.short_market_value),
-                "initial_margin": float(account.initial_margin),
-                "maintenance_margin": float(account.maintenance_margin),
+                "multiplier": float(account.multiplier or 0),
+                "long_market_value": float(account.long_market_value or 0),
+                "short_market_value": float(account.short_market_value or 0),
+                "initial_margin": float(account.initial_margin or 0),
+                "maintenance_margin": float(account.maintenance_margin or 0),
                 "daytrade_count": account.daytrade_count,
                 "pattern_day_trader": account.pattern_day_trader,
             }
@@ -110,29 +113,34 @@ class AlpacaClient:
         """Get all positions"""
         try:
             positions = self.client.get_all_positions()
-            return [
-                {
-                    "asset_id": str(position.asset_id),
-                    "symbol": position.symbol,
-                    "exchange": position.exchange,
-                    "asset_class": position.asset_class,
-                    "qty": float(position.qty),
-                    "side": position.side,
-                    "market_value": float(position.market_value),
-                    "cost_basis": float(position.cost_basis),
-                    "unrealized_pl": float(position.unrealized_pl),
-                    "unrealized_plpc": float(position.unrealized_plpc),
-                    "unrealized_intraday_pl": float(position.unrealized_intraday_pl),
-                    "unrealized_intraday_plpc": float(
-                        position.unrealized_intraday_plpc
-                    ),
-                    "current_price": float(position.current_price),
-                    "lastday_price": float(position.lastday_price),
-                    "change_today": float(position.change_today),
-                    "avg_entry_price": float(position.avg_entry_price),
-                }
-                for position in positions
-            ]
+            result = []
+            for raw_position in positions:
+                position = cast(Position, raw_position)
+                result.append(
+                    {
+                        "asset_id": str(position.asset_id),
+                        "symbol": position.symbol,
+                        "exchange": position.exchange,
+                        "asset_class": position.asset_class,
+                        "qty": float(position.qty or 0),
+                        "side": position.side,
+                        "market_value": float(position.market_value or 0),
+                        "cost_basis": float(position.cost_basis or 0),
+                        "unrealized_pl": float(position.unrealized_pl or 0),
+                        "unrealized_plpc": float(position.unrealized_plpc or 0),
+                        "unrealized_intraday_pl": float(
+                            position.unrealized_intraday_pl or 0
+                        ),
+                        "unrealized_intraday_plpc": float(
+                            position.unrealized_intraday_plpc or 0
+                        ),
+                        "current_price": float(position.current_price or 0),
+                        "lastday_price": float(position.lastday_price or 0),
+                        "change_today": float(position.change_today or 0),
+                        "avg_entry_price": float(position.avg_entry_price or 0),
+                    }
+                )
+            return result
         except APIError as e:
             raise AlpacaAPIError(f"Failed to get positions: {str(e)}")
         except Exception as e:
@@ -143,73 +151,82 @@ class AlpacaClient:
     ) -> List[Dict[str, Any]]:
         """Get orders"""
         try:
-            request = GetOrdersRequest(status=status, limit=limit)
+            request = GetOrdersRequest(status=QueryOrderStatus(status), limit=limit)
             orders = self.client.get_orders(filter=request)
-            return [
-                {
-                    "id": str(order.id),
-                    "client_order_id": order.client_order_id,
-                    "created_at": (
-                        order.created_at.isoformat() if order.created_at else None
-                    ),
-                    "updated_at": (
-                        order.updated_at.isoformat() if order.updated_at else None
-                    ),
-                    "submitted_at": (
-                        order.submitted_at.isoformat() if order.submitted_at else None
-                    ),
-                    "filled_at": (
-                        order.filled_at.isoformat() if order.filled_at else None
-                    ),
-                    "expired_at": (
-                        order.expired_at.isoformat() if order.expired_at else None
-                    ),
-                    "canceled_at": (
-                        order.canceled_at.isoformat() if order.canceled_at else None
-                    ),
-                    "failed_at": (
-                        order.failed_at.isoformat() if order.failed_at else None
-                    ),
-                    "replaced_at": (
-                        order.replaced_at.isoformat() if order.replaced_at else None
-                    ),
-                    "replaced_by": (
-                        str(order.replaced_by) if order.replaced_by else None
-                    ),
-                    "replaces": str(order.replaces) if order.replaces else None,
-                    "asset_id": str(order.asset_id),
-                    "symbol": order.symbol,
-                    "asset_class": order.asset_class,
-                    "notional": float(order.notional) if order.notional else None,
-                    "qty": float(order.qty) if order.qty else None,
-                    "filled_qty": float(order.filled_qty) if order.filled_qty else None,
-                    "filled_avg_price": (
-                        float(order.filled_avg_price)
-                        if order.filled_avg_price
-                        else None
-                    ),
-                    "order_class": order.order_class,
-                    "order_type": order.order_type,
-                    "type": order.type,
-                    "side": order.side,
-                    "time_in_force": order.time_in_force,
-                    "limit_price": (
-                        float(order.limit_price) if order.limit_price else None
-                    ),
-                    "stop_price": float(order.stop_price) if order.stop_price else None,
-                    "status": order.status,
-                    "extended_hours": order.extended_hours,
-                    "legs": order.legs,
-                    "trail_percent": (
-                        float(order.trail_percent) if order.trail_percent else None
-                    ),
-                    "trail_price": (
-                        float(order.trail_price) if order.trail_price else None
-                    ),
-                    "hwm": float(order.hwm) if order.hwm else None,
-                }
-                for order in orders
-            ]
+            result = []
+            for raw_order in orders:
+                order = cast(Order, raw_order)
+                result.append(
+                    {
+                        "id": str(order.id),
+                        "client_order_id": order.client_order_id,
+                        "created_at": (
+                            order.created_at.isoformat() if order.created_at else None
+                        ),
+                        "updated_at": (
+                            order.updated_at.isoformat() if order.updated_at else None
+                        ),
+                        "submitted_at": (
+                            order.submitted_at.isoformat()
+                            if order.submitted_at
+                            else None
+                        ),
+                        "filled_at": (
+                            order.filled_at.isoformat() if order.filled_at else None
+                        ),
+                        "expired_at": (
+                            order.expired_at.isoformat() if order.expired_at else None
+                        ),
+                        "canceled_at": (
+                            order.canceled_at.isoformat() if order.canceled_at else None
+                        ),
+                        "failed_at": (
+                            order.failed_at.isoformat() if order.failed_at else None
+                        ),
+                        "replaced_at": (
+                            order.replaced_at.isoformat() if order.replaced_at else None
+                        ),
+                        "replaced_by": (
+                            str(order.replaced_by) if order.replaced_by else None
+                        ),
+                        "replaces": str(order.replaces) if order.replaces else None,
+                        "asset_id": str(order.asset_id),
+                        "symbol": order.symbol,
+                        "asset_class": order.asset_class,
+                        "notional": float(order.notional) if order.notional else None,
+                        "qty": float(order.qty) if order.qty else None,
+                        "filled_qty": (
+                            float(order.filled_qty) if order.filled_qty else None
+                        ),
+                        "filled_avg_price": (
+                            float(order.filled_avg_price)
+                            if order.filled_avg_price
+                            else None
+                        ),
+                        "order_class": order.order_class,
+                        "order_type": order.order_type,
+                        "type": order.type,
+                        "side": order.side,
+                        "time_in_force": order.time_in_force,
+                        "limit_price": (
+                            float(order.limit_price) if order.limit_price else None
+                        ),
+                        "stop_price": (
+                            float(order.stop_price) if order.stop_price else None
+                        ),
+                        "status": order.status,
+                        "extended_hours": order.extended_hours,
+                        "legs": order.legs,
+                        "trail_percent": (
+                            float(order.trail_percent) if order.trail_percent else None
+                        ),
+                        "trail_price": (
+                            float(order.trail_price) if order.trail_price else None
+                        ),
+                        "hwm": float(order.hwm) if order.hwm else None,
+                    }
+                )
+            return result
         except APIError as e:
             raise AlpacaAPIError(f"Failed to get orders: {str(e)}")
         except Exception as e:
@@ -218,7 +235,7 @@ class AlpacaClient:
     async def get_clock(self) -> Dict[str, Any]:
         """Get market clock"""
         try:
-            clock = self.client.get_clock()
+            clock = cast(Clock, self.client.get_clock())
             return {
                 "timestamp": clock.timestamp.isoformat() if clock.timestamp else None,
                 "is_open": clock.is_open,
@@ -235,7 +252,7 @@ class AlpacaClient:
     async def close_position(self, symbol: str) -> Dict[str, Any]:
         """Close a position"""
         try:
-            result = self.client.close_position(symbol)
+            result = cast(Order, self.client.close_position(symbol))
             return {
                 "id": str(result.id),
                 "client_order_id": result.client_order_id,
@@ -291,12 +308,12 @@ class AlpacaClient:
                 limit=limit,
                 adjustment=Adjustment(adjustment),
             )
-            bars = self.data_client.get_stock_bars(request)
+            bars = cast(BarSet, self.data_client.get_stock_bars(request))
             if bars is None or len(bars.df) == 0:
                 return pd.Series(dtype=float, name=symbol)
-            df = bars.df
+            df: pd.DataFrame = bars.df
             if isinstance(df.index, pd.MultiIndex):
-                df = df.xs(symbol, level="symbol")
+                df = cast(pd.DataFrame, df.xs(symbol, level="symbol"))
             df.index = pd.to_datetime(df.index, utc=True)
             return pd.Series(df["close"].rename(symbol), dtype=float)
         except APIError as e:
@@ -339,7 +356,7 @@ class AlpacaClient:
                     side=side,
                     time_in_force=time_in_force,
                 )
-            order = self.client.submit_order(order_data=order_request)
+            order = cast(Order, self.client.submit_order(order_data=order_request))
             return {
                 "id": str(order.id),
                 "client_order_id": order.client_order_id,

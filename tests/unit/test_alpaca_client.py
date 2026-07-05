@@ -33,8 +33,9 @@ class TestAlpacaClientInitialization:
 
     def test_client_initialization_success_paper_trading(self, mock_env_vars):
         """Test successful client initialization for paper trading"""
-        with patch("src.services.alpaca.client.TradingClient") as mock_trading, patch(
-            "src.services.alpaca.client.StockHistoricalDataClient"
+        with (
+            patch("src.services.alpaca.client.TradingClient") as mock_trading,
+            patch("src.services.alpaca.client.StockHistoricalDataClient"),
         ):
             mock_client = Mock()
             mock_trading.return_value = mock_client
@@ -53,8 +54,9 @@ class TestAlpacaClientInitialization:
 
     def test_client_initialization_success_live_trading(self, mock_env_vars):
         """Test successful client initialization for live trading"""
-        with patch("src.services.alpaca.client.TradingClient") as mock_trading, patch(
-            "src.services.alpaca.client.StockHistoricalDataClient"
+        with (
+            patch("src.services.alpaca.client.TradingClient") as mock_trading,
+            patch("src.services.alpaca.client.StockHistoricalDataClient"),
         ):
             mock_client = Mock()
             mock_trading.return_value = mock_client
@@ -66,8 +68,9 @@ class TestAlpacaClientInitialization:
 
     def test_client_initialization_with_custom_credentials(self):
         """Test client initialization with custom credentials"""
-        with patch("src.services.alpaca.client.TradingClient") as mock_trading, patch(
-            "src.services.alpaca.client.StockHistoricalDataClient"
+        with (
+            patch("src.services.alpaca.client.TradingClient") as mock_trading,
+            patch("src.services.alpaca.client.StockHistoricalDataClient"),
         ):
             mock_client = Mock()
             mock_trading.return_value = mock_client
@@ -119,8 +122,9 @@ class TestAlpacaClientAccountMethods:
                 "ALPACA_SECRET_KEY": "test_secret_key",
             },
         ):
-            with patch("src.services.alpaca.client.TradingClient"), patch(
-                "src.services.alpaca.client.StockHistoricalDataClient"
+            with (
+                patch("src.services.alpaca.client.TradingClient"),
+                patch("src.services.alpaca.client.StockHistoricalDataClient"),
             ):
                 return AlpacaClient()
 
@@ -201,8 +205,9 @@ class TestAlpacaClientPositionMethods:
                 "ALPACA_SECRET_KEY": "test_secret_key",
             },
         ):
-            with patch("src.services.alpaca.client.TradingClient"), patch(
-                "src.services.alpaca.client.StockHistoricalDataClient"
+            with (
+                patch("src.services.alpaca.client.TradingClient"),
+                patch("src.services.alpaca.client.StockHistoricalDataClient"),
             ):
                 return AlpacaClient()
 
@@ -307,8 +312,9 @@ class TestAlpacaClientOrderMethods:
                 "ALPACA_SECRET_KEY": "test_secret_key",
             },
         ):
-            with patch("src.services.alpaca.client.TradingClient"), patch(
-                "src.services.alpaca.client.StockHistoricalDataClient"
+            with (
+                patch("src.services.alpaca.client.TradingClient"),
+                patch("src.services.alpaca.client.StockHistoricalDataClient"),
             ):
                 return AlpacaClient()
 
@@ -443,9 +449,7 @@ class TestAlpacaClientOrderMethods:
     async def test_place_order_api_error(self, alpaca_client):
         """Test order placement with API error"""
         with patch.object(alpaca_client, "client") as mock_client:
-            mock_client.submit_order.side_effect = APIError(
-                "Insufficient buying power"
-            )
+            mock_client.submit_order.side_effect = APIError("Insufficient buying power")
 
             with pytest.raises(AlpacaAPIError) as exc_info:
                 await alpaca_client.place_order(
@@ -488,8 +492,9 @@ class TestAlpacaClientMarketMethods:
                 "ALPACA_SECRET_KEY": "test_secret_key",
             },
         ):
-            with patch("src.services.alpaca.client.TradingClient"), patch(
-                "src.services.alpaca.client.StockHistoricalDataClient"
+            with (
+                patch("src.services.alpaca.client.TradingClient"),
+                patch("src.services.alpaca.client.StockHistoricalDataClient"),
             ):
                 return AlpacaClient()
 
