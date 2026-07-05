@@ -160,6 +160,74 @@ prefect deployment resume "Daily Market Data Update/Daily Market Data Update"
 | Cannot connect to Prefect API | Ensure server is running; set `PREFECT_API_URL=http://localhost:4200/api` |
 | No worker available | `prefect worker start --pool data-ingestion-pool` |
 | Deployments exist but flows don’t run | Check deployment not paused, schedule correct, worker running; check UI for errors |
+| `alembic.util.exc.CommandError: Can't locate revision identified by '<hash>'` on server startup | See [Alembic revision mismatch after a Prefect upgrade/downgrade](#alembic-revision-mismatch-after-a-prefect-upgradedowngrade) below |
+| `ERROR: Cannot install ... websockets ... conflicting dependencies` during `pip install -r requirements.txt` | See [websockets version conflict](#websockets-version-conflict-prefect-vs-alpaca) below |
+
+### Alembic revision mismatch after a Prefect upgrade/downgrade
+
+**Symptom**: `prefect server start` fails during startup with a traceback ending in
+`alembic.util.exc.CommandError: Can't locate revision identified by '<hash>'`. This can
+happen either as an upgrade (current DB revision unknown to the installed package) or
+mid-way through a downgrade.
+
+**Root cause**: The Prefect Postgres database's `alembic_version` table is stamped with a
+migration revision that the currently installed `prefect` package doesn't recognize -- most
+often because a *different* Prefect version was installed against this same database at some
+point (e.g. `pip` silently resolved a different `prefect` version to satisfy another
+package's dependency, such as `streamlit` or `alpaca-py`/`alpaca-trade-api` pulling in a
+different `websockets` range). Each Prefect minor version ships its own alembic migration
+chain; a revision stamped by 3.4.14 will not exist in 3.2.7's chain and vice versa.
+
+**Diagnosis**:
+1. Confirm which database Prefect is actually using -- do not assume the profile file is
+   authoritative; check the resolved setting directly:
+   ```python
+   from prefect.settings import PREFECT_API_DATABASE_CONNECTION_URL
+   print(PREFECT_API_DATABASE_CONNECTION_URL.value())
+   ```
+   (An env var can silently override `~/.prefect/profiles.toml`.)
+2. Connect to that exact database/host/user and check the stamped revision:
+   ```sql
+   SELECT * FROM alembic_version;
+   ```
+3. Check the installed Prefect version: `pip show prefect`.
+
+**Fix**:
+- If the DB's tables are otherwise fine and only `alembic_version` is stale (e.g. after a
+  Prefect version was reinstalled to the *correct* version): `DELETE FROM alembic_version;`
+  then start the server again -- Prefect will re-run migrations against the existing tables
+  and re-stamp correctly.
+- If that fails with `DuplicateTableError` (tables already exist from a different schema
+  version), the safest fix is to fully reset: drop and recreate the database, then start the
+  server so it builds the schema from scratch. This loses local flow-run/deployment history
+  but does not touch your trading-system Postgres databases (they are separate).
+- `prefect server database reset -y` does **not** help here -- it also goes through alembic
+  (downgrade to base first), so it fails with the exact same `ResolutionError` if the current
+  stamp is unresolvable.
+
+**Prevention**: Pin `prefect>=3.4.14` (or whatever version your Prefect DB is currently
+stamped for) in `requirements.txt` with an explicit lower bound, not just `prefect>=2.14.0`.
+Without a floor, `pip`'s resolver can silently downgrade Prefect to satisfy an unrelated
+conflict (see below), which reintroduces this exact failure the next time the server starts.
+
+### websockets version conflict (Prefect vs Alpaca)
+
+**Symptom**: `pip install -r requirements.txt` fails with
+`ResolutionImpossible: ... websockets ... conflicting dependencies` naming
+`alpaca-trade-api` and `prefect` (or `streamlit`).
+
+**Root cause**: `alpaca-trade-api==3.2.0` (latest release, package is unmaintained) hard-pins
+`websockets<11`. `prefect>=3.4.14` requires `websockets>=15.0.1`. `streamlit>=1.57.0` also
+requires `websockets>=12.0.0` unconditionally (earlier 1.5x releases only needed it for an
+optional `starlette` extra). There is no single `websockets` version that satisfies
+`alpaca-trade-api` and a modern `prefect`/`streamlit` simultaneously.
+
+**Fix**: The project uses `alpaca-py` instead of `alpaca-trade-api` specifically to avoid
+this (see [Alpaca Integration](../api/data-ingestion-alpaca.md#sdk-alpaca-py-not-alpaca-trade-api)
+for the full migration notes). If `alpaca-trade-api` ever gets reintroduced as a dependency,
+this conflict will return -- resolve it by migrating that usage to `alpaca-py` again rather
+than downgrading `prefect`/`streamlit`, since downgrading Prefect against an
+already-migrated database re-triggers the alembic revision mismatch above.
 
 ## Updating Deployments
 

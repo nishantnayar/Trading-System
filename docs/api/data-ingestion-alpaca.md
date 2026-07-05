@@ -51,6 +51,50 @@ The Alpaca client is located in `src/services/alpaca/client.py` and provides:
 - Order placement and tracking
 - Trade execution monitoring
 
+### SDK: alpaca-py (not alpaca-trade-api)
+
+**As of 2026-07-05, the client uses `alpaca-py`** (`TradingClient`, `StockHistoricalDataClient`),
+not the legacy `alpaca-trade-api` package (`REST`). Do not reintroduce `alpaca-trade-api` --
+this was a deliberate migration, not an accident.
+
+**Why**: `alpaca-trade-api==3.2.0` (latest, unmaintained) hard-pins `websockets<11`.
+`prefect>=3.4.14` requires `websockets>=15.0.1`. There is no `websockets` version that
+satisfies both, so any fresh `pip install -r requirements.txt` fails with
+`ResolutionImpossible`. `alpaca-py` has no such upper bound, so it coexists with modern
+Prefect/Streamlit releases.
+
+**What changed**:
+- `requirements.txt`: `alpaca-trade-api>=3.2.0` -> `alpaca-py>=0.43.0`
+- `src/services/alpaca/client.py`: `alpaca_trade_api.REST` -> `alpaca.trading.client.TradingClient`
+  (+ `alpaca.data.historical.StockHistoricalDataClient` for `get_bars`)
+- Method name changes: `list_positions` -> `get_all_positions`, `list_orders` -> `get_orders`
+  (now takes a `GetOrdersRequest` filter with `QueryOrderStatus` enum, not a raw string),
+  `cancel_order` -> `cancel_order_by_id`, `submit_order` now takes an `order_data=` request
+  object (`MarketOrderRequest`/`LimitOrderRequest`/`StopOrderRequest`) instead of kwargs.
+- `alpaca.common.exceptions.APIError` replaces `alpaca_trade_api.rest.APIError` (accepts a
+  plain string, unlike the old one's dict-based constructor).
+- alpaca-py's trading/data methods are typed as returning a model **or** `dict`/`str`
+  (the SDK's generic HTTP layer). mypy needs this narrowed with `cast(ModelType, ...)` at
+  each call site -- do NOT use `assert isinstance(...)`, since that breaks `Mock()`-based
+  unit tests in `tests/unit/test_alpaca_client.py` (a `Mock()` is never an `isinstance` of
+  the real model, so the assert raises and gets masked by the generic `except Exception`).
+- Several numeric fields on `TradeAccount`/`Position` (e.g. `buying_power`, `qty`) are typed
+  `Optional[str]` in alpaca-py's models -- wrap with `float(x or 0)`, not bare `float(x)`.
+
+**Gotcha -- `get_orders(status=...)` only accepts `QueryOrderStatus` values**: unlike the old
+`alpaca_trade_api`, which passed `status` through as a free-form string query param,
+`alpaca-py`'s `GetOrdersRequest.status` is typed as `QueryOrderStatus` (`open`/`closed`/`all`
+only). Passing a specific order status like `"filled"` or `"canceled"` raises
+`ValueError: 'filled' is not a valid QueryOrderStatus`. `AlpacaClient.get_orders()` handles
+this: if `status` isn't one of the `QueryOrderStatus` values, it queries with
+`QueryOrderStatus.ALL` and filters the results client-side by `order.status`. Callers (e.g.
+`/trades` in `alpaca_routes.py`, which calls `get_orders(status="filled")`) do not need to
+change -- this is handled inside `client.py`.
+
+**If upgrading `alpaca-py` in the future**: re-run `mypy src/services/alpaca/client.py
+--ignore-missing-imports` after any alpaca-py version bump; its model/method surface has
+changed across versions.
+
 ### Prefect Flows
 
 Alpaca data ingestion uses the following Prefect flows:

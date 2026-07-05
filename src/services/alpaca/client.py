@@ -149,13 +149,30 @@ class AlpacaClient:
     async def get_orders(
         self, status: str = "open", limit: int = 50
     ) -> List[Dict[str, Any]]:
-        """Get orders"""
+        """
+        Get orders.
+
+        `status` accepts either a QueryOrderStatus value ("open", "closed", "all")
+        or a specific order status (e.g. "filled", "canceled") for client-side
+        filtering, since Alpaca's QueryOrderStatus only distinguishes
+        open/closed/all -- it has no server-side filter for individual statuses.
+        """
         try:
-            request = GetOrdersRequest(status=QueryOrderStatus(status), limit=limit)
+            query_status_values = {qs.value for qs in QueryOrderStatus}
+            if status in query_status_values:
+                query_status = QueryOrderStatus(status)
+                status_filter = None
+            else:
+                query_status = QueryOrderStatus.ALL
+                status_filter = status
+
+            request = GetOrdersRequest(status=query_status, limit=limit)
             orders = self.client.get_orders(filter=request)
             result = []
             for raw_order in orders:
                 order = cast(Order, raw_order)
+                if status_filter is not None and order.status != status_filter:
+                    continue
                 result.append(
                     {
                         "id": str(order.id),

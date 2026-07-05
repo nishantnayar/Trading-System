@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from alpaca.common.exceptions import APIError
+from alpaca.trading.enums import QueryOrderStatus
 
 from src.services.alpaca.client import AlpacaClient
 from src.services.alpaca.exceptions import (
@@ -377,6 +378,63 @@ class TestAlpacaClientOrderMethods:
             result = await alpaca_client.get_orders()
 
             assert result == []
+
+    @pytest.mark.asyncio
+    async def test_get_orders_filtered_by_specific_status(self, alpaca_client):
+        """
+        Test that a specific order status (e.g. "filled") is applied as a
+        client-side filter, since QueryOrderStatus only supports open/closed/all.
+        """
+
+        def make_order(order_id, status):
+            order = Mock()
+            order.id = order_id
+            order.client_order_id = f"client-{order_id}"
+            order.created_at = datetime(2024, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
+            order.updated_at = None
+            order.submitted_at = None
+            order.filled_at = None
+            order.expired_at = None
+            order.canceled_at = None
+            order.failed_at = None
+            order.replaced_at = None
+            order.replaced_by = None
+            order.replaces = None
+            order.asset_id = "asset123"
+            order.symbol = "AAPL"
+            order.asset_class = "us_equity"
+            order.notional = None
+            order.qty = 100.0
+            order.filled_qty = 100.0 if status == "filled" else 0.0
+            order.filled_avg_price = 150.0 if status == "filled" else None
+            order.order_class = "simple"
+            order.order_type = "market"
+            order.type = "market"
+            order.side = "buy"
+            order.time_in_force = "day"
+            order.limit_price = None
+            order.stop_price = None
+            order.status = status
+            order.extended_hours = False
+            order.legs = None
+            order.trail_percent = None
+            order.trail_price = None
+            order.hwm = None
+            return order
+
+        with patch.object(alpaca_client, "client") as mock_client:
+            mock_client.get_orders.return_value = [
+                make_order("order1", "filled"),
+                make_order("order2", "canceled"),
+            ]
+
+            result = await alpaca_client.get_orders(status="filled", limit=50)
+
+            assert len(result) == 1
+            assert result[0]["id"] == "order1"
+            assert result[0]["status"] == "filled"
+            _, kwargs = mock_client.get_orders.call_args
+            assert kwargs["filter"].status == QueryOrderStatus.ALL
 
     @pytest.mark.asyncio
     async def test_place_order_market_success(self, alpaca_client):

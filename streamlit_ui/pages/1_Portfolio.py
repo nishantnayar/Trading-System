@@ -150,7 +150,7 @@ def render_allocation(positions: list) -> None:
             tickfont=dict(family="DM Sans", size=14, color="#111111"),
         ),
     )
-    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+    st.plotly_chart(fig, width="stretch", config=PLOTLY_CONFIG)
 
 
 # ── Positions table ───────────────────────────────────────────────────────────
@@ -201,27 +201,26 @@ def render_positions(positions: list, api) -> None:
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("Close Position", key="close_pos_btn", type="primary"):
-            st.session_state["_confirm_close"] = selected
+            _confirm_close_position(selected, api)
 
-    if st.session_state.get("_confirm_close"):
-        sym = st.session_state["_confirm_close"]
-        st.warning(
-            f"Close **all shares** of **{sym}**? This will submit a market sell order."
-        )
-        c1, c2, _ = st.columns([1, 1, 4])
-        with c1:
-            if st.button("Confirm", key="confirm_close_yes"):
-                result = api.close_position(sym)
-                if "error" not in str(result):
-                    st.success(f"Close order submitted for {sym}.")
-                else:
-                    st.error(f"Error: {result}")
-                del st.session_state["_confirm_close"]
-                st.rerun()
-        with c2:
-            if st.button("Cancel", key="confirm_close_no"):
-                del st.session_state["_confirm_close"]
-                st.rerun()
+
+@st.dialog("Confirm Close Position")
+def _confirm_close_position(sym: str, api) -> None:
+    st.warning(
+        f"Close **all shares** of **{sym}**? This will submit a market sell order."
+    )
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Confirm", key="confirm_close_yes", type="primary"):
+            result = api.close_position(sym)
+            if "error" not in str(result):
+                st.success(f"Close order submitted for {sym}.")
+            else:
+                st.error(f"Error: {result}")
+            st.rerun()
+    with c2:
+        if st.button("Cancel", key="confirm_close_no"):
+            st.rerun()
 
 
 # ── Open orders ───────────────────────────────────────────────────────────────
@@ -262,13 +261,24 @@ def render_orders(orders: list, api) -> None:
             "Select order", list(order_options.keys()), key="cancel_order_sel"
         )
         if st.button("Cancel Order", key="cancel_order_btn"):
-            oid = order_options[selected_label]
-            result = api.cancel_order(oid)
+            _confirm_cancel_order(selected_label, order_options[selected_label], api)
+
+
+@st.dialog("Confirm Cancel Order")
+def _confirm_cancel_order(label: str, order_id: str, api) -> None:
+    st.warning(f"Cancel order **{label}**?")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Confirm", key="confirm_cancel_yes", type="primary"):
+            result = api.cancel_order(order_id)
             if "error" not in str(result):
                 st.success("Order cancelled.")
-                st.rerun()
             else:
                 st.error(f"Error: {result}")
+            st.rerun()
+    with c2:
+        if st.button("Keep Order", key="confirm_cancel_no"):
+            st.rerun()
 
 
 # ── Recent trades ─────────────────────────────────────────────────────────────

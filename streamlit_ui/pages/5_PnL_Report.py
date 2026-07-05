@@ -260,15 +260,13 @@ def main():
     with col_left:
         if series:
             st.plotly_chart(
-                _equity_curve(series), config=PLOTLY_CFG_FULL, use_container_width=True
+                _equity_curve(series), config=PLOTLY_CFG_FULL, width="stretch"
             )
         else:
             st.info("No daily P&L data for the selected period.")
     with col_right:
         if series:
-            st.plotly_chart(
-                _daily_bar(series), config=PLOTLY_CFG, use_container_width=True
-            )
+            st.plotly_chart(_daily_bar(series), config=PLOTLY_CFG, width="stretch")
 
     st.divider()
 
@@ -277,7 +275,7 @@ def main():
     with col_attr:
         if per_pair:
             st.plotly_chart(
-                _pair_attribution(per_pair), config=PLOTLY_CFG, use_container_width=True
+                _pair_attribution(per_pair), config=PLOTLY_CFG, width="stretch"
             )
 
     with col_month:
@@ -295,7 +293,7 @@ def main():
             styled = mdf.style.map(_pnl_style, subset=["P&L ($)"]).format(
                 {"P&L ($)": "${:,.2f}"}
             )
-            st.dataframe(styled, width='stretch', hide_index=True)
+            st.dataframe(styled, width="stretch", hide_index=True)
         else:
             st.info("No monthly data yet.")
 
@@ -325,10 +323,10 @@ def main():
             color = "#00c864" if val >= 0 else "#e05252"
             return f"color: {color}; font-weight: bold"
 
-        pp_styled = pp_df.style.map(
-            _pnl_row_style, subset=["Total P&L ($)"]
-        ).format({"Total P&L ($)": "${:,.2f}"})
-        st.dataframe(pp_styled, width='stretch', hide_index=True)
+        pp_styled = pp_df.style.map(_pnl_row_style, subset=["Total P&L ($)"]).format(
+            {"Total P&L ($)": "${:,.2f}"}
+        )
+        st.dataframe(pp_styled, width="stretch", hide_index=True)
 
     st.divider()
 
@@ -402,7 +400,7 @@ def main():
     trade_styled = tdf_disp.style.map(_pnl_cell, subset=["P&L ($)"]).format(
         {"P&L ($)": lambda x: f"${x:,.2f}" if x is not None else "--"}
     )
-    st.dataframe(trade_styled, width='stretch', hide_index=True)
+    st.dataframe(trade_styled, width="stretch", hide_index=True)
     st.caption(f"Showing {len(tdf_disp)} trades | Last {days} days")
 
 

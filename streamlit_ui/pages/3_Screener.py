@@ -226,14 +226,12 @@ def screen_stocks(
     the results. The query parameter is used only for logging.
     """
     results = []
-    progress_bar = st.progress(0)
-    status_text = st.empty()
     total = len(symbols)
+    status = st.status(f"Screening {total} symbols...", expanded=True)
 
     for idx, symbol in enumerate(symbols):
         try:
-            status_text.text(f"Processing {symbol} ({idx + 1}/{total})...")
-            progress_bar.progress((idx + 1) / total)
+            status.update(label=f"Processing {symbol} ({idx + 1}/{total})...")
 
             ohlc_data = get_real_market_data(
                 _api_client=api_client,
@@ -413,11 +411,14 @@ def screen_stocks(
 
         except Exception as e:
             logger.error(f"Error processing {symbol}: {e}")
-            st.warning(f"Error processing {symbol}: {e}")
+            status.write(f":warning: Error processing {symbol}: {e}")
             continue
 
-    progress_bar.empty()
-    status_text.empty()
+    status.update(
+        label=f"Screened {total} symbols - {len(results)} matches",
+        state="complete",
+        expanded=False,
+    )
 
     # Sort results
     sort_by = criteria.get("sort_by") if criteria else None
@@ -486,8 +487,7 @@ def _configure_aggrid(df: pd.DataFrame):
     )
 
     # RSI colour coding
-    rsi_style = JsCode(
-        """
+    rsi_style = JsCode("""
     function(params) {
         if (params.value == null) return {};
         if (params.value < 30)
@@ -496,14 +496,12 @@ def _configure_aggrid(df: pd.DataFrame):
             return {'backgroundColor': '#4b1a1a', 'color': '#f87171'};
         return {};
     }
-    """
-    )
+    """)
     rsi_fmt = JsCode("function(p){return p.value==null?'N/A':p.value.toFixed(1);}")
     gb.configure_column("RSI", cellStyle=rsi_style, valueFormatter=rsi_fmt, width=80)
 
     # Signal badge colours
-    signal_style = JsCode(
-        """
+    signal_style = JsCode("""
     function(params) {
         const v = params.value;
         if (v === 'Oversold')  return {color:'#4ade80', fontWeight:'bold'};
@@ -512,8 +510,7 @@ def _configure_aggrid(df: pd.DataFrame):
         if (v === 'Bearish')   return {color:'#fb923c', fontWeight:'bold'};
         return {color:'#9ca3af'};
     }
-    """
-    )
+    """)
     gb.configure_column("Signal", cellStyle=signal_style, width=110)
 
     # Numeric formatters (keep values numeric so sorting works)
@@ -524,25 +521,21 @@ def _configure_aggrid(df: pd.DataFrame):
         "function(p){return p.value==null?'N/A':"
         "(p.value>=0?'+':'')+p.value.toFixed(1)+'%';}"
     )
-    mc_fmt = JsCode(
-        """
+    mc_fmt = JsCode("""
     function(p) {
         if (p.value == null) return 'N/A';
         const b = p.value / 1e9;
         return b >= 1 ? '$'+b.toFixed(1)+'B' : '$'+(p.value/1e6).toFixed(0)+'M';
     }
-    """
-    )
-    vol_fmt = JsCode(
-        """
+    """)
+    vol_fmt = JsCode("""
     function(p) {
         if (p.value == null) return 'N/A';
         if (p.value >= 1e6) return (p.value/1e6).toFixed(1)+'M';
         if (p.value >= 1e3) return (p.value/1e3).toFixed(0)+'K';
         return p.value.toFixed(0);
     }
-    """
-    )
+    """)
     f2_fmt = JsCode("function(p){return p.value==null?'N/A':p.value.toFixed(2);}")
 
     gb.configure_column("Price", valueFormatter=price_fmt, width=90)
