@@ -8,8 +8,18 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from alpaca_trade_api import REST
-from alpaca_trade_api.rest import APIError
+from alpaca.common.exceptions import APIError
+from alpaca.data.enums import Adjustment
+from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.requests import StockBarsRequest
+from alpaca.data.timeframe import TimeFrame
+from alpaca.trading.client import TradingClient
+from alpaca.trading.requests import (
+    GetOrdersRequest,
+    LimitOrderRequest,
+    MarketOrderRequest,
+    StopOrderRequest,
+)
 
 from .exceptions import AlpacaAPIError, AlpacaAuthenticationError, AlpacaConnectionError
 
@@ -48,11 +58,14 @@ class AlpacaClient:
             raise AlpacaAuthenticationError("Alpaca API credentials not provided")
 
         try:
-            self.client = REST(
-                key_id=self.api_key,
+            self.client = TradingClient(
+                api_key=self.api_key,
                 secret_key=self.secret_key,
-                base_url=self.base_url,
-                api_version="v2",
+                paper=is_paper,
+            )
+            self.data_client = StockHistoricalDataClient(
+                api_key=self.api_key,
+                secret_key=self.secret_key,
             )
             mode = "paper" if is_paper else "live"
             logger.info("Alpaca client initialized for %s trading", mode)
@@ -64,7 +77,7 @@ class AlpacaClient:
         try:
             account = self.client.get_account()
             return {
-                "id": account.id,
+                "id": str(account.id),
                 "account_number": account.account_number,
                 "status": account.status,
                 "currency": account.currency,
@@ -96,10 +109,10 @@ class AlpacaClient:
     async def get_positions(self) -> List[Dict[str, Any]]:
         """Get all positions"""
         try:
-            positions = self.client.list_positions()
+            positions = self.client.get_all_positions()
             return [
                 {
-                    "asset_id": position.asset_id,
+                    "asset_id": str(position.asset_id),
                     "symbol": position.symbol,
                     "exchange": position.exchange,
                     "asset_class": position.asset_class,
@@ -130,10 +143,11 @@ class AlpacaClient:
     ) -> List[Dict[str, Any]]:
         """Get orders"""
         try:
-            orders = self.client.list_orders(status=status, limit=limit)
+            request = GetOrdersRequest(status=status, limit=limit)
+            orders = self.client.get_orders(filter=request)
             return [
                 {
-                    "id": order.id,
+                    "id": str(order.id),
                     "client_order_id": order.client_order_id,
                     "created_at": (
                         order.created_at.isoformat() if order.created_at else None
@@ -159,9 +173,11 @@ class AlpacaClient:
                     "replaced_at": (
                         order.replaced_at.isoformat() if order.replaced_at else None
                     ),
-                    "replaced_by": order.replaced_by,
-                    "replaces": order.replaces,
-                    "asset_id": order.asset_id,
+                    "replaced_by": (
+                        str(order.replaced_by) if order.replaced_by else None
+                    ),
+                    "replaces": str(order.replaces) if order.replaces else None,
+                    "asset_id": str(order.asset_id),
                     "symbol": order.symbol,
                     "asset_class": order.asset_class,
                     "notional": float(order.notional) if order.notional else None,
@@ -221,7 +237,7 @@ class AlpacaClient:
         try:
             result = self.client.close_position(symbol)
             return {
-                "id": result.id,
+                "id": str(result.id),
                 "client_order_id": result.client_order_id,
                 "created_at": (
                     result.created_at.isoformat() if result.created_at else None
@@ -239,7 +255,7 @@ class AlpacaClient:
     async def cancel_order(self, order_id: str) -> bool:
         """Cancel an order"""
         try:
-            self.client.cancel_order(order_id)
+            self.client.cancel_order_by_id(order_id)
             return True
         except APIError as e:
             raise AlpacaAPIError(f"Failed to cancel order {order_id}: {str(e)}")
@@ -266,20 +282,21 @@ class AlpacaClient:
         """
         # 4 calendar days per bar is conservative enough to always cover limit
         lookback_days = max(7, (limit * 4) // 7)
-        start = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).strftime(
-            "%Y-%m-%d"
-        )
+        start = datetime.now(timezone.utc) - timedelta(days=lookback_days)
         try:
-            bars = self.client.get_bars(
-                symbol,
-                "1Hour",
+            request = StockBarsRequest(
+                symbol_or_symbols=symbol,
+                timeframe=TimeFrame.Hour,
                 start=start,
                 limit=limit,
-                adjustment=adjustment,
+                adjustment=Adjustment(adjustment),
             )
-            if bars is None or len(bars) == 0:
+            bars = self.data_client.get_stock_bars(request)
+            if bars is None or len(bars.df) == 0:
                 return pd.Series(dtype=float, name=symbol)
             df = bars.df
+            if isinstance(df.index, pd.MultiIndex):
+                df = df.xs(symbol, level="symbol")
             df.index = pd.to_datetime(df.index, utc=True)
             return pd.Series(df["close"].rename(symbol), dtype=float)
         except APIError as e:
@@ -299,17 +316,32 @@ class AlpacaClient:
     ) -> Dict[str, Any]:
         """Place an order"""
         try:
-            order = self.client.submit_order(
-                symbol=symbol,
-                qty=qty,
-                side=side,
-                type=order_type,
-                time_in_force=time_in_force,
-                limit_price=limit_price,
-                stop_price=stop_price,
-            )
+            if order_type == "limit":
+                order_request: Any = LimitOrderRequest(
+                    symbol=symbol,
+                    qty=qty,
+                    side=side,
+                    time_in_force=time_in_force,
+                    limit_price=limit_price,
+                )
+            elif order_type == "stop":
+                order_request = StopOrderRequest(
+                    symbol=symbol,
+                    qty=qty,
+                    side=side,
+                    time_in_force=time_in_force,
+                    stop_price=stop_price,
+                )
+            else:
+                order_request = MarketOrderRequest(
+                    symbol=symbol,
+                    qty=qty,
+                    side=side,
+                    time_in_force=time_in_force,
+                )
+            order = self.client.submit_order(order_data=order_request)
             return {
-                "id": order.id,
+                "id": str(order.id),
                 "client_order_id": order.client_order_id,
                 "created_at": (
                     order.created_at.isoformat() if order.created_at else None

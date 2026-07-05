@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import pytest
-from alpaca_trade_api.rest import APIError
+from alpaca.common.exceptions import APIError
 
 from src.services.alpaca.client import AlpacaClient
 from src.services.alpaca.exceptions import (
@@ -33,9 +33,11 @@ class TestAlpacaClientInitialization:
 
     def test_client_initialization_success_paper_trading(self, mock_env_vars):
         """Test successful client initialization for paper trading"""
-        with patch("src.services.alpaca.client.REST") as mock_rest:
+        with patch("src.services.alpaca.client.TradingClient") as mock_trading, patch(
+            "src.services.alpaca.client.StockHistoricalDataClient"
+        ):
             mock_client = Mock()
-            mock_rest.return_value = mock_client
+            mock_trading.return_value = mock_client
 
             client = AlpacaClient()
 
@@ -43,18 +45,19 @@ class TestAlpacaClientInitialization:
             assert client.secret_key == "test_secret_key"
             assert client.is_paper is True
             assert client.base_url == "https://paper-api.alpaca.markets"
-            mock_rest.assert_called_once_with(
-                key_id="test_api_key",
+            mock_trading.assert_called_once_with(
+                api_key="test_api_key",
                 secret_key="test_secret_key",
-                base_url="https://paper-api.alpaca.markets",
-                api_version="v2",
+                paper=True,
             )
 
     def test_client_initialization_success_live_trading(self, mock_env_vars):
         """Test successful client initialization for live trading"""
-        with patch("src.services.alpaca.client.REST") as mock_rest:
+        with patch("src.services.alpaca.client.TradingClient") as mock_trading, patch(
+            "src.services.alpaca.client.StockHistoricalDataClient"
+        ):
             mock_client = Mock()
-            mock_rest.return_value = mock_client
+            mock_trading.return_value = mock_client
 
             client = AlpacaClient(is_paper=False)
 
@@ -63,9 +66,11 @@ class TestAlpacaClientInitialization:
 
     def test_client_initialization_with_custom_credentials(self):
         """Test client initialization with custom credentials"""
-        with patch("src.services.alpaca.client.REST") as mock_rest:
+        with patch("src.services.alpaca.client.TradingClient") as mock_trading, patch(
+            "src.services.alpaca.client.StockHistoricalDataClient"
+        ):
             mock_client = Mock()
-            mock_rest.return_value = mock_client
+            mock_trading.return_value = mock_client
 
             client = AlpacaClient(
                 api_key="custom_key",
@@ -93,8 +98,8 @@ class TestAlpacaClientInitialization:
 
     def test_client_initialization_connection_error(self, mock_env_vars):
         """Test client initialization with connection error"""
-        with patch("src.services.alpaca.client.REST") as mock_rest:
-            mock_rest.side_effect = Exception("Connection failed")
+        with patch("src.services.alpaca.client.TradingClient") as mock_trading:
+            mock_trading.side_effect = Exception("Connection failed")
 
             with pytest.raises(AlpacaConnectionError) as exc_info:
                 AlpacaClient()
@@ -114,7 +119,9 @@ class TestAlpacaClientAccountMethods:
                 "ALPACA_SECRET_KEY": "test_secret_key",
             },
         ):
-            with patch("src.services.alpaca.client.REST"):
+            with patch("src.services.alpaca.client.TradingClient"), patch(
+                "src.services.alpaca.client.StockHistoricalDataClient"
+            ):
                 return AlpacaClient()
 
     @pytest.mark.asyncio
@@ -164,7 +171,7 @@ class TestAlpacaClientAccountMethods:
     async def test_get_account_api_error(self, alpaca_client):
         """Test account retrieval with API error"""
         with patch.object(alpaca_client, "client") as mock_client:
-            mock_client.get_account.side_effect = APIError({"message": "API Error"})
+            mock_client.get_account.side_effect = APIError("API Error")
 
             with pytest.raises(AlpacaAPIError) as exc_info:
                 await alpaca_client.get_account()
@@ -194,7 +201,9 @@ class TestAlpacaClientPositionMethods:
                 "ALPACA_SECRET_KEY": "test_secret_key",
             },
         ):
-            with patch("src.services.alpaca.client.REST"):
+            with patch("src.services.alpaca.client.TradingClient"), patch(
+                "src.services.alpaca.client.StockHistoricalDataClient"
+            ):
                 return AlpacaClient()
 
     @pytest.mark.asyncio
@@ -219,7 +228,7 @@ class TestAlpacaClientPositionMethods:
         mock_position.avg_entry_price = 140.0
 
         with patch.object(alpaca_client, "client") as mock_client:
-            mock_client.list_positions.return_value = [mock_position]
+            mock_client.get_all_positions.return_value = [mock_position]
 
             result = await alpaca_client.get_positions()
 
@@ -228,13 +237,13 @@ class TestAlpacaClientPositionMethods:
             assert result[0]["qty"] == 100.0
             assert result[0]["market_value"] == 15000.0
             assert result[0]["unrealized_pl"] == 1000.0
-            mock_client.list_positions.assert_called_once()
+            mock_client.get_all_positions.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_positions_empty(self, alpaca_client):
         """Test positions retrieval with no positions"""
         with patch.object(alpaca_client, "client") as mock_client:
-            mock_client.list_positions.return_value = []
+            mock_client.get_all_positions.return_value = []
 
             result = await alpaca_client.get_positions()
 
@@ -244,7 +253,7 @@ class TestAlpacaClientPositionMethods:
     async def test_get_positions_api_error(self, alpaca_client):
         """Test positions retrieval with API error"""
         with patch.object(alpaca_client, "client") as mock_client:
-            mock_client.list_positions.side_effect = APIError({"message": "API Error"})
+            mock_client.get_all_positions.side_effect = APIError("API Error")
 
             with pytest.raises(AlpacaAPIError) as exc_info:
                 await alpaca_client.get_positions()
@@ -278,9 +287,7 @@ class TestAlpacaClientPositionMethods:
     async def test_close_position_api_error(self, alpaca_client):
         """Test position closing with API error"""
         with patch.object(alpaca_client, "client") as mock_client:
-            mock_client.close_position.side_effect = APIError(
-                {"message": "Position not found"}
-            )
+            mock_client.close_position.side_effect = APIError("Position not found")
 
             with pytest.raises(AlpacaAPIError) as exc_info:
                 await alpaca_client.close_position("INVALID")
@@ -300,7 +307,9 @@ class TestAlpacaClientOrderMethods:
                 "ALPACA_SECRET_KEY": "test_secret_key",
             },
         ):
-            with patch("src.services.alpaca.client.REST"):
+            with patch("src.services.alpaca.client.TradingClient"), patch(
+                "src.services.alpaca.client.StockHistoricalDataClient"
+            ):
                 return AlpacaClient()
 
     @pytest.mark.asyncio
@@ -341,7 +350,7 @@ class TestAlpacaClientOrderMethods:
         mock_order.hwm = None
 
         with patch.object(alpaca_client, "client") as mock_client:
-            mock_client.list_orders.return_value = [mock_order]
+            mock_client.get_orders.return_value = [mock_order]
 
             result = await alpaca_client.get_orders(status="all", limit=50)
 
@@ -351,13 +360,13 @@ class TestAlpacaClientOrderMethods:
             assert result[0]["side"] == "buy"
             assert result[0]["status"] == "filled"
             assert result[0]["qty"] == 100.0
-            mock_client.list_orders.assert_called_once_with(status="all", limit=50)
+            mock_client.get_orders.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_orders_empty(self, alpaca_client):
         """Test orders retrieval with no orders"""
         with patch.object(alpaca_client, "client") as mock_client:
-            mock_client.list_orders.return_value = []
+            mock_client.get_orders.return_value = []
 
             result = await alpaca_client.get_orders()
 
@@ -392,15 +401,13 @@ class TestAlpacaClientOrderMethods:
             assert result["qty"] == 100.0
             assert result["side"] == "buy"
             assert result["status"] == "new"
-            mock_client.submit_order.assert_called_once_with(
-                symbol="AAPL",
-                qty=100,
-                side="buy",
-                type="market",
-                time_in_force="day",
-                limit_price=None,
-                stop_price=None,
-            )
+            mock_client.submit_order.assert_called_once()
+            _, kwargs = mock_client.submit_order.call_args
+            order_request = kwargs["order_data"]
+            assert order_request.symbol == "AAPL"
+            assert order_request.qty == 100
+            assert order_request.side == "buy"
+            assert order_request.time_in_force == "day"
 
     @pytest.mark.asyncio
     async def test_place_order_limit_success(self, alpaca_client):
@@ -429,13 +436,15 @@ class TestAlpacaClientOrderMethods:
 
             assert result["id"] == "order123"
             mock_client.submit_order.assert_called_once()
+            _, kwargs = mock_client.submit_order.call_args
+            assert kwargs["order_data"].limit_price == 150.0
 
     @pytest.mark.asyncio
     async def test_place_order_api_error(self, alpaca_client):
         """Test order placement with API error"""
         with patch.object(alpaca_client, "client") as mock_client:
             mock_client.submit_order.side_effect = APIError(
-                {"message": "Insufficient buying power"}
+                "Insufficient buying power"
             )
 
             with pytest.raises(AlpacaAPIError) as exc_info:
@@ -448,20 +457,18 @@ class TestAlpacaClientOrderMethods:
     async def test_cancel_order_success(self, alpaca_client):
         """Test successful order cancellation"""
         with patch.object(alpaca_client, "client") as mock_client:
-            mock_client.cancel_order.return_value = None
+            mock_client.cancel_order_by_id.return_value = None
 
             result = await alpaca_client.cancel_order("order123")
 
             assert result is True
-            mock_client.cancel_order.assert_called_once_with("order123")
+            mock_client.cancel_order_by_id.assert_called_once_with("order123")
 
     @pytest.mark.asyncio
     async def test_cancel_order_api_error(self, alpaca_client):
         """Test order cancellation with API error"""
         with patch.object(alpaca_client, "client") as mock_client:
-            mock_client.cancel_order.side_effect = APIError(
-                {"message": "Order not found"}
-            )
+            mock_client.cancel_order_by_id.side_effect = APIError("Order not found")
 
             with pytest.raises(AlpacaAPIError) as exc_info:
                 await alpaca_client.cancel_order("invalid_order")
@@ -481,7 +488,9 @@ class TestAlpacaClientMarketMethods:
                 "ALPACA_SECRET_KEY": "test_secret_key",
             },
         ):
-            with patch("src.services.alpaca.client.REST"):
+            with patch("src.services.alpaca.client.TradingClient"), patch(
+                "src.services.alpaca.client.StockHistoricalDataClient"
+            ):
                 return AlpacaClient()
 
     @pytest.mark.asyncio
@@ -524,7 +533,7 @@ class TestAlpacaClientMarketMethods:
     async def test_get_clock_api_error(self, alpaca_client):
         """Test market clock with API error"""
         with patch.object(alpaca_client, "client") as mock_client:
-            mock_client.get_clock.side_effect = APIError({"message": "API Error"})
+            mock_client.get_clock.side_effect = APIError("API Error")
 
             with pytest.raises(AlpacaAPIError) as exc_info:
                 await alpaca_client.get_clock()
