@@ -348,12 +348,12 @@ def _fmt_time(ts_str) -> str:
 
 def _z_color(z: Optional[float], entry_thr: float, exit_thr: float) -> str:
     if z is None:
-        return "grey"
+        return "gray"
     if abs(z) > entry_thr:
-        return "#C0392B"
+        return "red"
     if abs(z) < exit_thr:
-        return "#2A7A4B"
-    return "#E67E22"
+        return "green"
+    return "orange"
 
 
 def _fmt_z(z: Optional[float]) -> str:
@@ -539,15 +539,17 @@ def _render_pairs_tab() -> None:
         else:
             z_label = f"{z:.3f}"
 
-        status_icon = "🔵" if p["status"] == "in_trade" else "⚪"
-
         c1, c2, c3, c4, c5 = st.columns([2, 1, 1, 1, 3])
         c1.markdown(
             f"**{p['name']}**  \n<small>corr {p.get('correlation', 0):.3f} "
             f"· {p.get('days_held') or 0}d held</small>",
             unsafe_allow_html=True,
         )
-        c2.markdown(f"{status_icon} {p['status']}")
+        with c2:
+            if p["status"] == "in_trade":
+                st.badge("in_trade", color="blue")
+            else:
+                st.badge(p["status"], color="gray")
         c3.markdown(z_label)
         c4.metric(
             label="P&L",
@@ -748,7 +750,7 @@ def _render_baskets_tab() -> None:
                 ],
             ):
                 col.markdown(f"**{h}**")
-            st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+            st.divider()
 
             for b in display_baskets:
                 cols = st.columns([2.5, 3.0, 1.5, 1.2, 1.0, 1.2, 1.5, 1.5])
@@ -763,16 +765,12 @@ def _render_baskets_tab() -> None:
                 cols[2].write(b["sector"])
                 cols[3].write(f"{b['half_life_hours']:.1f}")
                 cols[4].write(b["z_score_window"])
-                cols[5].markdown(
-                    f'<span style="color:{z_color};font-weight:bold">{z_str}</span>',
-                    unsafe_allow_html=True,
-                )
-                status_label = "Active" if b["is_active"] else "Inactive"
-                status_color = "#2A7A4B" if b["is_active"] else "#888"
-                cols[6].markdown(
-                    f'<span style="color:{status_color}">{status_label}</span>',
-                    unsafe_allow_html=True,
-                )
+                cols[5].markdown(f"**:{z_color}[{z_str}]**")
+                with cols[6]:
+                    if b["is_active"]:
+                        st.badge("Active", color="green")
+                    else:
+                        st.badge("Inactive", color="gray")
                 if b["is_active"]:
                     if cols[7].button("Deactivate", key=f"b_deact_{b['id']}"):
                         set_basket_active(b["id"], False)
@@ -786,7 +784,7 @@ def _render_baskets_tab() -> None:
                         st.cache_data.clear()
                         st.rerun()
 
-        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+        st.divider()
         st.caption(
             "Z-score color: red = |z| > entry threshold, "
             "green = |z| < exit threshold, orange = between"
@@ -856,7 +854,7 @@ def _render_baskets_tab() -> None:
                     ),
                     xaxis=dict(title=""),
                 )
-                st.plotly_chart(fig, width='stretch', config=PLOTLY_CONFIG)
+                st.plotly_chart(fig, width="stretch", config=PLOTLY_CONFIG)
 
     st.divider()
 
@@ -879,7 +877,7 @@ def _render_baskets_tab() -> None:
             ],
         ):
             col.markdown(f"**{h}**")
-        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+        st.divider()
         for t in open_trades:
             cols = st.columns([2.0, 1.2, 1.5, 1.0, 1.0, 3.0, 1.5])
             legs_str = ", ".join(
@@ -888,7 +886,7 @@ def _render_baskets_tab() -> None:
             )
             pnl = t["unrealized_pnl"]
             pnl_color = (
-                "#2A7A4B" if pnl and pnl > 0 else ("#C0392B" if pnl and pnl < 0 else "")
+                "green" if pnl and pnl > 0 else ("red" if pnl and pnl < 0 else "")
             )
             cols[0].markdown(f"**{t['basket_name']}**")
             cols[1].write(t["side"])
@@ -897,14 +895,10 @@ def _render_baskets_tab() -> None:
             cols[4].write(f"{t['hold_hours']}h" if t["hold_hours"] else "--")
             cols[5].write(legs_str)
             if pnl_color:
-                cols[6].markdown(
-                    f'<span style="color:{pnl_color};font-weight:bold">'
-                    f"{_fmt_pnl(pnl)}</span>",
-                    unsafe_allow_html=True,
-                )
+                cols[6].markdown(f"**:{pnl_color}[{_fmt_pnl(pnl)}]**")
             else:
                 cols[6].write(_fmt_pnl(pnl))
-        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+        st.divider()
 
     st.divider()
 
@@ -929,12 +923,12 @@ def _render_baskets_tab() -> None:
             ],
         ):
             col.markdown(f"**{h}**")
-        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+        st.divider()
         for t in history:
             cols = st.columns([2.0, 1.2, 1.0, 1.0, 1.5, 1.0, 1.2, 1.2, 1.5])
             pnl = t["pnl"]
             pnl_color = (
-                "#2A7A4B" if pnl and pnl > 0 else ("#C0392B" if pnl and pnl < 0 else "")
+                "green" if pnl and pnl > 0 else ("red" if pnl and pnl < 0 else "")
             )
             cols[0].write(t["basket_name"])
             cols[1].write(t["side"])
@@ -945,19 +939,13 @@ def _render_baskets_tab() -> None:
             pnl_str = _fmt_pnl(pnl)
             pnl_pct_str = f"{t['pnl_pct']:+.3f}%" if t["pnl_pct"] is not None else "--"
             if pnl_color:
-                cols[6].markdown(
-                    f'<span style="color:{pnl_color};font-weight:bold">{pnl_str}</span>',
-                    unsafe_allow_html=True,
-                )
-                cols[7].markdown(
-                    f'<span style="color:{pnl_color}">{pnl_pct_str}</span>',
-                    unsafe_allow_html=True,
-                )
+                cols[6].markdown(f"**:{pnl_color}[{pnl_str}]**")
+                cols[7].markdown(f":{pnl_color}[{pnl_pct_str}]")
             else:
                 cols[6].write(pnl_str)
                 cols[7].write(pnl_pct_str)
             cols[8].write(t["exit_time"])
-        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+        st.divider()
 
     if st.button("Refresh Data"):
         st.cache_data.clear()
@@ -1182,47 +1170,29 @@ def _render_harmonic_tab() -> None:
             ],
         ):
             col.markdown(f"**{h}**")
-        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+        st.divider()
 
         for t in open_trades:
             cols = st.columns([1.2, 1.2, 1.0, 1.0, 1.2, 1.0, 1.2, 1.2, 1.0, 3.0])
-            dir_color = "#2A7A4B" if t["direction"] == "bullish" else "#C0392B"
+            dir_color = "green" if t["direction"] == "bullish" else "red"
             cols[0].markdown(f"**{t['symbol']}**")
             cols[1].write(t["pattern"].capitalize())
-            cols[2].markdown(
-                f'<span style="color:{dir_color};font-weight:bold">'
-                f"{t['direction'].capitalize()}</span>",
-                unsafe_allow_html=True,
-            )
+            cols[2].markdown(f"**:{dir_color}[{t['direction'].capitalize()}]**")
             cols[3].write(t["side"].upper())
             cols[4].write(f"${t['entry_price']:.4f}" if t["entry_price"] else "--")
             cols[5].write(t["qty"])
-            cols[6].markdown(
-                (
-                    f'<span style="color:#C0392B">' f"${t['stop_loss']:.4f}</span>"
-                    if t["stop_loss"]
-                    else "--"
-                ),
-                unsafe_allow_html=True,
-            )
-            cols[7].markdown(
-                (
-                    f'<span style="color:#2A7A4B">' f"${t['target_1']:.4f}</span>"
-                    if t["target_1"]
-                    else "--"
-                ),
-                unsafe_allow_html=True,
-            )
+            cols[6].markdown(f":red[${t['stop_loss']:.4f}]" if t["stop_loss"] else "--")
+            cols[7].markdown(f":green[${t['target_1']:.4f}]" if t["target_1"] else "--")
             cols[8].write(f"{t['hold_hours']}h" if t["hold_hours"] else "--")
             if t["d_price"]:
                 cols[9].plotly_chart(
                     _render_xabcd_chart(t),
                     config={"displayModeBar": False},
-                    width='stretch',
+                    width="stretch",
                 )
             else:
                 cols[9].write("--")
-        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+        st.divider()
 
     st.divider()
 
@@ -1250,42 +1220,32 @@ def _render_harmonic_tab() -> None:
             ],
         ):
             col.markdown(f"**{h}**")
-        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+        st.divider()
 
         for t in history:
             cols = st.columns([1.2, 1.2, 1.0, 1.2, 1.2, 1.5, 1.0, 1.2, 1.2, 1.5])
             pnl = t["pnl"]
             pnl_color = (
-                "#2A7A4B" if pnl and pnl > 0 else ("#C0392B" if pnl and pnl < 0 else "")
+                "green" if pnl and pnl > 0 else ("red" if pnl and pnl < 0 else "")
             )
-            dir_color = "#2A7A4B" if t["direction"] == "bullish" else "#C0392B"
+            dir_color = "green" if t["direction"] == "bullish" else "red"
             pnl_str = _fmt_pnl(pnl)
             pnl_pct_str = f"{t['pnl_pct']:+.3f}%" if t["pnl_pct"] is not None else "--"
             cols[0].markdown(f"**{t['symbol']}**")
             cols[1].write(t["pattern"].capitalize())
-            cols[2].markdown(
-                f'<span style="color:{dir_color}">{t["direction"].capitalize()}</span>',
-                unsafe_allow_html=True,
-            )
+            cols[2].markdown(f":{dir_color}[{t['direction'].capitalize()}]")
             cols[3].write(f"${t['entry_price']:.4f}" if t["entry_price"] else "--")
             cols[4].write(f"${t['exit_price']:.4f}" if t["exit_price"] else "--")
             cols[5].write(t["exit_reason"])
             cols[6].write(f"{t['hold_hours']}h" if t["hold_hours"] else "--")
             if pnl_color:
-                cols[7].markdown(
-                    f'<span style="color:{pnl_color};font-weight:bold">'
-                    f"{pnl_str}</span>",
-                    unsafe_allow_html=True,
-                )
-                cols[8].markdown(
-                    f'<span style="color:{pnl_color}">{pnl_pct_str}</span>',
-                    unsafe_allow_html=True,
-                )
+                cols[7].markdown(f"**:{pnl_color}[{pnl_str}]**")
+                cols[8].markdown(f":{pnl_color}[{pnl_pct_str}]")
             else:
                 cols[7].write(pnl_str)
                 cols[8].write(pnl_pct_str)
             cols[9].write(t["exit_time"])
-        st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+        st.divider()
 
     if st.button("Refresh Harmonic Data"):
         st.cache_data.clear()

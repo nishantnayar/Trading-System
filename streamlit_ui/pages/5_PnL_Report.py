@@ -235,13 +235,14 @@ def main():
     per_pair = summary.get("per_pair", [])
 
     k1, k2, k3, k4, k5 = st.columns(5)
-    k1.metric("Total Realized P&L", f"${total_pnl:,.2f}")
-    k2.metric("Total Trades", total_trades)
-    k3.metric("Win Rate", f"{win_rate * 100:.1f}%")
-    k4.metric("Avg Trade Return", f"{avg_pnl_pct * 100:.2f}%")
+    k1.metric("Total Realized P&L", f"${total_pnl:,.2f}", border=True)
+    k2.metric("Total Trades", total_trades, border=True)
+    k3.metric("Win Rate", f"{win_rate * 100:.1f}%", border=True)
+    k4.metric("Avg Trade Return", f"{avg_pnl_pct * 100:.2f}%", border=True)
     k5.metric(
         "Profit Factor",
         f"{profit_factor:.2f}" if profit_factor is not None else "--",
+        border=True,
     )
 
     if total_trades == 0:

@@ -60,8 +60,6 @@ GATE_SHARPE = 0.5
 GATE_WIN_RATE = 45.0
 GATE_DRAWDOWN = 15.0
 
-COLOR_PASS = "#2A7A4B"
-COLOR_FAIL = "#C0392B"
 COLOR_ACTIVE = "#1f77b4"
 
 C1 = "#1f77b4"
@@ -560,11 +558,11 @@ def _render_scanner_table(results: list) -> None:
         ],
     ):
         col.markdown(f"**{h}**")
-    st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+    st.divider()
 
     for i, r in enumerate(results):
         cols = st.columns([0.5, 2.0, 1.5, 0.9, 0.9, 0.9, 0.7, 1.0, 1.2, 1.2])
-        gate_color = COLOR_PASS if r["passed"] else COLOR_FAIL
+        gate_color = "green" if r["passed"] else "red"
         gate_label = "PASS" if r["passed"] else "FAIL"
         active_badge = " [active]" if r["is_active"] else ""
 
@@ -574,34 +572,24 @@ def _render_scanner_table(results: list) -> None:
         ret_str = f"{r['total_return']:.2f}%" if r["total_return"] is not None else "--"
 
         sharpe_color = (
-            "" if r["sharpe"] is None or r["sharpe"] >= GATE_SHARPE else COLOR_FAIL
+            "" if r["sharpe"] is None or r["sharpe"] >= GATE_SHARPE else "red"
         )
         win_color = (
-            ""
-            if r["win_rate"] is None or r["win_rate"] >= GATE_WIN_RATE
-            else COLOR_FAIL
+            "" if r["win_rate"] is None or r["win_rate"] >= GATE_WIN_RATE else "red"
         )
-        dd_color = (
-            "" if r["max_dd"] is None or r["max_dd"] < GATE_DRAWDOWN else COLOR_FAIL
-        )
-
-        def _colored(text: str, color: str) -> str:
-            if color:
-                return f'<span style="color:{color}">{text}</span>'
-            return text
+        dd_color = "" if r["max_dd"] is None or r["max_dd"] < GATE_DRAWDOWN else "red"
 
         cols[0].write(i + 1)
         cols[1].markdown(f"**{r['pair']}**{active_badge}")
         cols[2].write(r["sector"])
-        cols[3].markdown(_colored(sharpe_str, sharpe_color), unsafe_allow_html=True)
-        cols[4].markdown(_colored(win_str, win_color), unsafe_allow_html=True)
-        cols[5].markdown(_colored(dd_str, dd_color), unsafe_allow_html=True)
+        cols[3].markdown(
+            f":{sharpe_color}[{sharpe_str}]" if sharpe_color else sharpe_str
+        )
+        cols[4].markdown(f":{win_color}[{win_str}]" if win_color else win_str)
+        cols[5].markdown(f":{dd_color}[{dd_str}]" if dd_color else dd_str)
         cols[6].write(r["total_trades"])
         cols[7].write(ret_str)
-        cols[8].markdown(
-            f'<span style="color:{gate_color};font-weight:bold">{gate_label}</span>',
-            unsafe_allow_html=True,
-        )
+        cols[8].markdown(f"**:{gate_color}[{gate_label}]**")
 
         if r["is_active"]:
             if cols[9].button("Deactivate", key=f"sc_deact_{r['id']}"):
@@ -619,7 +607,7 @@ def _render_scanner_table(results: list) -> None:
                 r["is_active"] = True
                 st.rerun()
 
-    st.markdown("<hr style='margin:4px 0'>", unsafe_allow_html=True)
+    st.divider()
     st.caption("[active] = currently live  .  (!) = activating a failing pair")
 
 
@@ -1524,7 +1512,7 @@ def _render_harmonic_equity_curve(trades_df: pd.DataFrame) -> None:
         height=320,
         margin={"t": 40, "b": 30},
     )
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, width="stretch")
 
 
 def _render_harmonic_lab_tab() -> None:
@@ -1613,7 +1601,11 @@ def _render_harmonic_lab_tab() -> None:
                 "Win %": f"{s.win_rate * 100:.1f}",
                 "Total P&L": f"{s.total_pnl:.2f}",
                 "Avg P&L": f"{s.avg_pnl:.2f}",
-                "Profit Factor": "inf" if s.profit_factor == float("inf") else f"{s.profit_factor:.2f}",
+                "Profit Factor": (
+                    "inf"
+                    if s.profit_factor == float("inf")
+                    else f"{s.profit_factor:.2f}"
+                ),
                 "Sharpe": f"{s.sharpe:.2f}",
                 "Max DD": f"{s.max_drawdown * 100:.1f}%",
                 "Avg Hold": f"{s.avg_hold_bars:.0f}",
@@ -1626,7 +1618,7 @@ def _render_harmonic_lab_tab() -> None:
     if summary_rows:
         sum_df = pd.DataFrame(summary_rows).set_index("Symbol")
         sum_df = sum_df.sort_values("Sharpe", ascending=False)
-        st.dataframe(sum_df, width='stretch')
+        st.dataframe(sum_df, width="stretch")
     else:
         st.warning("No patterns detected across the universe for the selected period.")
         return
@@ -1667,7 +1659,7 @@ def _render_harmonic_lab_tab() -> None:
                     detail_df[dt_col] = pd.to_datetime(detail_df[dt_col]).dt.strftime(
                         "%Y-%m-%d"
                     )
-            st.dataframe(detail_df, width='stretch', height=350)
+            st.dataframe(detail_df, width="stretch", height=350)
 
             # Download
             csv = detail_df.to_csv(index=False)

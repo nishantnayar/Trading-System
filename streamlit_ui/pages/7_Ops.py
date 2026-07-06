@@ -110,7 +110,7 @@ def _format_dt(iso_str) -> str:
 
 
 def _render_connections_tab(api) -> None:
-    st.markdown("<h2>Connection Status</h2>", unsafe_allow_html=True)
+    st.subheader("Connection Status")
 
     c1, c2, c3 = st.columns(3)
 
@@ -171,7 +171,7 @@ def _render_connections_tab(api) -> None:
 
     st.markdown("---")
 
-    st.markdown("<h2>Analysis Preferences</h2>", unsafe_allow_html=True)
+    st.subheader("Analysis Preferences")
     st.markdown(
         "<p style='color:#6b6b6b;font-size:0.88rem;margin-bottom:1rem;'>"
         "These defaults pre-fill the Analysis page each session.</p>",
@@ -220,7 +220,7 @@ def _render_connections_tab(api) -> None:
 
     st.markdown("---")
 
-    st.markdown("<h2>System Info</h2>", unsafe_allow_html=True)
+    st.subheader("System Info")
     s1, s2 = st.columns(2)
     with s1:
         api_url = os.getenv("API_BASE_URL", "http://localhost:8001")
@@ -326,7 +326,7 @@ def _render_data_quality_tab(api) -> None:
         st.success("All symbols are up to date.")
         st.markdown("---")
 
-    st.markdown("<h2>All Ingestion Series</h2>", unsafe_allow_html=True)
+    st.subheader("All Ingestion Series")
     statuses = api.get_ingestion_status()
 
     if not statuses:
@@ -383,7 +383,7 @@ def _render_data_quality_tab(api) -> None:
 
 def main() -> None:
     load_css()
-    st.markdown("<h1>Ops</h1>", unsafe_allow_html=True)
+    st.title("Ops")
 
     api = get_api_client()
 

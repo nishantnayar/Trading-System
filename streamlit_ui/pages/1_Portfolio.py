@@ -157,14 +157,10 @@ def render_allocation(positions: list) -> None:
 
 
 def render_positions(positions: list, api) -> None:
-    st.markdown("<h2>Positions</h2>", unsafe_allow_html=True)
+    st.subheader("Positions")
 
     if not positions:
-        st.markdown(
-            "<p style='color:#9e9e9e;font-size:0.88rem;padding:0.6rem 0;'>"
-            "No open positions.</p>",
-            unsafe_allow_html=True,
-        )
+        st.caption("No open positions.")
         return
 
     # Build display rows
@@ -193,13 +189,13 @@ def render_positions(positions: list, api) -> None:
     st.dataframe(df, width="stretch", hide_index=True)
 
     # Per-position close buttons
-    st.markdown("<h3>Close a Position</h3>", unsafe_allow_html=True)
+    st.markdown("### Close a Position")
     syms = [p.get("symbol", "") for p in positions]
     col1, col2 = st.columns([2, 1])
     with col1:
         selected = st.selectbox("Select symbol", syms, key="close_sym_select")
     with col2:
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.write("")
         if st.button("Close Position", key="close_pos_btn", type="primary"):
             _confirm_close_position(selected, api)
 
@@ -250,7 +246,7 @@ def render_orders(orders: list, api) -> None:
     display_df = df.drop(columns=["ID"])
     st.dataframe(display_df, width="stretch", hide_index=True)
 
-    st.markdown("<h3>Cancel an Order</h3>", unsafe_allow_html=True)
+    st.markdown("### Cancel an Order")
     order_options = {
         f"{o.get('symbol')} {(o.get('side') or '').upper()} {o.get('qty')} "
         f"({o.get('id', '')[:8]})": o.get("id", "")
@@ -367,7 +363,7 @@ def main() -> None:
     trades = api.get_alpaca_trades(limit=20)
 
     # ── Page title ──
-    st.markdown("<h1>Portfolio</h1>", unsafe_allow_html=True)
+    st.title("Portfolio")
 
     # ── Account summary ──
     if "error" not in account:
@@ -378,15 +374,16 @@ def main() -> None:
         long_mv = float(account.get("long_market_value", 0))
 
         c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Equity", _d(equity))
-        c2.metric("Cash", _d(account.get("cash", 0)))
-        c3.metric("Buying Power", _d(account.get("buying_power", 0)))
-        c4.metric("Long Mkt Value", _d(long_mv))
+        c1.metric("Equity", _d(equity), border=True)
+        c2.metric("Cash", _d(account.get("cash", 0)), border=True)
+        c3.metric("Buying Power", _d(account.get("buying_power", 0)), border=True)
+        c4.metric("Long Mkt Value", _d(long_mv), border=True)
         sign = "+" if day_pnl >= 0 else ""
         c5.metric(
             "Today's P&L",
             _d(day_pnl),
             f"{sign}{day_pct:.2f}%",
+            border=True,
         )
     else:
         st.error("Cannot reach API — is it running on port 8001?")
@@ -399,7 +396,7 @@ def main() -> None:
     # ── Allocation chart (full width, below positions) ──
     if positions:
         st.markdown("---")
-        st.markdown("<h2>Allocation</h2>", unsafe_allow_html=True)
+        st.subheader("Allocation")
         render_allocation(positions)
 
     st.markdown("---")
