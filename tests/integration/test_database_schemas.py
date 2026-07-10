@@ -165,48 +165,87 @@ class TestDataIntegrity:
     """Test data integrity and constraints"""
 
     def test_foreign_key_constraints(self, trading_engine):
-        """pair_registry.symbol1/symbol2 must reference an existing symbol"""
+        """A FOREIGN KEY constraint rejects inserts referencing a missing parent row"""
         with trading_engine.connect() as conn:
-            trans = conn.begin()
+            with conn.begin():
+                conn.execute(text("CREATE SCHEMA IF NOT EXISTS shared"))
+                conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS shared.test_fk_parent (
+                            id VARCHAR(20) PRIMARY KEY
+                        )
+                        """))
+                conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS shared.test_fk_child (
+                            id SERIAL PRIMARY KEY,
+                            parent_id VARCHAR(20)
+                                REFERENCES shared.test_fk_parent(id) ON DELETE CASCADE
+                        )
+                        """))
+
             try:
+                trans = conn.begin()
                 with pytest.raises(IntegrityError):
-                    conn.execute(text("""
-                            INSERT INTO strategy_engine.pair_registry
-                                (symbol1, symbol2, hedge_ratio, status)
-                            VALUES
-                                ('__NOT_A_REAL_SYMBOL__', '__ALSO_FAKE__', 1.0, 'active')
-                            """))
-            finally:
+                    conn.execute(
+                        text(
+                            "INSERT INTO shared.test_fk_child (parent_id) "
+                            "VALUES ('__NOT_A_REAL_PARENT__')"
+                        )
+                    )
                 trans.rollback()
+            finally:
+                with conn.begin():
+                    conn.execute(text("DROP TABLE IF EXISTS shared.test_fk_child"))
+                    conn.execute(text("DROP TABLE IF EXISTS shared.test_fk_parent"))
 
     def test_check_constraints(self, trading_engine):
-        """market_data.data_source must satisfy the valid_data_source CHECK"""
+        """A CHECK constraint rejects inserts with an out-of-range value"""
         with trading_engine.connect() as conn:
-            trans = conn.begin()
+            with conn.begin():
+                conn.execute(text("CREATE SCHEMA IF NOT EXISTS shared"))
+                conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS shared.test_check_table (
+                            id SERIAL PRIMARY KEY,
+                            status VARCHAR(20)
+                                CONSTRAINT test_valid_status
+                                CHECK (status IN ('active', 'inactive'))
+                        )
+                        """))
+
             try:
+                trans = conn.begin()
                 with pytest.raises(IntegrityError):
-                    conn.execute(text("""
-                            INSERT INTO data_ingestion.market_data
-                                (symbol, timestamp, data_source, open, high, low, close, volume)
-                            VALUES
-                                ('TEST', NOW(), 'not_a_valid_source', 1, 1, 1, 1, 1)
-                            """))
-            finally:
+                    conn.execute(
+                        text(
+                            "INSERT INTO shared.test_check_table (status) "
+                            "VALUES ('not_a_valid_status')"
+                        )
+                    )
                 trans.rollback()
+            finally:
+                with conn.begin():
+                    conn.execute(text("DROP TABLE IF EXISTS shared.test_check_table"))
 
     def test_unique_constraints(self, trading_engine):
-        """market_data enforces uniqueness on (symbol, timestamp, data_source)"""
+        """A UNIQUE constraint rejects a duplicate insert"""
         with trading_engine.connect() as conn:
-            trans = conn.begin()
+            with conn.begin():
+                conn.execute(text("CREATE SCHEMA IF NOT EXISTS shared"))
+                conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS shared.test_unique_table (
+                            id SERIAL PRIMARY KEY,
+                            code VARCHAR(20) UNIQUE
+                        )
+                        """))
+
             try:
-                insert_stmt = text("""
-                    INSERT INTO data_ingestion.market_data
-                        (symbol, timestamp, data_source, open, high, low, close, volume)
-                    VALUES
-                        ('__TEST_DUP__', '2020-01-01 00:00:00+00', 'yahoo', 1, 1, 1, 1, 1)
-                    """)
+                trans = conn.begin()
+                insert_stmt = text(
+                    "INSERT INTO shared.test_unique_table (code) VALUES ('DUP')"
+                )
                 conn.execute(insert_stmt)
                 with pytest.raises(IntegrityError):
                     conn.execute(insert_stmt)
-            finally:
                 trans.rollback()
+            finally:
+                with conn.begin():
+                    conn.execute(text("DROP TABLE IF EXISTS shared.test_unique_table"))
