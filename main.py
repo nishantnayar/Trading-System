@@ -3,12 +3,27 @@ Main entry point for the Trading System API.
 This is now a pure API server - the UI has been moved to Streamlit.
 """
 
+import os
 import sys
 from pathlib import Path
 
 # Add the project root to Python path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
+
+
+def _check_conda_env(expected: str = "torch_gpu") -> None:
+    """Fail fast if this process is not running in the expected conda env."""
+    actual = os.environ.get("CONDA_DEFAULT_ENV")
+    if actual != expected:
+        sys.exit(
+            f"Wrong Python environment: expected conda env '{expected}', "
+            f"got '{actual or 'none (not a conda env)'}'. "
+            f"Activate it with: conda activate {expected}"
+        )
+
+
+_check_conda_env()
 
 from contextlib import asynccontextmanager
 

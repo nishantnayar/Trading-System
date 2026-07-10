@@ -4,12 +4,22 @@ Yahoo Finance API Client
 Client for fetching market data from Yahoo Finance using yfinance library.
 """
 
+import warnings
 from datetime import date, datetime, timezone
 from typing import Any, List, Optional
 
 import pandas as pd
 import yfinance as yf
 from loguru import logger
+
+# yfinance 0.2.58 uses a NumPy timedelta pattern that NumPy >=2.5 flags as
+# deprecated (bare-integer unit conversion). Upstream issue, not ours to fix.
+warnings.filterwarnings(
+    "ignore",
+    message=r"The 'generic' unit for NumPy timedelta is deprecated.*",
+    category=DeprecationWarning,
+    module="yfinance.*",
+)
 
 from .exceptions import YahooAPIError, YahooDataError, YahooSymbolNotFoundError
 from .models import (

@@ -76,13 +76,8 @@ def fetch_monthly():
 
 
 @st.cache_data(ttl=60)
-def fetch_trades(days: int, pair_filter: str):
-    url = f"/api/strategies/pairs/pnl/trades?days={days}"
-    if pair_filter != "All":
-        # pair_filter is "SYM1/SYM2" -- we cannot filter by name server-side,
-        # so fetch all and filter client-side
-        pass
-    return api._make_request("GET", url)
+def fetch_trades(days: int):
+    return api._make_request("GET", f"/api/strategies/pairs/pnl/trades?days={days}")
 
 
 @st.cache_data(ttl=60)
@@ -333,7 +328,7 @@ def main():
 
     # ---- Trade log ----
     st.subheader("Trade Log")
-    trades_data = fetch_trades(days, "All")
+    trades_data = fetch_trades(days)
     trades = trades_data.get("trades", []) if "error" not in trades_data else []
 
     if not trades:

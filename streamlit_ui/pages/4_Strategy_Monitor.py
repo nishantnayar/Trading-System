@@ -994,6 +994,10 @@ def load_harmonic_open_trades() -> List[dict]:
                         "stop_loss": float(t.stop_loss) if t.stop_loss else None,
                         "target_1": float(t.target_1) if t.target_1 else None,
                         "target_2": float(t.target_2) if t.target_2 else None,
+                        "x_price": float(t.x_price) if t.x_price else None,
+                        "a_price": float(t.a_price) if t.a_price else None,
+                        "b_price": float(t.b_price) if t.b_price else None,
+                        "c_price": float(t.c_price) if t.c_price else None,
                         "d_price": float(t.d_price) if t.d_price else None,
                         "hold_hours": hold_hours,
                         "status": t.status,
@@ -1089,16 +1093,34 @@ def _render_xabcd_chart(trade: dict) -> go.Figure:
     """Mini XABCD price-level chart for a single harmonic trade row."""
     labels = ["X", "A", "B", "C", "D"]
     prices = [
-        trade.get("d_price"),  # placeholder - only D is stored on open trades
+        trade.get("x_price"),
+        trade.get("a_price"),
+        trade.get("b_price"),
+        trade.get("c_price"),
+        trade.get("d_price"),
     ]
-    # We only have D, stop, and targets from the open trade dict.
-    # Draw a simple horizontal level chart instead.
+
+    fig = go.Figure()
+
+    if all(p is not None for p in prices):
+        fig.add_trace(
+            go.Scatter(
+                x=labels,
+                y=prices,
+                mode="lines+markers+text",
+                text=[f"{p:.2f}" for p in prices],
+                textposition="top center",
+                line=dict(color="#1f77b4", width=1.5),
+                marker=dict(size=6, color="#1f77b4"),
+                showlegend=False,
+            )
+        )
+
     d = trade["d_price"] or 0
     sl = trade["stop_loss"] or 0
     t1 = trade["target_1"] or 0
     t2 = trade["target_2"] or 0
 
-    fig = go.Figure()
     for y, color, label in [
         (t2, "#2A7A4B", "T2"),
         (t1, "#58A87A", "T1"),
@@ -1118,7 +1140,7 @@ def _render_xabcd_chart(trade: dict) -> go.Figure:
         margin=dict(l=0, r=70, t=10, b=10),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(visible=False),
+        xaxis=dict(visible=all(p is not None for p in prices)),
         yaxis=dict(visible=False),
         showlegend=False,
     )

@@ -4,6 +4,7 @@ Integration tests for database schemas and table creation
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from config.database import get_database_config
 
@@ -16,9 +17,7 @@ class TestSchemaCreation:
     def test_all_service_schemas_exist(self, trading_engine):
         """Test that all required service schemas exist"""
         with trading_engine.connect() as conn:
-            result = conn.execute(
-                text(
-                    """
+            result = conn.execute(text("""
                 SELECT schema_name
                 FROM information_schema.schemata
                 WHERE schema_name IN (
@@ -27,9 +26,7 @@ class TestSchemaCreation:
                     'logging', 'shared'
                 )
                 ORDER BY schema_name
-            """
-                )
-            )
+            """))
             schemas = [row[0] for row in result.fetchall()]
 
             expected_schemas = [
@@ -60,28 +57,20 @@ class TestSchemaCreation:
                 "shared",
             ]:
                 # Create a test table
-                conn.execute(
-                    text(
-                        f"""
+                conn.execute(text(f"""
                     CREATE TABLE IF NOT EXISTS {schema}.test_table (
                         id SERIAL PRIMARY KEY,
                         test_column VARCHAR(50)
                     )
-                """
-                    )
-                )
+                """))
 
                 # Verify table was created
-                result = conn.execute(
-                    text(
-                        f"""
+                result = conn.execute(text(f"""
                     SELECT table_name
                     FROM information_schema.tables
                     WHERE table_schema = '{schema}'
                     AND table_name = 'test_table'
-                """
-                    )
-                )
+                """))
                 assert result.fetchone() is not None
 
                 # Clean up test table
@@ -147,10 +136,19 @@ class TestConnectionManagement:
             assert result.fetchone()[0] == 1
 
     def test_connection_pool_exhaustion(self, trading_engine):
-        """Test behavior when connection pool is exhausted"""
-        # This is a more complex test that would require careful implementation
-        # to avoid actually exhausting the pool in a test environment
-        pass
+        """Test that the pool recovers connections after they are closed"""
+        pool_size = trading_engine.pool.size()
+        connections = [trading_engine.connect() for _ in range(pool_size)]
+        try:
+            for conn in connections:
+                assert conn.execute(text("SELECT 1")).fetchone()[0] == 1
+        finally:
+            for conn in connections:
+                conn.close()
+
+        # Pool should be reusable once connections are released
+        with trading_engine.connect() as conn:
+            assert conn.execute(text("SELECT 1")).fetchone()[0] == 1
 
     def test_transaction_isolation(self, trading_engine):
         """Test transaction isolation levels"""
@@ -167,16 +165,48 @@ class TestDataIntegrity:
     """Test data integrity and constraints"""
 
     def test_foreign_key_constraints(self, trading_engine):
-        """Test that foreign key constraints are properly configured"""
-        # This test will be more relevant when we have actual tables with foreign keys
-        pass
+        """pair_registry.symbol1/symbol2 must reference an existing symbol"""
+        with trading_engine.connect() as conn:
+            trans = conn.begin()
+            try:
+                with pytest.raises(IntegrityError):
+                    conn.execute(text("""
+                            INSERT INTO strategy_engine.pair_registry
+                                (symbol1, symbol2, hedge_ratio, status)
+                            VALUES
+                                ('__NOT_A_REAL_SYMBOL__', '__ALSO_FAKE__', 1.0, 'active')
+                            """))
+            finally:
+                trans.rollback()
 
     def test_check_constraints(self, trading_engine):
-        """Test that check constraints are properly configured"""
-        # This test will be more relevant when we have actual tables with check constraints
-        pass
+        """market_data.data_source must satisfy the valid_data_source CHECK"""
+        with trading_engine.connect() as conn:
+            trans = conn.begin()
+            try:
+                with pytest.raises(IntegrityError):
+                    conn.execute(text("""
+                            INSERT INTO data_ingestion.market_data
+                                (symbol, timestamp, data_source, open, high, low, close, volume)
+                            VALUES
+                                ('TEST', NOW(), 'not_a_valid_source', 1, 1, 1, 1, 1)
+                            """))
+            finally:
+                trans.rollback()
 
     def test_unique_constraints(self, trading_engine):
-        """Test that unique constraints are properly configured"""
-        # This test will be more relevant when we have actual tables with unique constraints
-        pass
+        """market_data enforces uniqueness on (symbol, timestamp, data_source)"""
+        with trading_engine.connect() as conn:
+            trans = conn.begin()
+            try:
+                insert_stmt = text("""
+                    INSERT INTO data_ingestion.market_data
+                        (symbol, timestamp, data_source, open, high, low, close, volume)
+                    VALUES
+                        ('__TEST_DUP__', '2020-01-01 00:00:00+00', 'yahoo', 1, 1, 1, 1, 1)
+                    """)
+                conn.execute(insert_stmt)
+                with pytest.raises(IntegrityError):
+                    conn.execute(insert_stmt)
+            finally:
+                trans.rollback()

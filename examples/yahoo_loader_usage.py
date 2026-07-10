@@ -116,9 +116,9 @@ async def example_5_health_check() -> None:
 
 
 async def example_6_comprehensive_load() -> None:
-    """Example 6: Load all data types (when implemented)"""
+    """Example 6: Load all data types"""
     print("\n" + "=" * 80)
-    print("Example 6: Comprehensive data load (market data only for now)")
+    print("Example 6: Comprehensive data load (market data + fundamentals)")
     print("=" * 80)
 
     loader = YahooDataLoader()
@@ -130,9 +130,9 @@ async def example_6_comprehensive_load() -> None:
         symbol="AAPL",
         start_date=start_date,
         end_date=end_date,
-        include_fundamentals=True,  # Not yet implemented
-        include_dividends=True,  # Not yet implemented
-        include_splits=True,  # Not yet implemented
+        include_fundamentals=True,
+        include_dividends=True,
+        include_splits=True,
     )
 
     print(f"\nLoading Results:")
