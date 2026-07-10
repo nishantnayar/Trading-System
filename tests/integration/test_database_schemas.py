@@ -184,14 +184,16 @@ class TestDataIntegrity:
 
             try:
                 trans = conn.begin()
-                with pytest.raises(IntegrityError):
-                    conn.execute(
-                        text(
-                            "INSERT INTO shared.test_fk_child (parent_id) "
-                            "VALUES ('__NOT_A_REAL_PARENT__')"
+                try:
+                    with pytest.raises(IntegrityError):
+                        conn.execute(
+                            text(
+                                "INSERT INTO shared.test_fk_child (parent_id) "
+                                "VALUES ('MISSING')"
+                            )
                         )
-                    )
-                trans.rollback()
+                finally:
+                    trans.rollback()
             finally:
                 with conn.begin():
                     conn.execute(text("DROP TABLE IF EXISTS shared.test_fk_child"))
@@ -213,14 +215,16 @@ class TestDataIntegrity:
 
             try:
                 trans = conn.begin()
-                with pytest.raises(IntegrityError):
-                    conn.execute(
-                        text(
-                            "INSERT INTO shared.test_check_table (status) "
-                            "VALUES ('not_a_valid_status')"
+                try:
+                    with pytest.raises(IntegrityError):
+                        conn.execute(
+                            text(
+                                "INSERT INTO shared.test_check_table (status) "
+                                "VALUES ('not_a_valid_status')"
+                            )
                         )
-                    )
-                trans.rollback()
+                finally:
+                    trans.rollback()
             finally:
                 with conn.begin():
                     conn.execute(text("DROP TABLE IF EXISTS shared.test_check_table"))
@@ -239,13 +243,15 @@ class TestDataIntegrity:
 
             try:
                 trans = conn.begin()
-                insert_stmt = text(
-                    "INSERT INTO shared.test_unique_table (code) VALUES ('DUP')"
-                )
-                conn.execute(insert_stmt)
-                with pytest.raises(IntegrityError):
+                try:
+                    insert_stmt = text(
+                        "INSERT INTO shared.test_unique_table (code) VALUES ('DUP')"
+                    )
                     conn.execute(insert_stmt)
-                trans.rollback()
+                    with pytest.raises(IntegrityError):
+                        conn.execute(insert_stmt)
+                finally:
+                    trans.rollback()
             finally:
                 with conn.begin():
                     conn.execute(text("DROP TABLE IF EXISTS shared.test_unique_table"))
