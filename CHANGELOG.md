@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Pair boundary optimizer** (`src/services/strategy_engine/pairs/boundary_optimizer.py`): new research/backtest module implementing minimum-profit optimization for mean-reversion entry boundaries (Lin, McCrae & Gulati 2006; Puspaningrum, Lin & Gulati 2010). Given a pair's AR(1) spread parameters (phi, sigma_a), `optimize_boundary()` solves for the entry z-score boundary `U` that maximizes expected profit rate `U / (trade_duration + inter_trade_interval)`, using mean first-passage times of the stationary AR(1) process. Pure function, no DB/network access — not wired into live trading or `PairSignal` generation
+  - `scripts/discover_pairs.py`: `compute_half_life()` split into `compute_half_life_and_ar1()`, which now also returns the AR(1) beta and residual std already computed by the existing OLS fit (previously discarded). `run_discovery()` calls `optimize_boundary()` per candidate pair and prints a `suggested_entry_z` column/detail line alongside the existing `rank_score` — display-only, does not change the `pair_registry` upsert or `entry_threshold` defaults
+  - `tests/unit/test_boundary_optimizer.py`: 14 unit tests covering boundary positivity/bounds, monotonicity (faster reversion -> shorter trade cycle, wider boundary -> longer inter-trade interval), and invalid-input handling (phi outside (0,1), non-positive sigma_a)
+  - Validated against the source presentation's AME/DOV 2016-2018 backtest: refitting the same AR(1) on real Yahoo data reproduces a consistent stationary std (implied 0.058 vs. empirical 0.066) and an expected trade frequency (~5.6 trades over 753 days) matching the sparse signal count shown for that slow-reverting pair (half-life ~33 days)
+
+### Fixed
+- **P&L Report** (`streamlit_ui/pages/5_PnL_Report.py`): removed dead `pair_filter` parameter and no-op branch from `fetch_trades()` — pair filtering has always happened client-side after fetch; the parameter did nothing
+- **Strategy Monitor harmonic chart** (`streamlit_ui/pages/4_Strategy_Monitor.py`): `_render_xabcd_chart()` now plots the full X-A-B-C-D zigzag line for open harmonic trades. The `HarmonicTrade` model already stored all five price points, but `load_harmonic_open_trades()` only queried `d_price`, so the mini-chart fell back to a horizontal-levels-only view
+- **`tests/integration/test_database_schemas.py`**: implemented the previously stubbed (`pass`-only) `TestConnectionManagement.test_connection_pool_exhaustion`, `TestDataIntegrity.test_foreign_key_constraints`, `test_check_constraints`, and `test_unique_constraints`. The integrity tests create throwaway tables under the `shared` schema (rather than assuming `market_data`/`pair_registry` exist, since CI's test DB only has schemas created, not migrated tables) and assert the corresponding constraint rejects a bad insert
+- **`examples/yahoo_loader_usage.py`**: removed stale "Not yet implemented" comments on `include_fundamentals`/`include_dividends`/`include_splits` — `YahooDataLoader.load_all_data()` has fully supported all three since `load_company_info`/`load_dividends`/`load_splits` were added
+
 ---
 
 ## [1.2.0] - In Progress

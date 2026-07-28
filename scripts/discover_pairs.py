@@ -33,6 +33,7 @@ from datetime import timezone
 from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from src.services.strategy_engine.pairs.boundary_optimizer import optimize_boundary
 from src.shared.database.base import db_readonly_session, db_transaction
 from src.shared.database.models.market_data import MarketData
 from src.shared.database.models.strategy_models import PairRegistry
@@ -161,12 +162,29 @@ def compute_half_life(spread: pd.Series) -> float:
     half_life = -log(2) / log(1 + beta_ar1)  in same units as the series index.
     Returns inf if the series is not mean-reverting.
     """
+    half_life, _beta, _sigma_a = compute_half_life_and_ar1(spread)
+    return half_life
+
+
+def compute_half_life_and_ar1(spread: pd.Series) -> Tuple[float, float, float]:
+    """
+    Compute mean-reversion half-life and the underlying AR(1) fit.
+    half_life = -log(2) / log(1 + beta_ar1)  in same units as the series index.
+
+    Returns:
+        (half_life, beta, sigma_a) where beta is the OLS slope of
+        delta-spread on lagged spread (AR(1) coefficient phi = 1 + beta),
+        and sigma_a is the residual std dev of that regression - both
+        feed src.services.strategy_engine.pairs.boundary_optimizer.
+        Returns (inf, 0.0, 0.0) if the series is not mean-reverting or
+        has insufficient data.
+    """
     from statsmodels.regression.linear_model import OLS
     from statsmodels.tools import add_constant
 
     spread = spread.dropna()
     if len(spread) < 30:
-        return float("inf")
+        return float("inf"), 0.0, 0.0
 
     delta = spread.diff().dropna()
     lagged = spread.shift(1).dropna()
@@ -174,7 +192,7 @@ def compute_half_life(spread: pd.Series) -> float:
     # Align
     aligned = pd.concat([delta, lagged], axis=1).dropna()
     if len(aligned) < 20:
-        return float("inf")
+        return float("inf"), 0.0, 0.0
 
     y = aligned.iloc[:, 0].values
     x = add_constant(aligned.iloc[:, 1].values)
@@ -183,10 +201,10 @@ def compute_half_life(spread: pd.Series) -> float:
 
     if beta >= 0:
         # Not mean-reverting
-        return float("inf")
+        return float("inf"), beta, float(model.resid.std())
 
     half_life = -np.log(2) / np.log(1 + beta)
-    return float(half_life)
+    return float(half_life), beta, float(model.resid.std())
 
 
 def compute_spread_stats(
@@ -284,7 +302,7 @@ def discover_pairs(
             log_s1 = np.log(s1_aligned)
             log_s2 = np.log(s2_aligned)
             spread = log_s1 - hedge_ratio * log_s2
-            half_life = compute_half_life(spread)
+            half_life, ar1_beta, ar1_sigma = compute_half_life_and_ar1(spread)
 
             if half_life < min_half_life_hours or half_life > max_half_life_hours:
                 continue
@@ -303,6 +321,21 @@ def discover_pairs(
             z_abs_mean = spread_stats["z_score_abs_mean"]
             rank_score = coint_strength * abs(corr) * z_abs_mean
 
+            # Step 6: Suggested entry boundary via minimum-profit optimization
+            # (Lin, McCrae & Gulati 2006 / Puspaningrum et al. 2010), converted
+            # to z-score units by dividing by the spread's rolling std so it's
+            # comparable to entry_threshold. None if the AR(1) fit is unusable.
+            suggested_entry_z: Optional[float] = None
+            phi = 1 + ar1_beta
+            if 0 < phi < 1 and ar1_sigma > 0 and spread_stats["spread_std"] > 0:
+                try:
+                    boundary_result = optimize_boundary(phi=phi, sigma_a=ar1_sigma)
+                    suggested_entry_z = (
+                        boundary_result.boundary / spread_stats["spread_std"]
+                    )
+                except ValueError:
+                    suggested_entry_z = None
+
             results.append(
                 {
                     "symbol1": sym1,
@@ -317,6 +350,11 @@ def discover_pairs(
                     "overlap_days": round(overlap_days, 0),
                     "z_score_abs_mean": round(z_abs_mean, 4),
                     "rank_score": round(rank_score, 4),
+                    "suggested_entry_z": (
+                        round(suggested_entry_z, 3)
+                        if suggested_entry_z is not None
+                        else None
+                    ),
                     "name1": symbols_meta.get(sym1, {}).get("name", ""),
                     "name2": symbols_meta.get(sym2, {}).get("name", ""),
                 }
@@ -551,6 +589,7 @@ async def run_discovery(
         "z_score_window",
         "z_score_abs_mean",
         "current_z_score",
+        "suggested_entry_z",
         "overlap_days",
         "rank_score",
     ]
@@ -587,6 +626,12 @@ async def run_discovery(
             f"       Z abs mean:   {row['z_score_abs_mean']:.4f}  (tradeability signal)"
         )
         print(f"       Current Z:    {row['current_z_score']:.3f}")
+        suggested_z = row.get("suggested_entry_z")
+        if suggested_z is not None and not pd.isna(suggested_z):
+            print(
+                f"       Suggested entry Z: {suggested_z:.3f}  "
+                f"(minimum-profit optimization, vs. default 2.0)"
+            )
         print(f"       Data overlap: {int(row['overlap_days'])} days")
 
     # ---- Upsert into pair_registry (is_active=False - activate from UI after backtest) ----
