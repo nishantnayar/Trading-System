@@ -15,9 +15,10 @@ manually or via backtest tooling.
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional, cast
 
 import numpy as np
+import numpy.typing as npt
 from scipy import optimize
 
 
@@ -33,12 +34,12 @@ class BoundaryResult:
 
 def _stationary_std(phi: float, sigma_a: float) -> float:
     """Stationary standard deviation of a mean-zero AR(1) process."""
-    return sigma_a / np.sqrt(1 - phi**2)
+    return float(sigma_a / np.sqrt(1 - phi**2))
 
 
 def _mean_first_passage_time(
     start: float,
-    target_offset_fn,
+    target_offset_fn: Callable[[npt.NDArray[np.float64]], npt.NDArray[np.bool_]],
     phi: float,
     sigma_a: float,
     n_grid: int = 200,
@@ -58,11 +59,11 @@ def _mean_first_passage_time(
     dx = grid[1] - grid[0]
 
     # Transition density: s' | s ~ N(phi*s, sigma_a^2)
-    def kernel_row(s):
+    def kernel_row(s: float) -> npt.NDArray[np.float64]:
         density = np.exp(-((grid - phi * s) ** 2) / (2 * sigma_a**2)) / (
             np.sqrt(2 * np.pi) * sigma_a
         )
-        return density * dx
+        return cast(npt.NDArray[np.float64], density * dx)
 
     target_mask = target_offset_fn(grid)
 
@@ -84,8 +85,8 @@ def _mean_first_passage_time(
 def trade_duration(u: float, phi: float, sigma_a: float) -> float:
     """Mean first-passage time from U back to the mean (0)."""
 
-    def reached_mean(grid):
-        return np.abs(grid) < (grid[1] - grid[0])
+    def reached_mean(grid: npt.NDArray[np.float64]) -> npt.NDArray[np.bool_]:
+        return cast(npt.NDArray[np.bool_], np.abs(grid) < (grid[1] - grid[0]))
 
     return _mean_first_passage_time(u, reached_mean, phi, sigma_a)
 
@@ -93,7 +94,7 @@ def trade_duration(u: float, phi: float, sigma_a: float) -> float:
 def inter_trade_interval(u: float, phi: float, sigma_a: float) -> float:
     """Mean first-passage time from the mean (0) out to U."""
 
-    def reached_u(grid):
+    def reached_u(grid: npt.NDArray[np.float64]) -> npt.NDArray[np.bool_]:
         return grid >= u
 
     return _mean_first_passage_time(0.0, reached_u, phi, sigma_a)
