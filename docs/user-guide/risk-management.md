@@ -514,7 +514,7 @@ print(f"Recommended Position Size: ${position_size:.2f}")
 
 - [Risk Management API](../api/risk-management.md) - API reference for risk management
 - [Strategy Management](strategies.md) - Strategy configuration and risk limits
-- [Configuration Guide](../../Readme.md#configuration) - System configuration
+- [Configuration Guide](../../README.md#2-configure-environment) - System configuration
 - [Troubleshooting](../troubleshooting.md) - Common issues and solutions
 
 ---

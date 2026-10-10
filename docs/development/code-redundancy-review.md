@@ -88,7 +88,7 @@ Either have the UI use them or delete them. Having both the endpoint and an in-p
 - **Fix**: Move `streamlit_ui/utils/technical_indicators.py` to `src/shared/indicators.py` (or `src/services/analytics/indicators.py`). Have both the indicator service and the UI import from there.
 
 ### 2.2 `streamlit_ui/utils.py` vs `streamlit_ui/utils/` package
-- A module `utils.py` and a package `utils/` with the same name coexist. Python always resolves `utils` to the package, so [streamlit_ui/utils/__init__.py](../../streamlit_ui/utils/__init__.py) uses `importlib` to load the shadowed `utils.py` and manually re-exports ~50 names.
+- A module `utils.py` and a package `utils/` with the same name coexist. Python always resolves `utils` to the package, so `streamlit_ui/utils/__init__.py` (since removed) uses `importlib` to load the shadowed `utils.py` and manually re-exports ~50 names.
 - Pages import it three different ways: `from utils import ...`, `from streamlit_ui.utils import ...`, and a local `from utils import ...` inside a function.
 - **Fix**: Rename `utils.py` -> e.g. `streamlit_ui/ui_helpers.py` (or split into `formatting.py`, `charts.py`, `data.py`), delete the importlib shim, use one import style.
 
@@ -196,7 +196,7 @@ Unmatched remainder:
 ### 4.3 Position sizing: three rules, backtest doesn't match live
 - Live pairs: `KellySizer` - 2% bootstrap, Half-Kelly, 12% cap ([position_sizer.py](../../src/services/strategy_engine/pairs/position_sizer.py))
 - Backtest: hardcoded 2% per leg, fractional shares ([engine.py:384](../../src/services/strategy_engine/backtesting/engine.py))
-- Harmonic: own `compute_qty` 2% / 10% cap ([harmonic_executor.py:34](../../src/services/strategy_engine/harmonic/harmonic_executor.py))
+- Harmonic: own `compute_qty` 2% / 10% cap (`harmonic_executor.py:34`, since removed)
 - `BOOTSTRAP_FRACTION` / `MAX_LEG_FRACTION` constants exist but backtest and harmonic don't use them.
 - **Fix**: Import the constants at minimum; ideally let `KellySizer` accept an injected trade history so the backtest can use it.
 

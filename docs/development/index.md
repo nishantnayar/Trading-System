@@ -137,7 +137,7 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md) for contribution guidelines.
 
 ## Quick Links
 
-- [Main README](../../Readme.md)
+- [Main README](../../README.md)
 - [API Reference](../api/index.md)
 - [Troubleshooting](../troubleshooting.md)
 - [GitHub Repository](https://github.com/nishantnayar/trading-system)
