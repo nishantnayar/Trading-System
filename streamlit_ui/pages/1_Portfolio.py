@@ -13,6 +13,7 @@ import streamlit as st
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from api_client import get_api_client  # noqa: E402
+from utils import load_custom_css  # noqa: E402
 
 # ── Page config ───────────────────────────────────────────────────────────────
 
@@ -29,21 +30,6 @@ PLOTLY_CONFIG = {
 
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
-
-
-def load_css() -> None:
-    css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
-    try:
-        with open(css_file) as f:
-            css = f.read()
-        from css_config import generate_css_variables, get_theme_css
-
-        st.markdown(
-            f"<style>{generate_css_variables()}{css}{get_theme_css()}</style>",
-            unsafe_allow_html=True,
-        )
-    except Exception:
-        pass
 
 
 # ── Formatters ────────────────────────────────────────────────────────────────
@@ -96,10 +82,7 @@ _COLOR_SHORT = "#C44E52"
 
 def render_allocation(positions: list) -> None:
     if not positions:
-        st.markdown(
-            "<p style='color:#9e9e9e;font-size:0.88rem;'>No positions to chart.</p>",
-            unsafe_allow_html=True,
-        )
+        st.html("<p style='color:#9e9e9e;font-size:0.88rem;'>No positions to chart.</p>")
         return
 
     labels = [p.get("symbol", "") for p in positions]
@@ -321,11 +304,10 @@ def render_place_order(api) -> None:
                     "Limit Price ($)", min_value=0.01, value=100.0, step=0.01
                 )
             else:
-                st.markdown(
-                    "<div style='padding-top:1.4rem;color:#9e9e9e;"
-                    "font-size:0.82rem;'>Fill at market price</div>",
-                    unsafe_allow_html=True,
-                )
+                    st.html(
+                        "<div style='padding-top:1.4rem;color:#9e9e9e;"
+                        "font-size:0.82rem;'>Fill at market price</div>"
+                    )
 
         submitted = st.form_submit_button("Submit Order", type="primary")
 
@@ -353,7 +335,7 @@ def render_place_order(api) -> None:
 
 
 def main() -> None:
-    load_css()
+    load_custom_css()
 
     api = get_api_client()
 

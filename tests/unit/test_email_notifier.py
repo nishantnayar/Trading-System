@@ -5,7 +5,7 @@ smtplib.SMTP and get_settings() are patched so no real network
 or SMTP credentials are needed.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -13,7 +13,7 @@ import src.services.notification.email_notifier as notifier_module
 from src.services.notification.email_notifier import EmailNotifier, get_notifier
 
 
-def _mock_settings(configured: bool = True, paper: bool = True) -> MagicMock:
+def _mock_settings(configured: bool = True) -> MagicMock:
     """Build a settings mock with SMTP fields populated (or blank if not configured)."""
     s = MagicMock()
     if configured:
@@ -30,15 +30,17 @@ def _mock_settings(configured: bool = True, paper: bool = True) -> MagicMock:
         s.smtp_password = None
         s.smtp_from_email = None
         s.smtp_to_email = None
-    s.paper_trading = paper
     return s
 
 
 def _configured_notifier(paper: bool = True) -> EmailNotifier:
     """Return an EmailNotifier built with mocked configured settings."""
-    with patch(
-        "src.services.notification.email_notifier.get_settings",
-        return_value=_mock_settings(configured=True, paper=paper),
+    with (
+        patch(
+            "src.services.notification.email_notifier.get_settings",
+            return_value=_mock_settings(configured=True),
+        ),
+        patch("src.services.notification.email_notifier.PAPER_TRADING", paper),
     ):
         return EmailNotifier()
 

@@ -2,18 +2,10 @@
 Alpaca Trading API Client
 """
 
-import logging
 import os
-from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, cast
 
-import pandas as pd
 from alpaca.common.exceptions import APIError
-from alpaca.data.enums import Adjustment
-from alpaca.data.historical import StockHistoricalDataClient
-from alpaca.data.models import BarSet
-from alpaca.data.requests import StockBarsRequest
-from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.client import TradingClient
 from alpaca.trading.enums import QueryOrderStatus
 from alpaca.trading.models import Clock, Order, Position, TradeAccount
@@ -23,10 +15,13 @@ from alpaca.trading.requests import (
     MarketOrderRequest,
     StopOrderRequest,
 )
+from loguru import logger
 
 from .exceptions import AlpacaAPIError, AlpacaAuthenticationError, AlpacaConnectionError
 
-logger = logging.getLogger(__name__)
+# The system is paper-trading only. Every AlpacaClient defaults to this and
+# EmailNotifier derives its [PAPER]/[LIVE] tag from it - change it in one place.
+PAPER_TRADING = True
 
 
 class AlpacaClient:
@@ -37,7 +32,7 @@ class AlpacaClient:
         api_key: Optional[str] = None,
         secret_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        is_paper: bool = True,
+        is_paper: bool = PAPER_TRADING,
     ):
         """
         Initialize Alpaca client
@@ -66,12 +61,8 @@ class AlpacaClient:
                 secret_key=self.secret_key,
                 paper=is_paper,
             )
-            self.data_client = StockHistoricalDataClient(
-                api_key=self.api_key,
-                secret_key=self.secret_key,
-            )
             mode = "paper" if is_paper else "live"
-            logger.info("Alpaca client initialized for %s trading", mode)
+            logger.info(f"Alpaca client initialized for {mode} trading")
         except Exception as e:
             raise AlpacaConnectionError(f"Failed to initialize Alpaca client: {str(e)}")
 
@@ -295,48 +286,6 @@ class AlpacaClient:
             raise AlpacaAPIError(f"Failed to cancel order {order_id}: {str(e)}")
         except Exception as e:
             raise AlpacaConnectionError(f"Connection error: {str(e)}")
-
-    async def get_bars(
-        self,
-        symbol: str,
-        limit: int = 500,
-        adjustment: str = "all",
-    ) -> pd.Series:
-        """
-        Fetch the last `limit` hourly bars for a symbol.
-
-        Returns a pd.Series of close prices indexed by UTC timestamp.
-        Uses Alpaca's market data API - includes today's intraday bars,
-        unlike the DB which is end-of-day only.
-
-        A start date is required: without it the Alpaca v2 API returns only
-        the current day's bars regardless of the limit value.
-        We request enough calendar days to cover `limit` hourly bars
-        (assuming ~7 market hours/day, 5 days/week -> ~3.5 bars/calendar day).
-        """
-        # 4 calendar days per bar is conservative enough to always cover limit
-        lookback_days = max(7, (limit * 4) // 7)
-        start = datetime.now(timezone.utc) - timedelta(days=lookback_days)
-        try:
-            request = StockBarsRequest(
-                symbol_or_symbols=symbol,
-                timeframe=TimeFrame.Hour,
-                start=start,
-                limit=limit,
-                adjustment=Adjustment(adjustment),
-            )
-            bars = cast(BarSet, self.data_client.get_stock_bars(request))
-            if bars is None or len(bars.df) == 0:
-                return pd.Series(dtype=float, name=symbol)
-            df: pd.DataFrame = bars.df
-            if isinstance(df.index, pd.MultiIndex):
-                df = cast(pd.DataFrame, df.xs(symbol, level="symbol"))
-            df.index = pd.to_datetime(df.index, utc=True)
-            return pd.Series(df["close"].rename(symbol), dtype=float)
-        except APIError as e:
-            raise AlpacaAPIError(f"Failed to get bars for {symbol}: {str(e)}")
-        except Exception as e:
-            raise AlpacaConnectionError(f"Connection error fetching bars: {str(e)}")
 
     async def place_order(
         self,

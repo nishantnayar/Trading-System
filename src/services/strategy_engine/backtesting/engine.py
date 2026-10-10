@@ -28,11 +28,12 @@ from typing import List, Optional, Tuple
 import pandas as pd
 from loguru import logger
 
+from src.services.strategy_engine.pairs.position_sizer import KellySizer
 from src.services.strategy_engine.pairs.signal_generator import BacktestSignalGenerator
 from src.services.strategy_engine.pairs.spread_calculator import SpreadCalculator
-from src.shared.database.base import db_readonly_session
-from src.shared.database.models.market_data import MarketData
+from src.services.strategy_engine.pnl import pair_pnl
 from src.shared.database.models.strategy_models import PairRegistry
+from src.shared.market_data import PRICE_SOURCE, get_close_series
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -109,7 +110,7 @@ class BacktestEngine:
         start_date: date,
         end_date: date,
         initial_capital: float = 100_000.0,
-        data_source: str = "yahoo_adjusted",
+        data_source: str = PRICE_SOURCE,
         slippage_bps: float = 5.0,
         commission_per_trade: float = 0.0,
     ):
@@ -176,37 +177,10 @@ class BacktestEngine:
         sym1 = self.pair.symbol1
         sym2 = self.pair.symbol2
 
-        with db_readonly_session() as session:
-            rows = (
-                session.query(
-                    MarketData.symbol,
-                    MarketData.timestamp,
-                    MarketData.close,
-                )
-                .filter(
-                    MarketData.symbol.in_([sym1, sym2]),
-                    MarketData.data_source == self.data_source,
-                    MarketData.timestamp
-                    >= datetime.combine(fetch_start, datetime.min.time()),
-                    MarketData.timestamp
-                    <= datetime.combine(
-                        self.end_date + timedelta(days=1), datetime.min.time()
-                    ),
-                    MarketData.close.isnot(None),
-                )
-                .order_by(MarketData.timestamp)
-                .all()
-            )
-
-        if not rows:
-            return pd.Series(dtype=float), pd.Series(dtype=float)
-
-        df = pd.DataFrame(rows, columns=["symbol", "timestamp", "close"])
-        df["close"] = df["close"].astype(float)
-        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
-
-        p1 = df[df["symbol"] == sym1].set_index("timestamp")["close"]
-        p2 = df[df["symbol"] == sym2].set_index("timestamp")["close"]
+        series = get_close_series(
+            [sym1, sym2], fetch_start, self.end_date, self.data_source
+        )
+        p1, p2 = series[sym1], series[sym2]
 
         logger.info(f"Loaded {len(p1)} bars for {sym1}, {len(p2)} bars for {sym2}")
         return p1, p2
@@ -236,8 +210,9 @@ class BacktestEngine:
         )
 
         open_trade: Optional[SimulatedTrade] = None
-        equity = self.initial_capital
-        realized_pnl = 0.0
+        equity = self.initial_capital  # includes realized P&L as trades close
+        # Same sizing as live trading, fed with this run's closed trades
+        sizer = KellySizer(self.pair, closed_trades=result.trades)
 
         # Use a rolling view: compute spread+z over the full series,
         # then iterate bar-by-bar from index `window` onwards.
@@ -270,9 +245,7 @@ class BacktestEngine:
                 result.equity_curve.append(
                     {
                         "timestamp": ts.isoformat(),
-                        "equity": equity
-                        + realized_pnl
-                        + _unrealized_pnl(open_trade, p1, p2),
+                        "equity": equity + _unrealized_pnl(open_trade, p1, p2),
                     }
                 )
                 result.bars_processed += 1
@@ -289,7 +262,7 @@ class BacktestEngine:
                 long_p1 = signal_type == "LONG_SPREAD"
                 entry_p1 = self._slipped_price(p1, is_buy=long_p1)
                 entry_p2 = self._slipped_price(p2, is_buy=not long_p1)
-                qty1, qty2 = self._size_position(equity, entry_p1, entry_p2)
+                qty1, qty2 = sizer.calculate_size(equity, entry_p1, entry_p2)
                 open_trade = SimulatedTrade(
                     side=signal_type,
                     entry_time=ts.to_pydatetime(),
@@ -321,7 +294,6 @@ class BacktestEngine:
                 hold_delta = ts.to_pydatetime() - open_trade.entry_time
                 open_trade.hold_hours = hold_delta.total_seconds() / 3600
 
-                realized_pnl += pnl
                 equity += pnl
                 result.trades.append(open_trade)
                 open_trade = None
@@ -378,22 +350,6 @@ class BacktestEngine:
         return price * (1 + factor) if is_buy else price * (1 - factor)
 
     # ------------------------------------------------------------------
-    # Position sizing (fixed 2% per leg - Kelly not available in backtest)
-    # ------------------------------------------------------------------
-
-    def _size_position(
-        self, equity: float, price1: float, price2: float
-    ) -> Tuple[float, float]:
-        """
-        Simple fixed-fraction sizing: 2% of equity per leg.
-        Returns (qty1, qty2) as floats (fractional shares allowed in backtest).
-        """
-        leg_capital = equity * 0.02
-        qty1 = leg_capital / price1
-        qty2 = leg_capital / price2
-        return qty1, qty2
-
-    # ------------------------------------------------------------------
 
     def _empty_result(self) -> BacktestResult:
         return BacktestResult(
@@ -435,19 +391,16 @@ def _compute_pnl(
 
     commission is a flat dollar cost deducted from the gross P&L.
     """
-    d1 = exit_p1 - trade.entry_price1
-    d2 = exit_p2 - trade.entry_price2
-
-    if trade.side == "LONG_SPREAD":
-        pnl = trade.qty1 * d1 - trade.qty2 * d2
-    else:  # SHORT_SPREAD
-        pnl = -trade.qty1 * d1 + trade.qty2 * d2
-
-    pnl -= commission
-
-    entry_cost = trade.qty1 * trade.entry_price1 + trade.qty2 * trade.entry_price2
-    pnl_pct = (pnl / entry_cost * 100) if entry_cost > 0 else 0.0
-    return pnl, pnl_pct
+    return pair_pnl(
+        trade.side,
+        trade.qty1,
+        trade.qty2,
+        trade.entry_price1,
+        trade.entry_price2,
+        exit_p1,
+        exit_p2,
+        commission=commission,
+    )
 
 
 def _unrealized_pnl(

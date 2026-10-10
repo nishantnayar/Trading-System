@@ -4,7 +4,7 @@ Unit tests for Yahoo Finance Client
 Tests the Yahoo Finance API client functionality.
 """
 
-from datetime import date
+from datetime import date, datetime, timezone
 from unittest.mock import Mock, patch
 
 import pandas as pd
@@ -106,6 +106,35 @@ class TestYahooClientHistoricalData:
         mock_ticker.history.assert_called_once_with(
             period="1mo", interval="1d", auto_adjust=True
         )
+
+    @pytest.mark.asyncio
+    @patch("src.services.yahoo.client.yf.Ticker")
+    async def test_get_historical_data_converts_exchange_tz_to_utc(
+        self, mock_ticker_class, client
+    ):
+        """ET-stamped bars are converted to UTC, not relabelled as UTC"""
+        idx = pd.DatetimeIndex(
+            ["2026-06-23 09:30", "2026-12-01 09:30"], tz="America/New_York"
+        )
+        hist = pd.DataFrame(
+            {
+                "Open": [1.0, 1.0],
+                "High": [1.0, 1.0],
+                "Low": [1.0, 1.0],
+                "Close": [1.0, 1.0],
+                "Volume": [100, 100],
+            },
+            index=idx,
+        )
+        mock_ticker = Mock()
+        mock_ticker.history.return_value = hist
+        mock_ticker_class.return_value = mock_ticker
+
+        bars = await client.get_historical_data("EWBC", interval="1h")
+
+        # EDT (UTC-4) in June, EST (UTC-5) in December
+        assert bars[0].timestamp == datetime(2026, 6, 23, 13, 30, tzinfo=timezone.utc)
+        assert bars[1].timestamp == datetime(2026, 12, 1, 14, 30, tzinfo=timezone.utc)
 
     @pytest.mark.asyncio
     @patch("src.services.yahoo.client.yf.Ticker")

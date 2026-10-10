@@ -9,7 +9,7 @@ Tabs:
 import os
 import sys
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -18,15 +18,14 @@ import streamlit as st
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from api_client import TradingSystemAPI  # noqa: E402
-from utils import render_market_banner  # noqa: E402
+from api_client import get_api_client  # noqa: E402
+from utils import load_custom_css, render_market_banner  # noqa: E402
 
 from src.shared.database.base import db_readonly_session, db_transaction  # noqa: E402
 from src.shared.database.models.strategy_models import (  # noqa: E402
     BasketRegistry,
     BasketSpread,
     BasketTrade,
-    HarmonicTrade,
 )
 
 # ---------------------------------------------------------------------------
@@ -45,27 +44,11 @@ PLOTLY_CONFIG = {
     "modeBarButtonsToRemove": ["pan2d", "lasso2d", "select2d"],
 }
 
-API_BASE = os.getenv("API_BASE_URL", "http://localhost:8001")
-api = TradingSystemAPI(base_url=API_BASE)
+api = get_api_client()
 
 COLOR_ENTRY = "rgba(255,60,60,0.7)"
 COLOR_EXIT = "rgba(60,180,60,0.7)"
 COLOR_ZERO = "rgba(150,150,150,0.4)"
-
-
-def _load_css() -> None:
-    css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
-    try:
-        with open(css_file) as f:
-            css = f.read()
-        from css_config import generate_css_variables, get_theme_css
-
-        st.markdown(
-            f"<style>{generate_css_variables()}{css}{get_theme_css()}</style>",
-            unsafe_allow_html=True,
-        )
-    except Exception:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -75,47 +58,42 @@ def _load_css() -> None:
 
 @st.cache_data(ttl=30)
 def fetch_status():
-    return api._make_request("GET", "/api/strategies/pairs/status")
+    return api.get_pairs_status()
 
 
 @st.cache_data(ttl=30)
 def fetch_active_pairs():
-    data = api._make_request("GET", "/api/strategies/pairs/active")
-    return data.get("pairs", [])
+    return api.get_active_pairs()
 
 
 @st.cache_data(ttl=60)
 def fetch_performance():
-    return api._make_request("GET", "/api/strategies/pairs/performance")
+    return api.get_pairs_performance()
 
 
 @st.cache_data(ttl=30)
 def fetch_pair_history(pair_id: int, days: int = 30):
-    return api._make_request(
-        "GET", f"/api/strategies/pairs/{pair_id}/history?days={days}"
-    )
+    return api.get_pair_history(pair_id, days)
 
 
 @st.cache_data(ttl=30)
 def fetch_pair_details(pair_id: int):
-    return api._make_request("GET", f"/api/strategies/pairs/{pair_id}/details")
+    return api.get_pair_details(pair_id)
 
 
 @st.cache_data(ttl=30)
 def fetch_risk_state():
-    return api._make_request("GET", "/api/strategies/pairs/risk")
+    return api.get_risk_state()
 
 
 @st.cache_data(ttl=60)
 def fetch_market_clock():
-    return api._make_request("GET", "/clock")
+    return api.get_market_clock()
 
 
 @st.cache_data(ttl=60)
 def fetch_pair_sparkline(pair_id: int, points: int = 48):
-    return api._make_request(
-        "GET", f"/api/strategies/pairs/{pair_id}/sparkline?points={points}"
-    )
+    return api.get_pair_sparkline(pair_id, points)
 
 
 # ---------------------------------------------------------------------------
@@ -284,7 +262,7 @@ def load_trade_history(limit: int = 50) -> List[dict]:
                         "hold_hours": hold_hours,
                         "pnl": round(float(t.pnl), 2) if t.pnl is not None else None,
                         "pnl_pct": (
-                            round(float(t.pnl_pct) * 100, 3)
+                            round(float(t.pnl_pct), 3)
                             if t.pnl_pct is not None
                             else None
                         ),
@@ -434,20 +412,18 @@ def _render_pairs_tab() -> None:
         bcol1, bcol2, bcol3, _ = st.columns([1, 1, 1, 5])
         with bcol1:
             if st.button("Start Strategy", type="primary"):
-                r = api._make_request("POST", "/api/strategies/pairs/start")
+                r = api.start_pairs_strategy()
                 st.success(r.get("message", "Started"))
                 st.cache_data.clear()
         with bcol2:
             if st.button("Stop Strategy"):
-                r = api._make_request("POST", "/api/strategies/pairs/stop")
+                r = api.stop_pairs_strategy()
                 st.info(r.get("message", "Stopped"))
                 st.cache_data.clear()
         with bcol3:
             if st.button("Emergency Stop", type="secondary"):
                 if st.session_state.get("confirm_estop"):
-                    r = api._make_request(
-                        "POST", "/api/strategies/pairs/emergency-stop"
-                    )
+                    r = api.emergency_stop_pairs()
                     st.error(r.get("message", "Emergency stop sent"))
                     st.session_state["confirm_estop"] = False
                     st.cache_data.clear()
@@ -478,10 +454,7 @@ def _render_pairs_tab() -> None:
             with rc4:
                 if cb_active:
                     if st.button("Reset Circuit Breaker", type="primary"):
-                        api._make_request(
-                            "POST",
-                            "/api/strategies/pairs/risk/reset-circuit-breaker",
-                        )
+                        api.reset_circuit_breaker()
                         st.success("Circuit breaker reset")
                         st.cache_data.clear()
                 new_threshold = st.number_input(
@@ -493,11 +466,7 @@ def _render_pairs_tab() -> None:
                     key="risk_threshold_input",
                 )
                 if st.button("Save Threshold"):
-                    api._make_request(
-                        "PUT",
-                        "/api/strategies/pairs/risk/threshold",
-                        json={"threshold": new_threshold / 100},
-                    )
+                    api.set_drawdown_threshold(new_threshold / 100)
                     st.success(f"Threshold updated to {new_threshold:.1f}%")
                     st.cache_data.clear()
 
@@ -540,10 +509,9 @@ def _render_pairs_tab() -> None:
             z_label = f"{z:.3f}"
 
         c1, c2, c3, c4, c5 = st.columns([2, 1, 1, 1, 3])
-        c1.markdown(
-            f"**{p['name']}**  \n<small>corr {p.get('correlation', 0):.3f} "
-            f"· {p.get('days_held') or 0}d held</small>",
-            unsafe_allow_html=True,
+        c1.html(
+            f"<strong>{p['name']}</strong><br><small>corr {p.get('correlation', 0):.3f} "
+            f"· {p.get('days_held') or 0}d held</small>"
         )
         with c2:
             if p["status"] == "in_trade":
@@ -953,346 +921,21 @@ def _render_baskets_tab() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Harmonic data helpers
-# ---------------------------------------------------------------------------
-
-
-@st.cache_data(ttl=30)
-def load_harmonic_open_trades() -> List[dict]:
-    try:
-        with db_readonly_session() as session:
-            trades = (
-                session.query(HarmonicTrade)
-                .filter(HarmonicTrade.status == "OPEN")
-                .order_by(HarmonicTrade.entry_time.desc())
-                .all()
-            )
-            result = []
-            for t in trades:
-                entry = t.entry_time
-                if entry and entry.tzinfo is None:
-                    entry = entry.replace(tzinfo=timezone.utc)
-                hold_hours = (
-                    round(
-                        (datetime.now(timezone.utc) - entry).total_seconds() / 3600, 1
-                    )
-                    if entry
-                    else None
-                )
-                result.append(
-                    {
-                        "id": t.id,
-                        "symbol": t.symbol,
-                        "pattern": t.pattern,
-                        "direction": t.direction,
-                        "side": t.side,
-                        "qty": t.qty,
-                        "entry_price": float(t.entry_price) if t.entry_price else None,
-                        "entry_time": (
-                            entry.strftime("%Y-%m-%d %H:%M") if entry else "--"
-                        ),
-                        "stop_loss": float(t.stop_loss) if t.stop_loss else None,
-                        "target_1": float(t.target_1) if t.target_1 else None,
-                        "target_2": float(t.target_2) if t.target_2 else None,
-                        "x_price": float(t.x_price) if t.x_price else None,
-                        "a_price": float(t.a_price) if t.a_price else None,
-                        "b_price": float(t.b_price) if t.b_price else None,
-                        "c_price": float(t.c_price) if t.c_price else None,
-                        "d_price": float(t.d_price) if t.d_price else None,
-                        "hold_hours": hold_hours,
-                        "status": t.status,
-                    }
-                )
-            return result
-    except Exception as e:
-        st.error(f"Failed to load harmonic trades: {e}")
-        return []
-
-
-@st.cache_data(ttl=60)
-def load_harmonic_closed_trades(limit: int = 50) -> List[dict]:
-    try:
-        with db_readonly_session() as session:
-            trades = (
-                session.query(HarmonicTrade)
-                .filter(HarmonicTrade.status.in_(["CLOSED", "STOPPED"]))
-                .order_by(HarmonicTrade.exit_time.desc())
-                .limit(limit)
-                .all()
-            )
-            result = []
-            for t in trades:
-                entry = t.entry_time
-                ex = t.exit_time
-                if entry and entry.tzinfo is None:
-                    entry = entry.replace(tzinfo=timezone.utc)
-                if ex and ex.tzinfo is None:
-                    ex = ex.replace(tzinfo=timezone.utc)
-                hold_hours = (
-                    round((ex - entry).total_seconds() / 3600, 1)
-                    if entry and ex
-                    else None
-                )
-                result.append(
-                    {
-                        "symbol": t.symbol,
-                        "pattern": t.pattern,
-                        "direction": t.direction,
-                        "side": t.side,
-                        "qty": t.qty,
-                        "entry_price": float(t.entry_price) if t.entry_price else None,
-                        "exit_price": float(t.exit_price) if t.exit_price else None,
-                        "exit_reason": t.exit_reason or "--",
-                        "hold_hours": hold_hours,
-                        "pnl": float(t.pnl) if t.pnl is not None else None,
-                        "pnl_pct": float(t.pnl_pct) if t.pnl_pct is not None else None,
-                        "status": t.status,
-                        "exit_time": (ex.strftime("%Y-%m-%d %H:%M") if ex else "--"),
-                    }
-                )
-            return result
-    except Exception as e:
-        st.error(f"Failed to load harmonic trade history: {e}")
-        return []
-
-
-@st.cache_data(ttl=60)
-def load_harmonic_summary() -> dict:
-    try:
-        with db_readonly_session() as session:
-            open_count = (
-                session.query(HarmonicTrade)
-                .filter(HarmonicTrade.status == "OPEN")
-                .count()
-            )
-            closed = (
-                session.query(HarmonicTrade)
-                .filter(HarmonicTrade.status.in_(["CLOSED", "STOPPED"]))
-                .all()
-            )
-            closed_pnl = sum(float(t.pnl) for t in closed if t.pnl is not None)
-            wins = sum(1 for t in closed if t.pnl is not None and float(t.pnl) > 0)
-            win_rate = wins / len(closed) if closed else 0.0
-            return {
-                "open_trades": open_count,
-                "closed_trades": len(closed),
-                "closed_pnl": closed_pnl,
-                "win_rate": win_rate,
-            }
-    except Exception as e:
-        st.error(f"Failed to load harmonic summary: {e}")
-        return {
-            "open_trades": 0,
-            "closed_trades": 0,
-            "closed_pnl": 0.0,
-            "win_rate": 0.0,
-        }
-
-
-def _render_xabcd_chart(trade: dict) -> go.Figure:
-    """Mini XABCD price-level chart for a single harmonic trade row."""
-    labels = ["X", "A", "B", "C", "D"]
-    prices = [
-        trade.get("x_price"),
-        trade.get("a_price"),
-        trade.get("b_price"),
-        trade.get("c_price"),
-        trade.get("d_price"),
-    ]
-
-    fig = go.Figure()
-
-    if all(p is not None for p in prices):
-        fig.add_trace(
-            go.Scatter(
-                x=labels,
-                y=prices,
-                mode="lines+markers+text",
-                text=[f"{p:.2f}" for p in prices],
-                textposition="top center",
-                line=dict(color="#1f77b4", width=1.5),
-                marker=dict(size=6, color="#1f77b4"),
-                showlegend=False,
-            )
-        )
-
-    d = trade["d_price"] or 0
-    sl = trade["stop_loss"] or 0
-    t1 = trade["target_1"] or 0
-    t2 = trade["target_2"] or 0
-
-    for y, color, label in [
-        (t2, "#2A7A4B", "T2"),
-        (t1, "#58A87A", "T1"),
-        (d, "#1f77b4", "D (entry)"),
-        (sl, "#C0392B", "SL"),
-    ]:
-        fig.add_hline(
-            y=y,
-            line_color=color,
-            line_dash="dot",
-            line_width=1.5,
-            annotation_text=f"{label} {y:.2f}",
-            annotation_position="right",
-        )
-    fig.update_layout(
-        height=140,
-        margin=dict(l=0, r=70, t=10, b=10),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(visible=all(p is not None for p in prices)),
-        yaxis=dict(visible=False),
-        showlegend=False,
-    )
-    return fig
-
-
-def _render_harmonic_tab() -> None:
-    st.caption(
-        "Gartley harmonic pattern trades. "
-        "Patterns detected daily from EOD price data (yahoo_adjusted)."
-    )
-
-    summary = load_harmonic_summary()
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Open Trades", summary["open_trades"])
-    m2.metric("Closed Trades", summary["closed_trades"])
-    m3.metric(
-        "Closed P&L",
-        f"${summary['closed_pnl']:+,.2f}",
-    )
-    m4.metric("Win Rate", f"{summary['win_rate'] * 100:.1f}%")
-
-    st.divider()
-
-    # ---- Open trades ----
-    st.subheader("Open Trades")
-    open_trades = load_harmonic_open_trades()
-
-    if not open_trades:
-        st.info(
-            "No open harmonic trades. "
-            "Run the harmonic flow or wait for the next scheduled scan."
-        )
-    else:
-        hcols = st.columns([1.2, 1.2, 1.0, 1.0, 1.2, 1.0, 1.2, 1.2, 1.0, 3.0])
-        for col, h in zip(
-            hcols,
-            [
-                "Symbol",
-                "Pattern",
-                "Direction",
-                "Side",
-                "Entry Price",
-                "Qty",
-                "Stop Loss",
-                "Target 1",
-                "Hold (h)",
-                "Levels",
-            ],
-        ):
-            col.markdown(f"**{h}**")
-        st.divider()
-
-        for t in open_trades:
-            cols = st.columns([1.2, 1.2, 1.0, 1.0, 1.2, 1.0, 1.2, 1.2, 1.0, 3.0])
-            dir_color = "green" if t["direction"] == "bullish" else "red"
-            cols[0].markdown(f"**{t['symbol']}**")
-            cols[1].write(t["pattern"].capitalize())
-            cols[2].markdown(f"**:{dir_color}[{t['direction'].capitalize()}]**")
-            cols[3].write(t["side"].upper())
-            cols[4].write(f"${t['entry_price']:.4f}" if t["entry_price"] else "--")
-            cols[5].write(t["qty"])
-            cols[6].markdown(f":red[${t['stop_loss']:.4f}]" if t["stop_loss"] else "--")
-            cols[7].markdown(f":green[${t['target_1']:.4f}]" if t["target_1"] else "--")
-            cols[8].write(f"{t['hold_hours']}h" if t["hold_hours"] else "--")
-            if t["d_price"]:
-                cols[9].plotly_chart(
-                    _render_xabcd_chart(t),
-                    config={"displayModeBar": False},
-                    width="stretch",
-                )
-            else:
-                cols[9].write("--")
-        st.divider()
-
-    st.divider()
-
-    # ---- Trade history ----
-    st.subheader("Trade History (Last 50)")
-    history = load_harmonic_closed_trades(limit=50)
-
-    if not history:
-        st.info("No closed harmonic trades yet.")
-    else:
-        hcols = st.columns([1.2, 1.2, 1.0, 1.2, 1.2, 1.5, 1.0, 1.2, 1.2, 1.5])
-        for col, h in zip(
-            hcols,
-            [
-                "Symbol",
-                "Pattern",
-                "Direction",
-                "Entry Price",
-                "Exit Price",
-                "Exit Reason",
-                "Hold (h)",
-                "P&L",
-                "P&L %",
-                "Exit Time",
-            ],
-        ):
-            col.markdown(f"**{h}**")
-        st.divider()
-
-        for t in history:
-            cols = st.columns([1.2, 1.2, 1.0, 1.2, 1.2, 1.5, 1.0, 1.2, 1.2, 1.5])
-            pnl = t["pnl"]
-            pnl_color = (
-                "green" if pnl and pnl > 0 else ("red" if pnl and pnl < 0 else "")
-            )
-            dir_color = "green" if t["direction"] == "bullish" else "red"
-            pnl_str = _fmt_pnl(pnl)
-            pnl_pct_str = f"{t['pnl_pct']:+.3f}%" if t["pnl_pct"] is not None else "--"
-            cols[0].markdown(f"**{t['symbol']}**")
-            cols[1].write(t["pattern"].capitalize())
-            cols[2].markdown(f":{dir_color}[{t['direction'].capitalize()}]")
-            cols[3].write(f"${t['entry_price']:.4f}" if t["entry_price"] else "--")
-            cols[4].write(f"${t['exit_price']:.4f}" if t["exit_price"] else "--")
-            cols[5].write(t["exit_reason"])
-            cols[6].write(f"{t['hold_hours']}h" if t["hold_hours"] else "--")
-            if pnl_color:
-                cols[7].markdown(f"**:{pnl_color}[{pnl_str}]**")
-                cols[8].markdown(f":{pnl_color}[{pnl_pct_str}]")
-            else:
-                cols[7].write(pnl_str)
-                cols[8].write(pnl_pct_str)
-            cols[9].write(t["exit_time"])
-        st.divider()
-
-    if st.button("Refresh Harmonic Data"):
-        st.cache_data.clear()
-        st.rerun()
-
-
-# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 
 def main() -> None:
-    _load_css()
+    load_custom_css()
     st.title("Strategy Monitor")
 
-    tab_pairs, tab_baskets, tab_harmonic = st.tabs(["Pairs", "Baskets", "Harmonic"])
+    tab_pairs, tab_baskets = st.tabs(["Pairs", "Baskets"])
 
     with tab_pairs:
         _render_pairs_tab()
 
     with tab_baskets:
         _render_baskets_tab()
-
-    with tab_harmonic:
-        _render_harmonic_tab()
 
 
 if __name__ == "__main__" or True:

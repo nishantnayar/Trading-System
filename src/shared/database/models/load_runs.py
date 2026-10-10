@@ -24,7 +24,7 @@ class LoadRun(Base):
     symbol: Mapped[str] = mapped_column(String(20), nullable=False)
     data_source: Mapped[str] = mapped_column(
         String(20), nullable=False
-    )  # 'polygon', 'yahoo', etc.
+    )  # 'yahoo', 'yahoo_adjusted'
     timespan: Mapped[str] = mapped_column(
         String(10), nullable=False
     )  # 'minute', 'hour', 'day', etc.

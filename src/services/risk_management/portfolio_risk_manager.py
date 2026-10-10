@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
+from src.services.strategy_engine.pnl import pair_pnl
 from src.shared.database.base import db_transaction
 from src.shared.database.models.strategy_models import PairRegistry, PortfolioRiskState
 
@@ -202,6 +203,25 @@ class PortfolioRiskManager:
                 state.drawdown_threshold = threshold
                 state.updated_at = datetime.now(timezone.utc)
 
+    def set_strategy_enabled(self, enabled: bool) -> None:
+        """Global pairs-strategy switch (Start/Stop). Leaves per-pair is_active alone."""
+        with db_transaction() as session:
+            state = session.query(PortfolioRiskState).filter_by(id=1).first()
+            if state is None:
+                state = PortfolioRiskState(id=1, peak_equity=0.0)
+                session.add(state)
+            state.strategy_enabled = enabled
+            state.updated_at = datetime.now(timezone.utc)
+        logger.info(f"Pairs strategy {'enabled' if enabled else 'disabled'}")
+
+    def is_strategy_enabled(self) -> bool:
+        """True unless Stop / Emergency Stop has disabled the pairs strategy."""
+        from src.shared.database.base import db_readonly_session
+
+        with db_readonly_session() as session:
+            state = session.query(PortfolioRiskState).filter_by(id=1).first()
+            return True if state is None else bool(state.strategy_enabled)
+
     def get_state(self) -> Optional[dict]:
         """Return current risk state as a dict (for API/UI)."""
         from src.shared.database.base import db_readonly_session
@@ -250,17 +270,15 @@ class PortfolioRiskManager:
             current_p2 = float(p2_series.iloc[-1])
             entry_p1 = float(trade.entry_price1) if trade.entry_price1 else 0.0
             entry_p2 = float(trade.entry_price2) if trade.entry_price2 else 0.0
-            qty1 = float(trade.qty1)
-            qty2 = float(trade.qty2)
-
-            d1 = current_p1 - entry_p1
-            d2 = current_p2 - entry_p2
-
-            if trade.side == "LONG_SPREAD":
-                pnl = qty1 * d1 - qty2 * d2
-            else:  # SHORT_SPREAD
-                pnl = -qty1 * d1 + qty2 * d2
-
+            pnl, _ = pair_pnl(
+                trade.side,
+                float(trade.qty1),
+                float(trade.qty2),
+                entry_p1,
+                entry_p2,
+                current_p1,
+                current_p2,
+            )
             total += pnl
 
         return total

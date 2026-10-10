@@ -12,7 +12,6 @@ Sections:
 
 import os
 import sys
-from datetime import datetime
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -20,8 +19,8 @@ import streamlit as st
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from api_client import TradingSystemAPI
-from utils import render_market_banner
+from api_client import get_api_client
+from utils import load_custom_css, render_market_banner
 
 st.set_page_config(
     page_title="P&L Report",
@@ -36,23 +35,7 @@ PLOTLY_CFG_FULL = {
     "modeBarButtonsToRemove": ["pan2d", "lasso2d", "select2d"],
 }
 
-API_BASE = os.getenv("API_BASE_URL", "http://localhost:8001")
-api = TradingSystemAPI(base_url=API_BASE)
-
-
-def _load_css() -> None:
-    css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
-    try:
-        with open(css_file) as f:
-            css = f.read()
-        from css_config import generate_css_variables, get_theme_css
-
-        st.markdown(
-            f"<style>{generate_css_variables()}{css}{get_theme_css()}</style>",
-            unsafe_allow_html=True,
-        )
-    except Exception:
-        pass
+api = get_api_client()
 
 
 # ---------------------------------------------------------------------------
@@ -62,27 +45,27 @@ def _load_css() -> None:
 
 @st.cache_data(ttl=60)
 def fetch_summary():
-    return api._make_request("GET", "/api/strategies/pairs/pnl/summary")
+    return api.get_pnl_summary()
 
 
 @st.cache_data(ttl=60)
 def fetch_daily(days: int):
-    return api._make_request("GET", f"/api/strategies/pairs/pnl/daily?days={days}")
+    return api.get_pnl_daily(days)
 
 
 @st.cache_data(ttl=60)
 def fetch_monthly():
-    return api._make_request("GET", "/api/strategies/pairs/pnl/monthly")
+    return api.get_pnl_monthly()
 
 
 @st.cache_data(ttl=60)
 def fetch_trades(days: int):
-    return api._make_request("GET", f"/api/strategies/pairs/pnl/trades?days={days}")
+    return api.get_pnl_trades(days)
 
 
 @st.cache_data(ttl=60)
 def fetch_clock():
-    return api._make_request("GET", "/clock")
+    return api.get_market_clock()
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +186,7 @@ def _monthly_table(monthly: list) -> pd.DataFrame:
 
 
 def main():
-    _load_css()
+    load_custom_css()
     st.title("P&L Report")
 
     clock = fetch_clock()
@@ -233,7 +216,7 @@ def main():
     k1.metric("Total Realized P&L", f"${total_pnl:,.2f}", border=True)
     k2.metric("Total Trades", total_trades, border=True)
     k3.metric("Win Rate", f"{win_rate * 100:.1f}%", border=True)
-    k4.metric("Avg Trade Return", f"{avg_pnl_pct * 100:.2f}%", border=True)
+    k4.metric("Avg Trade Return", f"{avg_pnl_pct:.2f}%", border=True)
     k5.metric(
         "Profit Factor",
         f"{profit_factor:.2f}" if profit_factor is not None else "--",
@@ -312,7 +295,7 @@ def main():
         )
         pp_df["Win Rate"] = pp_df["Win Rate"].apply(lambda x: f"{x * 100:.1f}%")
         pp_df["Avg Return (%)"] = pp_df["Avg Return (%)"].apply(
-            lambda x: f"{x * 100:.2f}%" if x is not None else "--"
+            lambda x: f"{x:.2f}%" if x is not None else "--"
         )
 
         def _pnl_row_style(val):
@@ -384,7 +367,7 @@ def main():
     tdf_disp["Entry"] = pd.to_datetime(tdf_disp["Entry"]).dt.strftime("%Y-%m-%d %H:%M")
     tdf_disp["Exit"] = pd.to_datetime(tdf_disp["Exit"]).dt.strftime("%Y-%m-%d %H:%M")
     tdf_disp["Return (%)"] = tdf_disp["Return (%)"].apply(
-        lambda x: f"{x * 100:.2f}%" if x is not None else "--"
+        lambda x: f"{x:.2f}%" if x is not None else "--"
     )
 
     def _pnl_cell(val):

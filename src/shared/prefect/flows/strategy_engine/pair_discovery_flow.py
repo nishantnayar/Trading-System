@@ -38,6 +38,7 @@ from loguru import logger
 from prefect import flow, task
 
 from src.services.notification.email_notifier import get_notifier
+from src.services.strategy_engine.discovery.pairs import run_discovery
 
 
 def _flow_run_name() -> str:
@@ -70,22 +71,6 @@ async def run_pair_discovery_task(
     Returns:
         List of (pair_id, symbol1, symbol2) for upserted pairs.
     """
-    import asyncio
-
-    # Import the discovery logic from the scripts module.
-    # run_discovery handles all DB I/O, filtering, and upsert.
-    import importlib.util
-
-    _script = (
-        Path(__file__).parent.parent.parent.parent.parent.parent
-        / "scripts"
-        / "discover_pairs.py"
-    )
-    _spec = importlib.util.spec_from_file_location("discover_pairs", _script)
-    _mod = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
-    _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
-    run_discovery = _mod.run_discovery
-
     logger.info(
         f"Starting pair discovery: days_back={days_back}, "
         f"min_corr={min_correlation}, max_pvalue={max_pvalue}, "

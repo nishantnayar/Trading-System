@@ -3,13 +3,12 @@ Unit tests for Symbol Service
 """
 
 from datetime import date, datetime, timezone
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from sqlalchemy.orm import Session
 
 from src.services.data_ingestion.symbols import SymbolService
-from src.services.polygon.exceptions import PolygonDataError
 from src.shared.database.models.symbols import DelistedSymbol, Symbol, SymbolDataStatus
 
 
@@ -17,13 +16,7 @@ class TestSymbolService:
     """Test cases for SymbolService"""
 
     @pytest.fixture
-    def mock_polygon_client(self):
-        """Mock PolygonClient for testing"""
-        with patch("src.services.data_ingestion.symbols.PolygonClient") as mock_client:
-            yield mock_client.return_value
-
-    @pytest.fixture
-    def symbol_service(self, mock_polygon_client):
+    def symbol_service(self):
         """Create SymbolService instance for testing"""
         return SymbolService()
 
@@ -187,79 +180,6 @@ class TestSymbolService:
             result = await symbol_service.mark_symbol_delisted("INVALID")
 
             assert result is False
-
-    @pytest.mark.asyncio
-    async def test_check_symbol_health_success(
-        self, symbol_service, mock_polygon_client
-    ):
-        """Test successful symbol health check"""
-        mock_polygon_client.get_ticker_details = AsyncMock()
-
-        result = await symbol_service.check_symbol_health("AAPL")
-
-        assert result is True
-        mock_polygon_client.get_ticker_details.assert_called_once_with("AAPL")
-
-    @pytest.mark.asyncio
-    async def test_check_symbol_health_delisted(
-        self, symbol_service, mock_polygon_client
-    ):
-        """Test symbol health check for delisted symbol"""
-        mock_polygon_client.get_ticker_details = AsyncMock(
-            side_effect=PolygonDataError("Symbol not found")
-        )
-
-        result = await symbol_service.check_symbol_health("DELISTED")
-
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_check_symbol_health_other_error(
-        self, symbol_service, mock_polygon_client
-    ):
-        """Test symbol health check with other error"""
-        mock_polygon_client.get_ticker_details = AsyncMock(
-            side_effect=PolygonDataError("Rate limit exceeded")
-        )
-
-        result = await symbol_service.check_symbol_health("AAPL")
-
-        assert result is True  # Other errors are treated as healthy
-
-    @pytest.mark.asyncio
-    async def test_detect_delisted_symbols(self, symbol_service):
-        """Test delisting detection"""
-        mock_symbols = [Mock(spec=Symbol), Mock(spec=Symbol)]
-        mock_symbols[0].symbol = "HEALTHY"
-        mock_symbols[1].symbol = "DELISTED"
-
-        with patch.object(
-            symbol_service, "get_active_symbols", return_value=mock_symbols
-        ):
-            with patch.object(
-                symbol_service,
-                "get_active_symbol_strings",
-                return_value=["HEALTHY", "DELISTED"],
-            ):
-                with patch.object(
-                    symbol_service, "check_symbol_health"
-                ) as mock_health_check:
-                    mock_health_check.side_effect = [
-                        True,
-                        False,
-                    ]  # First healthy, second delisted
-
-                    with patch.object(
-                        symbol_service, "mark_symbol_delisted"
-                    ) as mock_mark_delisted:
-                        mock_mark_delisted.side_effect = [
-                            True
-                        ]  # Only second symbol gets delisted
-
-                        result = await symbol_service.detect_delisted_symbols()
-
-                        assert len(result) == 1
-                        assert result[0] == "DELISTED"
 
     @pytest.mark.asyncio
     async def test_get_symbol_data_status(self, symbol_service):

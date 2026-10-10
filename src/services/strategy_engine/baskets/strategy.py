@@ -9,7 +9,7 @@ across all active baskets in basket_registry:
         a. Fetch latest N hourly bars for all legs from data_ingestion.market_data
         b. BasketSpreadCalculator.calculate() -> spread, z_score
         c. Store spread/z-score to BasketSpread table
-        d. SignalGenerator.generate() -> signal or None  (reused from pairs)
+        d. evaluate_signal() -> signal type or None  (same rules as pairs)
         e. If entry signal: size each leg proportionally to |w_i|
         f. Execute N legs via PairExecutor.place_order (one call per leg)
         g. Persist BasketTrade row
@@ -26,7 +26,8 @@ from src.services.alpaca.client import AlpacaClient
 from src.services.strategy_engine.baskets.spread_calculator import (
     BasketSpreadCalculator,
 )
-from src.services.strategy_engine.pairs.signal_generator import SignalGenerator
+from src.services.strategy_engine.pairs.signal_generator import evaluate_signal
+from src.services.strategy_engine.pnl import legs_pnl
 from src.shared.database.base import db_readonly_session, db_transaction
 from src.shared.database.models.strategy_models import (
     BasketRegistry,
@@ -41,12 +42,11 @@ _PRICE_LOOKBACK_BARS = 500
 
 def _make_fake_pair(basket: BasketRegistry) -> SimpleNamespace:
     """
-    Build a plain namespace with only the attributes SignalGenerator reads.
-    Using SimpleNamespace avoids SQLAlchemy instrumentation errors that occur
-    when PairRegistry.__new__() is used (missing _sa_instance_state).
+    Build the duck-typed view evaluate_signal() reads (thresholds, hold time,
+    symbols for the reason string). Baskets have N legs, so symbol1 is the
+    first leg and symbol2 a placeholder.
     """
     return SimpleNamespace(
-        id=basket.id,
         symbol1=(basket.symbols or ["?"])[0],
         symbol2="_basket_",
         entry_threshold=basket.entry_threshold,
@@ -131,17 +131,17 @@ class BasketStrategy:
         # 3. Persist spread snapshot
         self._store_spread(basket, spread_series, z_series, prices, weights)
 
-        # 4. Generate signal (reuse SignalGenerator with a fake PairRegistry shim).
-        # persist=False: basket signals must never write to pair_signal -- its FK
-        # is to pair_registry, and basket ids are not pair ids, so persisting here
-        # can violate that FK. open_trade is fetched from BasketTrade directly
-        # since SignalGenerator's own lookup only knows about PairTrade.
-        fake_pair = _make_fake_pair(basket)
-        sig_gen = SignalGenerator(fake_pair)
+        # 4. Evaluate signal with the shared pairs rules. Basket signals are never
+        # persisted: pair_signal's FK is to pair_registry, not basket_registry.
         open_trade = self._get_open_trade(basket)
-        signal = sig_gen.generate(current_z, open_trade=open_trade, persist=False)
+        signal_type, _reason = evaluate_signal(
+            _make_fake_pair(basket),
+            current_z,
+            open_trade.entry_time if open_trade is not None else None,
+            datetime.now(timezone.utc),
+        )
 
-        if signal is None:
+        if signal_type is None:
             return {
                 "basket": name,
                 "status": "NO_SIGNAL",
@@ -149,14 +149,14 @@ class BasketStrategy:
             }
 
         logger.info(
-            f"Signal [{signal.signal_type}] for basket {name}  z={current_z:.3f}"
+            f"Signal [{signal_type}] for basket {name}  z={current_z:.3f}"
         )
 
         # 5. Execute
         action = "NONE"
         current_prices = calc.current_prices(prices)
 
-        if signal.signal_type in ("LONG_SPREAD", "SHORT_SPREAD"):
+        if signal_type in ("LONG_SPREAD", "SHORT_SPREAD"):
             # Size each leg proportionally to |w_i|
             abs_weights = [abs(w) for w in weights]
             total_abs_w = sum(abs_weights)
@@ -171,7 +171,7 @@ class BasketStrategy:
                 qty = max(1, int(dollar_value / price))
                 # Sign: LONG_SPREAD follows the cointegrating vector sign
                 # positive weight = long, negative weight = short
-                if signal.signal_type == "SHORT_SPREAD":
+                if signal_type == "SHORT_SPREAD":
                     w = -w
                 side = "buy" if w > 0 else "sell"
                 legs.append(
@@ -187,25 +187,25 @@ class BasketStrategy:
             if legs:
                 order_legs = await self._place_basket_orders(legs)
                 trade = self._open_basket_trade(
-                    basket, signal.signal_type, order_legs, current_z
+                    basket, signal_type, order_legs, current_z
                 )
                 if trade:
-                    action = f"OPEN ({signal.signal_type})"
+                    action = f"OPEN ({signal_type})"
                 else:
                     action = "OPEN_FAILED"
 
-        elif signal.signal_type in ("EXIT", "STOP_LOSS", "EXPIRE"):
+        elif signal_type in ("EXIT", "STOP_LOSS", "EXPIRE"):
             if open_trade:
                 closed = await self._close_basket_trade(
-                    basket, open_trade, current_z, signal.signal_type, current_prices
+                    basket, open_trade, current_z, signal_type, current_prices
                 )
-                action = f"CLOSE ({signal.signal_type})" if closed else "CLOSE_FAILED"
+                action = f"CLOSE ({signal_type})" if closed else "CLOSE_FAILED"
 
         return {
             "basket": name,
             "status": "OK",
             "z_score": round(current_z, 4),
-            "signal": signal.signal_type,
+            "signal": signal_type,
             "action": action,
         }
 
@@ -350,20 +350,17 @@ class BasketStrategy:
                 logger.error(f"Close order failed for {sym}: {exc}")
                 return False
 
-        # Compute simple P&L: sum over legs of (exit-entry)*qty * direction
-        pnl = 0.0
-        for leg, el in zip(trade.legs or [], exit_legs):
-            ep = leg.get("entry_price") or 0.0
-            xp = el.get("exit_price") or 0.0
-            qty = leg.get("qty", 0)
-            sign = 1 if leg["side"] == "buy" else -1
-            pnl += sign * qty * (xp - ep)
-
-        total_invested = sum(
-            (leg.get("entry_price") or 0.0) * leg.get("qty", 0)
-            for leg in (trade.legs or [])
+        # P&L over all legs; pnl_pct is a percentage, same unit as pair_trade
+        pnl, pnl_pct = legs_pnl(
+            (
+                (
+                    (1 if leg["side"] == "buy" else -1) * leg.get("qty", 0),
+                    leg.get("entry_price") or 0.0,
+                    el.get("exit_price") or 0.0,
+                )
+                for leg, el in zip(trade.legs or [], exit_legs)
+            )
         )
-        pnl_pct = pnl / total_invested if total_invested > 0 else 0.0
 
         now = datetime.now(timezone.utc)
         with db_transaction() as session:
@@ -374,7 +371,7 @@ class BasketStrategy:
                 db_trade.exit_reason = exit_reason
                 db_trade.exit_legs = exit_legs  # type: ignore[assignment]
                 db_trade.pnl = round(pnl, 4)
-                db_trade.pnl_pct = round(pnl_pct, 6)
+                db_trade.pnl_pct = round(pnl_pct, 4)
                 db_trade.status = "STOPPED" if exit_reason == "STOP_LOSS" else "CLOSED"
 
         return True

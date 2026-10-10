@@ -4,7 +4,7 @@ Position Sizer - Kelly Criterion
 Determines the number of shares to trade for each leg of a pair.
 
 Two-phase approach:
-    Bootstrap (< 20 closed trades): Fixed 2% of portfolio per leg
+    Bootstrap (< 20 closed trades): Fixed 2% of portfolio, split across both legs
     Full Kelly  (>= 20 closed trades): Half-Kelly based on historical win rate
 
 Half-Kelly formula:
@@ -23,7 +23,7 @@ Hard limits (always enforced):
 """
 
 import math
-from typing import Tuple
+from typing import Any, List, Optional, Tuple
 
 from loguru import logger
 
@@ -34,7 +34,7 @@ from src.shared.database.models.strategy_models import PairRegistry, PairTrade
 BOOTSTRAP_TRADES = 20
 
 # Fixed fraction during bootstrap
-BOOTSTRAP_FRACTION = 0.02   # 2% per leg
+BOOTSTRAP_FRACTION = 0.02   # 2% of portfolio across both legs (1% each)
 
 # Hard cap per leg
 MAX_LEG_FRACTION = 0.12     # 12% per leg
@@ -51,10 +51,14 @@ class KellySizer:
             price1=150.25,
             price2=200.10,
         )
+
+    Backtests pass `closed_trades` (any objects with a pnl_pct attribute, in
+    percent) so they size exactly like live trading without touching the DB.
     """
 
-    def __init__(self, pair: PairRegistry):
+    def __init__(self, pair: PairRegistry, closed_trades: Optional[List[Any]] = None):
         self.pair = pair
+        self._closed_trades = closed_trades
 
     def calculate_size(
         self,
@@ -101,7 +105,10 @@ class KellySizer:
         Returns 2% (bootstrap) if fewer than BOOTSTRAP_TRADES completed trades,
         otherwise Half-Kelly clamped to [0.01, MAX_LEG_FRACTION * 2].
         """
-        trades = self._load_closed_trades()
+        if self._closed_trades is not None:
+            trades = [t for t in self._closed_trades if t.pnl_pct is not None][-100:]
+        else:
+            trades = self._load_closed_trades()
         total = len(trades)
 
         if total < BOOTSTRAP_TRADES:

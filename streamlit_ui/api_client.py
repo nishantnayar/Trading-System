@@ -216,38 +216,69 @@ class TradingSystemAPI:
         params = {"limit": limit}
         return _self._make_request("GET", f"/api/institutional-holders/{symbol}", params=params)
 
+    # Pairs Strategy API
+    _PAIRS = "/api/strategies/pairs"
 
-# Global API client instance
-@st.cache_resource
+    def get_pairs_status(self) -> Dict[str, Any]:
+        return self._make_request("GET", f"{self._PAIRS}/status")
+
+    def get_active_pairs(self) -> List[Dict[str, Any]]:
+        return self._make_request("GET", f"{self._PAIRS}/active").get("pairs", [])
+
+    def get_pairs_performance(self) -> Dict[str, Any]:
+        return self._make_request("GET", f"{self._PAIRS}/performance")
+
+    def get_pair_history(self, pair_id: int, days: int = 30) -> Dict[str, Any]:
+        return self._make_request(
+            "GET", f"{self._PAIRS}/{pair_id}/history", params={"days": days}
+        )
+
+    def get_pair_details(self, pair_id: int) -> Dict[str, Any]:
+        return self._make_request("GET", f"{self._PAIRS}/{pair_id}/details")
+
+    def get_pair_sparkline(self, pair_id: int, points: int = 48) -> Dict[str, Any]:
+        return self._make_request(
+            "GET", f"{self._PAIRS}/{pair_id}/sparkline", params={"points": points}
+        )
+
+    def start_pairs_strategy(self) -> Dict[str, Any]:
+        return self._make_request("POST", f"{self._PAIRS}/start")
+
+    def stop_pairs_strategy(self) -> Dict[str, Any]:
+        return self._make_request("POST", f"{self._PAIRS}/stop")
+
+    def emergency_stop_pairs(self) -> Dict[str, Any]:
+        return self._make_request("POST", f"{self._PAIRS}/emergency-stop")
+
+    def get_risk_state(self) -> Dict[str, Any]:
+        return self._make_request("GET", f"{self._PAIRS}/risk")
+
+    def reset_circuit_breaker(self) -> Dict[str, Any]:
+        return self._make_request("POST", f"{self._PAIRS}/risk/reset-circuit-breaker")
+
+    def set_drawdown_threshold(self, threshold: float) -> Dict[str, Any]:
+        return self._make_request(
+            "PUT", f"{self._PAIRS}/risk/threshold", json={"threshold": threshold}
+        )
+
+    # P&L Report API
+    def get_pnl_summary(self) -> Dict[str, Any]:
+        return self._make_request("GET", f"{self._PAIRS}/pnl/summary")
+
+    def get_pnl_daily(self, days: int = 90) -> Dict[str, Any]:
+        return self._make_request("GET", f"{self._PAIRS}/pnl/daily", params={"days": days})
+
+    def get_pnl_monthly(self) -> Dict[str, Any]:
+        return self._make_request("GET", f"{self._PAIRS}/pnl/monthly")
+
+    def get_pnl_trades(self, days: int = 90) -> Dict[str, Any]:
+        return self._make_request("GET", f"{self._PAIRS}/pnl/trades", params={"days": days})
+
+
+# Not cached with st.cache_resource on purpose: a cached instance outlives
+# Streamlit's module reload, so pages would keep an old TradingSystemAPI
+# without methods added since the server started. The client is cheap.
 def get_api_client() -> TradingSystemAPI:
-    """Get cached API client instance"""
+    """Get API client instance (base URL from API_BASE_URL env var)"""
     base_url = os.getenv("API_BASE_URL", "http://localhost:8001")
     return TradingSystemAPI(base_url)
-
-
-def format_currency(value: float) -> str:
-    """Format currency values"""
-    if value >= 1_000_000:
-        return f"${value/1_000_000:.1f}M"
-    elif value >= 1_000:
-        return f"${value/1_000:.1f}K"
-    else:
-        return f"${value:,.2f}"
-
-
-def format_percentage(value: float) -> str:
-    """Format percentage values"""
-    return f"{value:.2f}%"
-
-
-def get_timeframe_days(timeframe: str) -> int:
-    """Convert timeframe string to days"""
-    timeframe_map = {
-        "1D": 1,
-        "1W": 7,
-        "1M": 30,
-        "3M": 90,
-        "6M": 180,
-        "1Y": 365
-    }
-    return timeframe_map.get(timeframe, 30)

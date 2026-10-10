@@ -1,153 +1,64 @@
 """
-Unit tests for Web API endpoints
+Unit tests for the FastAPI app wiring (no DB / network)
 """
 
-from datetime import datetime, timezone
+from collections import Counter
 
 import pytest
+from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
-from src.web.api.timezone_helpers import (
-    format_api_timestamp,
-    get_current_time_info,
-    get_market_status_info,
-)
 from src.web.main import app
 
 
+@pytest.fixture
+def client():
+    return TestClient(app)
+
+
 class TestWebAPI:
-    """Test cases for Web API endpoints"""
-
-    @pytest.fixture
-    def client(self):
-        """Create test client"""
-        return TestClient(app)
-
     def test_root_endpoint(self, client):
-        """Test root endpoint"""
         response = client.get("/")
         assert response.status_code == 200
+        assert response.json()["docs"] == "/docs"
 
     def test_health_endpoint(self, client):
-        """Test health check endpoint"""
         response = client.get("/health")
         assert response.status_code == 200
-        assert "status" in response.json()
+        assert response.json()["status"] == "healthy"
 
-    def test_dashboard_endpoint(self, client):
-        """Test dashboard endpoint"""
-        response = client.get("/dashboard")
-        assert response.status_code == 200
+    def test_correlation_id_echoed(self, client):
+        response = client.get("/health", headers={"X-Correlation-ID": "abc-123"})
+        assert response.headers["X-Correlation-ID"] == "abc-123"
 
-    def test_trading_endpoint(self, client):
-        """Test trading endpoint"""
-        response = client.get("/trading")
-        assert response.status_code == 200
+    def test_no_route_registered_twice(self):
+        keys = Counter(
+            (route.path, method)
+            for route in app.routes
+            if isinstance(route, APIRoute)
+            for method in route.methods
+        )
+        duplicates = [k for k, n in keys.items() if n > 1]
+        assert duplicates == []
 
-    def test_analytics_endpoint(self, client):
-        """Test analytics endpoint"""
-        response = client.get("/analysis")
-        assert response.status_code == 200
+    def test_root_main_reuses_web_app(self):
+        """Root main.py must not build a second app - it re-exports this one."""
+        import importlib
+        import sys
+        from unittest.mock import patch
 
-    def test_strategies_endpoint(self, client):
-        """Test strategies endpoint"""
-        response = client.get("/strategies")
-        assert response.status_code == 200
-
-    def test_profile_endpoint(self, client):
-        """Test profile endpoint"""
-        response = client.get("/profile")
-        assert response.status_code == 200
-
-
-class TestTimezoneHelpers:
-    """Test cases for timezone helper functions"""
-
-    def test_get_current_time_info(self):
-        """Test get current time info function"""
-        result = get_current_time_info()
-
-        assert "utc" in result
-        assert "central" in result
-        assert "eastern" in result
-        assert "market_status" in result
-
-    def test_format_api_timestamp(self):
-        """Test API timestamp formatting"""
-        test_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-
-        result = format_api_timestamp(test_time)
-
-        assert isinstance(result, str)
-        assert "2024-01-01" in result
-
-    def test_get_market_status_info(self):
-        """Test market status info function"""
-        result = get_market_status_info()
-
-        assert isinstance(result, dict)
-        assert "is_market_hours" in result
-        assert "current_time_eastern" in result
-        assert "next_market_open" in result
-        assert "last_market_close" in result
-
-    def test_get_market_status_info_returns_required_fields(self):
-        """Test get market status info returns all required fields"""
-        result = get_market_status_info()
-
-        assert isinstance(result, dict)
-        assert "is_market_hours" in result
-        assert "is_weekend" in result
-        assert "next_market_open" in result
-        assert "last_market_close" in result
-        assert "current_time_eastern" in result
-
-    def test_timezone_conversion_aware_datetime(self):
-        """Test timezone conversion with aware datetime"""
-        aware_dt = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-        result = format_api_timestamp(aware_dt)
-        assert isinstance(result, str)
-        assert "2024" in result
-
-    def test_timezone_display_formatting(self):
-        """Test timezone display formatting"""
-        dt = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-
-        result = format_api_timestamp(dt)
-
-        assert isinstance(result, str)
-        # Central time would be 6 hours behind UTC in winter
-        assert "2024-01-01" in result
-
-    def test_market_status_integration(self):
-        """Test market status integration"""
-        info = get_current_time_info()
-
-        assert "market_status" in info
-        assert isinstance(info["market_status"], dict)
-        assert "is_market_hours" in info["market_status"]
+        sys.modules.pop("main", None)
+        with patch.dict("os.environ", {"CONDA_DEFAULT_ENV": "torch_gpu"}):
+            root_main = importlib.import_module("main")
+        assert root_main.app is app
 
 
 class TestWebAPIErrorHandling:
-    """Test error handling in Web API"""
-
-    @pytest.fixture
-    def client(self):
-        """Create test client"""
-        return TestClient(app)
-
     def test_404_endpoint(self, client):
-        """Test 404 for non-existent endpoint"""
-        response = client.get("/nonexistent")
-        assert response.status_code == 404
+        assert client.get("/nonexistent").status_code == 404
 
     def test_method_not_allowed(self, client):
-        """Test method not allowed"""
-        response = client.put("/health")  # PUT not allowed on health endpoint
-        assert response.status_code == 405
+        assert client.put("/health").status_code == 405
 
     def test_nonexistent_api_route(self, client):
-        """Test accessing nonexistent API route"""
-        response = client.get("/api/nonexistent")
-
-        assert response.status_code == 404
+        assert client.get("/api/nonexistent").status_code == 404

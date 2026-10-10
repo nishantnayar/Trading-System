@@ -1,12 +1,12 @@
 """
-Stock Screener Page with Local LLM Integration
-Filter stocks by technical and fundamental criteria with AI-powered analysis
+Stock Screener Page
+Filter stocks by technical and fundamental criteria
 """
 
 import os
 import sys
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import pandas as pd
 import streamlit as st
@@ -19,10 +19,9 @@ if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
 from streamlit_ui.api_client import get_api_client  # noqa: E402
-from streamlit_ui.services.llm_service import LLMService, get_llm_service  # noqa: E402
 from streamlit_ui.utils import (  # noqa: E402
-    format_number,
     get_real_market_data,
+    load_custom_css,
     show_loading_spinner,
 )
 
@@ -59,44 +58,17 @@ SORT_KEY_MAP = {
     "Volatility (highest first)": ("volatility", True),
 }
 
-# sort_by values returned by LLM → (field, descending)
-LLM_SORT_MAP = {
-    "rsi_desc": ("rsi", True),
-    "rsi_asc": ("rsi", False),
-    "price_change_desc": ("price_change_30d", True),
-    "price_change_asc": ("price_change_30d", False),
-    "market_cap_desc": ("market_cap", True),
-    "price_desc": ("current_price", True),
-}
-
 # ---------------------------------------------------------------------------
 # Session state initialisation
 # ---------------------------------------------------------------------------
 
 if "screener_results" not in st.session_state:
     st.session_state.screener_results = []
-if "screener_query" not in st.session_state:
-    st.session_state.screener_query = ""
-if "screener_chat_history" not in st.session_state:
-    st.session_state.screener_chat_history = []
 
 
 # ---------------------------------------------------------------------------
 # CSS
 # ---------------------------------------------------------------------------
-
-
-def load_custom_css():
-    css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
-    try:
-        with open(css_file, "r") as f:
-            css_content = f.read()
-        from streamlit_ui.css_config import generate_css_variables, get_theme_css
-
-        full_css = generate_css_variables() + css_content + get_theme_css()
-        st.markdown(f"<style>{full_css}</style>", unsafe_allow_html=True)
-    except Exception as e:
-        st.warning(f"Error loading CSS: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -176,37 +148,6 @@ def _compute_signal(stock: Dict[str, Any]) -> str:
     return "Neutral"
 
 
-def _format_criteria_readable(criteria: Dict[str, Any]) -> str:
-    """Convert a criteria dict into a human-readable summary string."""
-    parts = []
-    if criteria.get("sector"):
-        parts.append(f"**{criteria['sector']}** sector")
-    if criteria.get("industry"):
-        parts.append(f"industry: *{criteria['industry']}*")
-    if criteria.get("min_price") or criteria.get("max_price"):
-        lo = f"${criteria['min_price']:.0f}" if criteria.get("min_price") else "$0"
-        hi = f"${criteria['max_price']:.0f}" if criteria.get("max_price") else "any"
-        parts.append(f"price {lo}–{hi}")
-    if criteria.get("rsi_min") or criteria.get("rsi_max"):
-        lo = criteria.get("rsi_min", 0)
-        hi = criteria.get("rsi_max", 100)
-        parts.append(f"RSI {lo:.0f}–{hi:.0f}")
-    if criteria.get("min_volume"):
-        parts.append(f"min vol {format_number(criteria['min_volume'])}")
-    if criteria.get("min_market_cap"):
-        parts.append(f"mkt cap ≥ ${criteria['min_market_cap']:.1f}B")
-    sort_by = criteria.get("sort_by")
-    if sort_by and sort_by in LLM_SORT_MAP:
-        field, desc = LLM_SORT_MAP[sort_by]
-        direction = "highest" if desc else "lowest"
-        parts.append(f"sorted by {direction} {field.replace('_', ' ')}")
-    if criteria.get("keywords"):
-        parts.append(f"keywords: {', '.join(criteria['keywords'])}")
-    if not parts:
-        return "No filters applied — showing all stocks."
-    return "Searching for " + " · ".join(parts)
-
-
 # ---------------------------------------------------------------------------
 # Core screening logic
 # ---------------------------------------------------------------------------
@@ -214,16 +155,14 @@ def _format_criteria_readable(criteria: Dict[str, Any]) -> str:
 
 def screen_stocks(
     api_client,
-    llm_service: Optional[LLMService],  # noqa: F841
     criteria: Dict[str, Any],
     symbols: List[str],
-    query: str = "",
 ) -> List[Dict[str, Any]]:
     """
     Screen stocks based on criteria dict.
 
-    sort_by and limit are handled here; the caller does not need to sort
-    the results. The query parameter is used only for logging.
+    Sorting (criteria["manual_sort"]) is handled here; the caller does not
+    need to sort the results.
     """
     results = []
     total = len(symbols)
@@ -421,19 +360,9 @@ def screen_stocks(
     )
 
     # Sort results
-    sort_by = criteria.get("sort_by") if criteria else None
     manual_sort = criteria.get("manual_sort") if criteria else None
 
-    if sort_by and sort_by in LLM_SORT_MAP:
-        field, descending = LLM_SORT_MAP[sort_by]
-        default = -1 if descending else float("inf")
-        results.sort(
-            key=lambda x: (x.get(field) or default),
-            reverse=descending,
-        )
-        if len(results) > 10:
-            results = results[:10]
-    elif manual_sort and manual_sort in SORT_KEY_MAP:
+    if manual_sort and manual_sort in SORT_KEY_MAP:
         field, descending = SORT_KEY_MAP[manual_sort]
         default = -1 if descending else float("inf")
         results.sort(
@@ -558,21 +487,10 @@ def _configure_aggrid(df: pd.DataFrame):
     return gb.build()
 
 
-def display_results(
-    results: List[Dict[str, Any]],
-    llm_service: Optional[LLMService],
-    query: str,
-):
-    """Render the AI analysis, results table, chat panel, and CSV download."""
+def display_results(results: List[Dict[str, Any]]):
+    """Render the results table and CSV download."""
     st.markdown("---")
     st.subheader("Screening Results")
-
-    # AI Analysis
-    if llm_service and query:
-        with st.expander("AI Analysis", expanded=True):
-            with show_loading_spinner("Generating AI analysis..."):
-                analysis = llm_service.analyze_screened_results(results, query=query)
-                st.write(analysis)
 
     # Results table
     df = _build_results_df(results)
@@ -595,56 +513,17 @@ def display_results(
         mime="text/csv",
     )
 
-    # Chat panel
-    if llm_service:
-        with st.expander("Ask a follow-up question about these results"):
-            chat_history = st.session_state.screener_chat_history
-            # Render prior exchanges
-            for msg in chat_history:
-                role = msg["role"]
-                with st.chat_message(role):
-                    st.write(msg["content"])
-            # New question input
-            col_q, col_btn = st.columns([5, 1])
-            with col_q:
-                follow_up = st.text_input(
-                    "Your question:",
-                    key="screener_chat_input",
-                    label_visibility="collapsed",
-                    placeholder="e.g. Which of these has the best risk/reward?",
-                )
-            with col_btn:
-                ask_btn = st.button("Ask", key="screener_ask_btn")
-
-            if ask_btn and follow_up:
-                with show_loading_spinner("Thinking..."):
-                    answer = llm_service.chat_about_results(
-                        results=results,
-                        history=chat_history,
-                        question=follow_up,
-                    )
-                chat_history.append({"role": "user", "content": follow_up})
-                chat_history.append({"role": "assistant", "content": answer})
-                # Trim to last 6 turns
-                if len(chat_history) > 6:
-                    st.session_state.screener_chat_history = chat_history[-6:]
-                st.rerun()
-
-
 # ---------------------------------------------------------------------------
 # Main page
 # ---------------------------------------------------------------------------
 
 
 def screener_page():
-    st.set_page_config(layout="wide", page_title="Stock Screener - AI Powered")
+    st.set_page_config(layout="wide", page_title="Stock Screener")
     load_custom_css()
 
-    st.title("Stock Screener with AI Analysis")
-    st.write(
-        "Filter stocks using natural language or traditional filters, "
-        "powered by your local LLM."
-    )
+    st.title("Stock Screener")
+    st.write("Filter stocks by sector, price, volume and technical indicators.")
 
     api_client = get_api_client()
 
@@ -661,274 +540,153 @@ def screener_page():
             "Symbols to screen", min_value=10, max_value=200, value=50, step=10
         )
 
-        st.subheader("LLM Settings")
-        llm_service: Optional[LLMService] = None
-        try:
-            # Use a temporary service to discover available models
-            temp_svc = LLMService(model="phi3")
-            model_info = temp_svc.get_model_info()
-            available = [m["name"] for m in model_info["available_models"]]
-        except Exception:
-            available = []
 
-        if available:
-            default_model = "phi3" if "phi3" in available else available[0]
-            selected_model = st.selectbox(
-                "Ollama model",
-                available,
-                index=(
-                    available.index(default_model) if default_model in available else 0
-                ),
+    st.subheader("Traditional Filter Options")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.write("**Sector & Industry**")
+        sectors = api_client.get_sectors() if "error" not in health else []
+        selected_sector = st.selectbox("Sector", ["All"] + sectors)
+        if selected_sector != "All":
+            industries = (
+                api_client.get_industries(sector=selected_sector)
+                if "error" not in health
+                else []
             )
         else:
-            selected_model = st.text_input("Ollama model (manual)", value="phi3")
+            industries = (
+                api_client.get_industries() if "error" not in health else []
+            )
+        selected_industry = st.selectbox("Industry", ["All"] + industries)
 
-        try:
-            with show_loading_spinner("Initialising LLM..."):
-                llm_service = get_llm_service(model=selected_model)
-            st.success(f"LLM ready ({selected_model})")
-        except Exception as e:
-            st.warning(f"LLM not available: {e}. Traditional filters still work.")
-
-    # ---- Tabs ----
-    tab1, tab2 = st.tabs(["Natural Language Query", "Traditional Filters"])
-
-    # ------------------------------------------------------------------ Tab 1
-    with tab1:
-        st.subheader("Ask in Natural Language")
-        st.caption("Example: 'Find oversold tech stocks with RSI < 30 and high volume'")
-
-        query = st.text_input(
-            "Enter your screening query:",
-            value=st.session_state.screener_query,
-            placeholder="e.g., Find undervalued tech stocks with RSI < 30",
+    with col2:
+        st.write("**Price & Volume**")
+        min_price = st.number_input(
+            "Min Price ($)", min_value=0.0, value=0.0, step=1.0
+        )
+        max_price = st.number_input(
+            "Max Price ($)", min_value=0.0, value=0.0, step=1.0
+        )
+        min_volume = st.number_input(
+            "Min Avg Volume", min_value=0, value=0, step=10_000
+        )
+        min_market_cap = st.number_input(
+            "Min Market Cap (B)", min_value=0.0, value=0.0, step=0.1
         )
 
-        col1, col2, _ = st.columns([1, 1, 3])
-        with col1:
-            search_button = st.button("Search", type="primary", width="stretch")
-        with col2:
-            clear_button = st.button("Clear", type="secondary", width="stretch")
+    with col3:
+        st.write("**Technical Indicators**")
+        rsi_min = st.slider("RSI Min", 0, 100, 0)
+        rsi_max = st.slider("RSI Max", 0, 100, 100)
+        min_price_change = st.number_input(
+            "Min 30d Change %", min_value=-100.0, value=0.0, step=1.0
+        )
+        max_price_change = st.number_input(
+            "Max 30d Change %", min_value=-100.0, value=100.0, step=1.0
+        )
+        max_volatility = st.number_input(
+            "Max Volatility %", min_value=0.0, value=0.0, step=1.0
+        )
 
-        if clear_button:
-            st.session_state.screener_results = []
-            st.session_state.screener_query = ""
-            st.session_state.screener_chat_history = []
-            st.rerun()
+    with col4:
+        st.write("**Advanced Filters**")
+        macd_signal_opt = st.selectbox("MACD Signal", ["Any", "Bullish", "Bearish"])
+        sma_crossover_opt = st.selectbox(
+            "SMA Crossover",
+            [
+                "Any",
+                "Price above SMA20",
+                "Price below SMA20",
+                "Golden Cross (SMA20>SMA50)",
+                "Death Cross (SMA20<SMA50)",
+            ],
+        )
+        bb_min = st.slider("BB Position Min", 0.0, 1.0, 0.0, step=0.05)
+        bb_max = st.slider("BB Position Max", 0.0, 1.0, 1.0, step=0.05)
+        sort_opt = st.selectbox("Sort Results By", SORT_OPTIONS)
 
-        if search_button and query:
-            st.session_state.screener_query = query
-            st.session_state.screener_chat_history = []
+    filter_button = st.button("Apply Filters", type="primary", width="stretch")
 
-            criteria: Dict[str, Any] = {}
-            if llm_service:
-                with show_loading_spinner("Interpreting query..."):
-                    try:
-                        criteria = llm_service.interpret_screening_query(query)
-                    except Exception as e:
-                        st.error(f"Error interpreting query: {e}")
-                        criteria = {}
-                # Human-readable interpretation
-                readable = _format_criteria_readable(criteria)
-                st.info(readable)
-            else:
-                st.warning("LLM not available. Please use the Traditional Filters tab.")
+    if filter_button:
+        criteria = {}
+        if selected_sector != "All":
+            criteria["sector"] = selected_sector
+        if selected_industry != "All":
+            criteria["industry"] = selected_industry
+        if min_price > 0:
+            criteria["min_price"] = min_price
+        if max_price > 0:
+            criteria["max_price"] = max_price
+        if min_volume > 0:
+            criteria["min_volume"] = min_volume
+        if min_market_cap > 0:
+            criteria["min_market_cap"] = min_market_cap
+        if rsi_min > 0:
+            criteria["rsi_min"] = rsi_min
+        if rsi_max < 100:
+            criteria["rsi_max"] = rsi_max
+        if min_price_change != 0:
+            criteria["min_price_change_pct"] = min_price_change
+        if max_price_change != 100:
+            criteria["max_price_change_pct"] = max_price_change
+        if max_volatility > 0:
+            criteria["max_volatility"] = max_volatility
+        if macd_signal_opt != "Any":
+            criteria["macd_signal"] = macd_signal_opt.lower()
+        if bb_min > 0:
+            criteria["bb_min"] = bb_min
+        if bb_max < 1.0:
+            criteria["bb_max"] = bb_max
+        if sma_crossover_opt != "Any":
+            xover_map = {
+                "Price above SMA20": "above_sma20",
+                "Price below SMA20": "below_sma20",
+                "Golden Cross (SMA20>SMA50)": "golden_cross",
+                "Death Cross (SMA20<SMA50)": "death_cross",
+            }
+            criteria["sma_crossover"] = xover_map[sma_crossover_opt]
+        if sort_opt != "None":
+            criteria["manual_sort"] = sort_opt
 
-            with show_loading_spinner("Loading symbols..."):
-                try:
-                    all_syms = api_client.get_all_symbols()
-                    if "error" not in all_syms and all_syms:
-                        symbols = [
-                            s.get("symbol", "") for s in all_syms if s.get("symbol")
-                        ]
-                    else:
-                        symbols = _fallback_symbols()
-                except Exception:
-                    symbols = _fallback_symbols()
-                st.info(f"Screening {min(len(symbols), symbol_limit)} symbols...")
-
-            with show_loading_spinner("Screening stocks..."):
-                try:
-                    results = screen_stocks(
-                        api_client,
-                        llm_service,
-                        criteria,
-                        symbols[:symbol_limit],
-                        query=query,
-                    )
-                    st.session_state.screener_results = results
-                except Exception as e:
-                    st.error(f"Error during screening: {e}")
-                    import traceback as tb
-
-                    st.code(tb.format_exc())
-                    results = []
-
-            if results:
-                st.success(f"Found {len(results)} matching stocks")
-            else:
-                _show_no_results_tips()
-
-    # ------------------------------------------------------------------ Tab 2
-    with tab2:
-        st.subheader("Traditional Filter Options")
-
-        col1, col2, col3, col4 = st.columns(4)
-
-        with col1:
-            st.write("**Sector & Industry**")
-            sectors = api_client.get_sectors() if "error" not in health else []
-            selected_sector = st.selectbox("Sector", ["All"] + sectors)
-            if selected_sector != "All":
-                industries = (
-                    api_client.get_industries(sector=selected_sector)
-                    if "error" not in health
-                    else []
+        with show_loading_spinner("Loading symbols..."):
+            if selected_sector != "All" or selected_industry != "All":
+                syms_data = api_client.get_symbols_by_filter(
+                    sector=(selected_sector if selected_sector != "All" else None),
+                    industry=(
+                        selected_industry if selected_industry != "All" else None
+                    ),
                 )
             else:
-                industries = (
-                    api_client.get_industries() if "error" not in health else []
-                )
-            selected_industry = st.selectbox("Industry", ["All"] + industries)
+                syms_data = api_client.get_all_symbols()
 
-        with col2:
-            st.write("**Price & Volume**")
-            min_price = st.number_input(
-                "Min Price ($)", min_value=0.0, value=0.0, step=1.0
-            )
-            max_price = st.number_input(
-                "Max Price ($)", min_value=0.0, value=0.0, step=1.0
-            )
-            min_volume = st.number_input(
-                "Min Avg Volume", min_value=0, value=0, step=10_000
-            )
-            min_market_cap = st.number_input(
-                "Min Market Cap (B)", min_value=0.0, value=0.0, step=0.1
-            )
-
-        with col3:
-            st.write("**Technical Indicators**")
-            rsi_min = st.slider("RSI Min", 0, 100, 0)
-            rsi_max = st.slider("RSI Max", 0, 100, 100)
-            min_price_change = st.number_input(
-                "Min 30d Change %", min_value=-100.0, value=0.0, step=1.0
-            )
-            max_price_change = st.number_input(
-                "Max 30d Change %", min_value=-100.0, value=100.0, step=1.0
-            )
-            max_volatility = st.number_input(
-                "Max Volatility %", min_value=0.0, value=0.0, step=1.0
-            )
-
-        with col4:
-            st.write("**Advanced Filters**")
-            macd_signal_opt = st.selectbox("MACD Signal", ["Any", "Bullish", "Bearish"])
-            sma_crossover_opt = st.selectbox(
-                "SMA Crossover",
-                [
-                    "Any",
-                    "Price above SMA20",
-                    "Price below SMA20",
-                    "Golden Cross (SMA20>SMA50)",
-                    "Death Cross (SMA20<SMA50)",
-                ],
-            )
-            bb_min = st.slider("BB Position Min", 0.0, 1.0, 0.0, step=0.05)
-            bb_max = st.slider("BB Position Max", 0.0, 1.0, 1.0, step=0.05)
-            sort_opt = st.selectbox("Sort Results By", SORT_OPTIONS)
-
-        filter_button = st.button("Apply Filters", type="primary", width="stretch")
-
-        if filter_button:
-            criteria = {}
-            if selected_sector != "All":
-                criteria["sector"] = selected_sector
-            if selected_industry != "All":
-                criteria["industry"] = selected_industry
-            if min_price > 0:
-                criteria["min_price"] = min_price
-            if max_price > 0:
-                criteria["max_price"] = max_price
-            if min_volume > 0:
-                criteria["min_volume"] = min_volume
-            if min_market_cap > 0:
-                criteria["min_market_cap"] = min_market_cap
-            if rsi_min > 0:
-                criteria["rsi_min"] = rsi_min
-            if rsi_max < 100:
-                criteria["rsi_max"] = rsi_max
-            if min_price_change != 0:
-                criteria["min_price_change_pct"] = min_price_change
-            if max_price_change != 100:
-                criteria["max_price_change_pct"] = max_price_change
-            if max_volatility > 0:
-                criteria["max_volatility"] = max_volatility
-            if macd_signal_opt != "Any":
-                criteria["macd_signal"] = macd_signal_opt.lower()
-            if bb_min > 0:
-                criteria["bb_min"] = bb_min
-            if bb_max < 1.0:
-                criteria["bb_max"] = bb_max
-            if sma_crossover_opt != "Any":
-                xover_map = {
-                    "Price above SMA20": "above_sma20",
-                    "Price below SMA20": "below_sma20",
-                    "Golden Cross (SMA20>SMA50)": "golden_cross",
-                    "Death Cross (SMA20<SMA50)": "death_cross",
-                }
-                criteria["sma_crossover"] = xover_map[sma_crossover_opt]
-            if sort_opt != "None":
-                criteria["manual_sort"] = sort_opt
-
-            with show_loading_spinner("Loading symbols..."):
-                if selected_sector != "All" or selected_industry != "All":
-                    syms_data = api_client.get_symbols_by_filter(
-                        sector=(selected_sector if selected_sector != "All" else None),
-                        industry=(
-                            selected_industry if selected_industry != "All" else None
-                        ),
-                    )
-                else:
-                    syms_data = api_client.get_all_symbols()
-
-                if "error" not in syms_data:
-                    symbols = [
-                        s.get("symbol", "") for s in syms_data if s.get("symbol")
-                    ]
-                else:
-                    symbols = _fallback_symbols()
-
-            with show_loading_spinner("Screening stocks..."):
-                try:
-                    results = screen_stocks(
-                        api_client,
-                        llm_service,
-                        criteria,
-                        symbols[:symbol_limit],
-                        query="",
-                    )
-                    st.session_state.screener_results = results
-                    st.session_state.screener_query = ""
-                    st.session_state.screener_chat_history = []
-                except Exception as e:
-                    st.error(f"Error during screening: {e}")
-                    import traceback as tb
-
-                    st.code(tb.format_exc())
-                    results = []
-
-            if results:
-                st.success(f"Found {len(results)} matching stocks")
+            if "error" not in syms_data:
+                symbols = [
+                    s.get("symbol", "") for s in syms_data if s.get("symbol")
+                ]
             else:
-                _show_no_results_tips()
+                symbols = _fallback_symbols()
 
-    # ---- Results (shared between tabs) ----
+        with show_loading_spinner("Screening stocks..."):
+            try:
+                results = screen_stocks(api_client, criteria, symbols[:symbol_limit])
+                st.session_state.screener_results = results
+            except Exception as e:
+                st.error(f"Error during screening: {e}")
+                import traceback as tb
+
+                st.code(tb.format_exc())
+                results = []
+
+        if results:
+            st.success(f"Found {len(results)} matching stocks")
+        else:
+            _show_no_results_tips()
+
+    # ---- Results ----
     if st.session_state.screener_results:
-        display_results(
-            results=st.session_state.screener_results,
-            llm_service=llm_service,
-            query=st.session_state.screener_query,
-        )
+        display_results(st.session_state.screener_results)
 
 
 # ---------------------------------------------------------------------------
@@ -944,7 +702,7 @@ def _show_no_results_tips():
     st.warning("No stocks matched your criteria.")
     st.info(
         "**Tips:** Relax your filters · Check market data availability "
-        "· Try Traditional Filters for more control"
+        "· Try a larger symbol count in the sidebar"
     )
 
 

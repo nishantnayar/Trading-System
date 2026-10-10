@@ -6,8 +6,7 @@ and enqueues them for async database writing.
 """
 
 import sys
-from typing import Any, Callable
-from uuid import uuid4
+from typing import Any
 
 from .database_handler import LogQueueManager
 from .formatters import format_for_database

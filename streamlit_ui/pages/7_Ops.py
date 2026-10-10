@@ -17,6 +17,7 @@ import streamlit as st
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from api_client import get_api_client  # noqa: E402
+from utils import load_custom_css  # noqa: E402
 
 _PREFS_FILE = os.path.join(
     os.path.dirname(__file__), "..", "..", "config", "analysis_prefs.json"
@@ -47,21 +48,6 @@ st.set_page_config(
     page_icon="⚙️",
     layout="wide",
 )
-
-
-def load_css() -> None:
-    css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
-    try:
-        with open(css_file) as f:
-            css = f.read()
-        from css_config import generate_css_variables, get_theme_css
-
-        st.markdown(
-            f"<style>{generate_css_variables()}{css}{get_theme_css()}</style>",
-            unsafe_allow_html=True,
-        )
-    except Exception:
-        pass
 
 
 def _status_badge(ok: bool, ok_label: str, fail_label: str) -> str:
@@ -117,7 +103,7 @@ def _render_connections_tab(api) -> None:
     with c1:
         health = api.health_check()
         api_ok = "error" not in health
-        st.markdown(
+        st.html(
             f"<div class='metric-container'>"
             f'<div style=\'font-family:"DM Sans",sans-serif;font-size:0.72rem;'
             f"text-transform:uppercase;letter-spacing:0.07em;color:#6b6b6b;"
@@ -126,8 +112,7 @@ def _render_connections_tab(api) -> None:
             f'<div style=\'font-family:"DM Mono",monospace;font-size:0.75rem;'
             f"color:#9e9e9e;margin-top:0.2rem;'>"
             f"{os.getenv('API_BASE_URL', 'http://localhost:8001')}</div>"
-            f"</div>",
-            unsafe_allow_html=True,
+            f"</div>"
         )
 
     with c2:
@@ -135,7 +120,7 @@ def _render_connections_tab(api) -> None:
         alpaca_ok = "error" not in account
         acct_num = account.get("account_number", "") if alpaca_ok else ""
         mode = "Paper Trading" if alpaca_ok else "--"
-        st.markdown(
+        st.html(
             f"<div class='metric-container'>"
             f'<div style=\'font-family:"DM Sans",sans-serif;font-size:0.72rem;'
             f"text-transform:uppercase;letter-spacing:0.07em;color:#6b6b6b;"
@@ -144,15 +129,14 @@ def _render_connections_tab(api) -> None:
             f'<div style=\'font-family:"DM Mono",monospace;font-size:0.75rem;'
             f"color:#9e9e9e;margin-top:0.2rem;'>"
             f"{acct_num or '--'} · {mode}</div>"
-            f"</div>",
-            unsafe_allow_html=True,
+            f"</div>"
         )
 
     with c3:
         clock = api.get_market_clock()
         clock_ok = "error" not in clock
         is_open = clock.get("is_open", False) if clock_ok else False
-        st.markdown(
+        st.html(
             f"<div class='metric-container'>"
             f'<div style=\'font-family:"DM Sans",sans-serif;font-size:0.72rem;'
             f"text-transform:uppercase;letter-spacing:0.07em;color:#6b6b6b;"
@@ -161,8 +145,7 @@ def _render_connections_tab(api) -> None:
             f'<div style=\'font-family:"DM Mono",monospace;font-size:0.75rem;'
             f"color:#9e9e9e;margin-top:0.2rem;'>"
             f"{'Real-time via Alpaca' if clock_ok else 'Clock unavailable'}</div>"
-            f"</div>",
-            unsafe_allow_html=True,
+            f"</div>"
         )
 
     if st.button("Recheck connections", key="recheck_btn"):
@@ -172,10 +155,9 @@ def _render_connections_tab(api) -> None:
     st.markdown("---")
 
     st.subheader("Analysis Preferences")
-    st.markdown(
+    st.html(
         "<p style='color:#6b6b6b;font-size:0.88rem;margin-bottom:1rem;'>"
-        "These defaults pre-fill the Analysis page each session.</p>",
-        unsafe_allow_html=True,
+        "These defaults pre-fill the Analysis page each session.</p>"
     )
 
     prefs = _load_prefs()
@@ -224,7 +206,7 @@ def _render_connections_tab(api) -> None:
     s1, s2 = st.columns(2)
     with s1:
         api_url = os.getenv("API_BASE_URL", "http://localhost:8001")
-        st.markdown(
+        st.html(
             f'<div style=\'font-family:"DM Sans",sans-serif;font-size:0.88rem;'
             f"line-height:1.9;color:#1a1a1a;'>"
             f"<span style='color:#6b6b6b;'>API URL&emsp;</span>"
@@ -232,13 +214,12 @@ def _render_connections_tab(api) -> None:
             f"<span style='color:#6b6b6b;'>Session started&emsp;</span>"
             f"<span style='font-family:\"DM Mono\",monospace;'>"
             f"{datetime.now().strftime('%Y-%m-%d %H:%M')}</span>"
-            f"</div>",
-            unsafe_allow_html=True,
+            f"</div>"
         )
     with s2:
         import streamlit as _st
 
-        st.markdown(
+        st.html(
             f'<div style=\'font-family:"DM Sans",sans-serif;font-size:0.88rem;'
             f"line-height:1.9;color:#1a1a1a;'>"
             f"<span style='color:#6b6b6b;'>Streamlit&emsp;</span>"
@@ -247,8 +228,7 @@ def _render_connections_tab(api) -> None:
             f"<span style='color:#6b6b6b;'>Python&emsp;</span>"
             f"<span style='font-family:\"DM Mono\",monospace;'>"
             f"{sys.version.split()[0]}</span>"
-            f"</div>",
-            unsafe_allow_html=True,
+            f"</div>"
         )
 
 
@@ -270,34 +250,28 @@ def _render_data_quality_tab(api) -> None:
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.markdown(_metric_card("Tracked Symbols", str(total)), unsafe_allow_html=True)
+        st.html(_metric_card("Tracked Symbols", str(total)))
     with c2:
-        st.markdown(
-            _metric_card("Up to Date", str(ok), color="#2A7A4B"), unsafe_allow_html=True
-        )
+        st.html(_metric_card("Up to Date", str(ok), color="#2A7A4B"))
     with c3:
         color = "#C0392B" if stale > 0 else "#6b6b6b"
-        st.markdown(
-            _metric_card("Stale", str(stale), color=color), unsafe_allow_html=True
-        )
+        st.html(_metric_card("Stale", str(stale), color=color))
     with c4:
-        st.markdown(
+        st.html(
             _metric_card(
                 "Last Ingestion",
                 last_ingest[:10] if last_ingest != "--" else "--",
                 sub=last_ingest[11:] if last_ingest != "--" else "",
-            ),
-            unsafe_allow_html=True,
+            )
         )
 
     st.markdown("---")
 
     alerts = api.get_data_quality_alerts()
     if alerts:
-        st.markdown(
+        st.html(
             f"<h2>Alerts <span style='color:#C0392B;font-size:1rem;font-weight:500'>"
-            f"({len(alerts)} issue{'s' if len(alerts) != 1 else ''})</span></h2>",
-            unsafe_allow_html=True,
+            f"({len(alerts)} issue{'s' if len(alerts) != 1 else ''})</span></h2>"
         )
         alert_df = (
             pd.DataFrame(alerts)[
@@ -368,11 +342,10 @@ def _render_data_quality_tab(api) -> None:
         },
     )
 
-    st.markdown(
+    st.html(
         f'<div style=\'font-family:"DM Mono",monospace;font-size:0.72rem;color:#9e9e9e;'
         f"margin-top:0.5rem;'>Showing {len(display)} of {len(df)} series . "
-        f"Stale threshold: >2 days since last successful load</div>",
-        unsafe_allow_html=True,
+        f"Stale threshold: >2 days since last successful load</div>"
     )
 
 
@@ -382,7 +355,7 @@ def _render_data_quality_tab(api) -> None:
 
 
 def main() -> None:
-    load_css()
+    load_custom_css()
     st.title("Ops")
 
     api = get_api_client()

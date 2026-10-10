@@ -3,7 +3,6 @@ Trading System - Home Dashboard
 Real-time account overview, market status, and positions summary.
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -11,7 +10,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import streamlit as st  # noqa: E402
-from utils import render_market_banner  # noqa: E402
+from utils import load_custom_css, render_market_banner  # noqa: E402
 
 from src.shared.logging import setup_logging  # noqa: E402
 
@@ -26,21 +25,6 @@ st.set_page_config(
 
 
 # --- CSS ---
-
-
-def load_css() -> None:
-    css_file = os.path.join(os.path.dirname(__file__), "styles.css")
-    try:
-        with open(css_file) as f:
-            css = f.read()
-        from css_config import generate_css_variables, get_theme_css
-
-        st.markdown(
-            f"<style>{generate_css_variables()}{css}{get_theme_css()}</style>",
-            unsafe_allow_html=True,
-        )
-    except Exception:
-        pass
 
 
 # --- Helpers ---
@@ -74,12 +58,11 @@ def _pnl_color(v) -> str:
 
 
 def render_sidebar(account: dict, positions: list) -> None:
-    st.sidebar.markdown(
+    st.sidebar.html(
         '<h2 style=\'font-family:"Playfair Display",Georgia,serif;'
         "font-size:1.15rem;font-weight:500;color:#1a1a1a;"
         "border-bottom:1px solid rgba(26,26,26,0.1);padding-bottom:0.4rem;"
-        "margin-bottom:0.8rem;'>Trading System</h2>",
-        unsafe_allow_html=True,
+        "margin-bottom:0.8rem;'>Trading System</h2>"
     )
 
     if "error" not in account:
@@ -91,11 +74,10 @@ def render_sidebar(account: dict, positions: list) -> None:
         st.sidebar.metric("Portfolio Value", _fmt_dollar(equity))
         color = _pnl_color(day_pnl)
         sign = "+" if day_pnl >= 0 else ""
-        st.sidebar.markdown(
+        st.sidebar.html(
             f'<div style=\'font-family:"DM Mono",monospace;font-size:0.85rem;'
             f"color:{color};margin:-0.4rem 0 0.6rem 0;'>"
-            f"{sign}{_fmt_dollar(abs(day_pnl))} ({sign}{day_pct:.2f}%) today</div>",
-            unsafe_allow_html=True,
+            f"{sign}{_fmt_dollar(abs(day_pnl))} ({sign}{day_pct:.2f}%) today</div>"
         )
         st.sidebar.metric("Buying Power", _fmt_dollar(account.get("buying_power", 0)))
         st.sidebar.metric("Cash", _fmt_dollar(account.get("cash", 0)))
@@ -103,10 +85,9 @@ def render_sidebar(account: dict, positions: list) -> None:
         st.sidebar.warning("API unavailable")
 
     st.sidebar.markdown("---")
-    st.sidebar.markdown(
+    st.sidebar.html(
         f'<p style=\'font-family:"DM Sans",sans-serif;font-size:0.78rem;'
-        f"color:#9e9e9e;margin:0;'>Open positions: {len(positions)}</p>",
-        unsafe_allow_html=True,
+        f"color:#9e9e9e;margin:0;'>Open positions: {len(positions)}</p>"
     )
 
 
@@ -114,7 +95,7 @@ def render_sidebar(account: dict, positions: list) -> None:
 
 
 def main() -> None:
-    load_css()
+    load_custom_css()
 
     from api_client import get_api_client
 
@@ -138,17 +119,15 @@ def main() -> None:
         else ("Good afternoon" if hour < 17 else "Good evening")
     )
 
-    st.markdown(
+    st.html(
         f'<div style=\'margin-bottom:0.2rem;font-family:"DM Sans",sans-serif;'
         f"font-size:0.85rem;color:#4a4a4a;'>{greeting}, Nishant</div>"
-        f"<h1 style='margin-top:0;'>Dashboard</h1>",
-        unsafe_allow_html=True,
+        f"<h1 style='margin-top:0;'>Dashboard</h1>"
     )
-    st.markdown(
+    st.html(
         "<p style='color:#6b6b6b;font-size:0.88rem;margin-top:-0.8rem;"
         "margin-bottom:1.2rem;'>"
-        "Here's what's happening in your paper trading account today.</p>",
-        unsafe_allow_html=True,
+        "Here's what's happening in your paper trading account today.</p>"
     )
 
     # --- Market clock ---
@@ -184,7 +163,7 @@ def main() -> None:
     col_left, col_right = st.columns([3, 1])
 
     with col_left:
-        st.markdown("<h2>Positions</h2>", unsafe_allow_html=True)
+        st.html("<h2>Positions</h2>")
 
         if positions:
             rows = []
@@ -214,14 +193,13 @@ def main() -> None:
             df = pd.DataFrame(rows)
             st.dataframe(df, width="stretch", hide_index=True)
         else:
-            st.markdown(
+            st.html(
                 '<p style=\'color:#9e9e9e;font-family:"DM Sans",sans-serif;'
-                "font-size:0.9rem;padding:1rem 0;'>No open positions.</p>",
-                unsafe_allow_html=True,
+                "font-size:0.9rem;padding:1rem 0;'>No open positions.</p>"
             )
 
     with col_right:
-        st.markdown("<h2>Open Orders</h2>", unsafe_allow_html=True)
+        st.html("<h2>Open Orders</h2>")
 
         if orders:
             for o in orders[:8]:
@@ -230,7 +208,7 @@ def main() -> None:
                 qty = o.get("qty", "")
                 otype = o.get("order_type") or o.get("type", "")
                 color = "#2A7A4B" if side == "BUY" else "#C0392B"
-                st.markdown(
+                st.html(
                     f"<div style='border:1px solid rgba(26,26,26,0.08);"
                     f"border-radius:4px;padding:0.55rem 0.8rem;margin-bottom:0.4rem;"
                     f"background:#fff;'>"
@@ -241,24 +219,21 @@ def main() -> None:
                     f"text-transform:uppercase;'>{side}</span><br>"
                     f'<span style=\'font-family:"DM Mono",monospace;font-size:0.78rem;'
                     f"color:#6b6b6b;'>{qty} shares | {otype}</span>"
-                    f"</div>",
-                    unsafe_allow_html=True,
+                    f"</div>"
                 )
             if len(orders) > 8:
                 st.caption(f"+{len(orders) - 8} more - see Portfolio page")
         else:
-            st.markdown(
+            st.html(
                 '<p style=\'color:#9e9e9e;font-family:"DM Sans",sans-serif;'
-                "font-size:0.85rem;padding:0.6rem 0;'>No open orders.</p>",
-                unsafe_allow_html=True,
+                "font-size:0.85rem;padding:0.6rem 0;'>No open orders.</p>"
             )
 
     # --- Refresh ---
     st.markdown("---")
-    st.markdown(
+    st.html(
         '<p style=\'font-family:"DM Sans",sans-serif;font-size:0.75rem;'
-        "color:#9e9e9e;'>Data refreshes on page reload.</p>",
-        unsafe_allow_html=True,
+        "color:#9e9e9e;'>Data refreshes on page reload.</p>"
     )
     if st.button("Refresh", key="home_refresh"):
         st.cache_data.clear()

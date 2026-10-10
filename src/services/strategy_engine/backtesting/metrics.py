@@ -22,14 +22,12 @@ Gate thresholds (defaults match plan):
 
 from dataclasses import dataclass
 from datetime import date
-from typing import List, Optional
+from typing import List
 
 import numpy as np
 
-from src.services.strategy_engine.backtesting.engine import (
-    BacktestResult,
-    SimulatedTrade,
-)
+from src.services.strategy_engine.backtesting.engine import BacktestResult
+from src.shared.indicators import max_drawdown_pct, sharpe_ratio
 
 # ---------------------------------------------------------------------------
 # Result dataclass
@@ -196,37 +194,21 @@ class MetricsCalculator:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+# Hourly bars: ~6.5 trading hours/day x 252 days
+_BARS_PER_YEAR = 252 * 6.5
+
+
 def _sharpe_ratio(equity_curve: List[dict]) -> float:
-    """
-    Annualized Sharpe ratio from equity curve (risk-free = 0).
-    Uses hourly bar returns, annualized assuming ~6.5 trading hours/day x 252 days.
-    """
+    """Annualized Sharpe ratio of hourly equity-curve returns (risk-free = 0)."""
     if len(equity_curve) < 2:
         return 0.0
-
     equities = np.array([e["equity"] for e in equity_curve], dtype=float)
-    returns = np.diff(equities) / equities[:-1]
-
-    if len(returns) == 0 or np.std(returns) == 0:
-        return 0.0
-
-    # Annualize: sqrt(trading hours per year) = sqrt(252 * 6.5) ~ sqrt(1638)
-    ann_factor = np.sqrt(252 * 6.5)
-    return float(np.mean(returns) / np.std(returns) * ann_factor)
+    return sharpe_ratio(np.diff(equities) / equities[:-1], _BARS_PER_YEAR)
 
 
 def _max_drawdown(equity_curve: List[dict]) -> float:
-    """
-    Maximum peak-to-trough drawdown as a positive percentage.
-    Returns 0.0 if no drawdown.
-    """
-    if not equity_curve:
-        return 0.0
-
-    equities = np.array([e["equity"] for e in equity_curve], dtype=float)
-    running_max = np.maximum.accumulate(equities)
-    drawdowns = (running_max - equities) / running_max * 100
-    return float(np.max(drawdowns))
+    """Maximum peak-to-trough drawdown as a positive percentage."""
+    return max_drawdown_pct([e["equity"] for e in equity_curve])
 
 
 def _kelly_fraction(win_rate: float, avg_win_pct: float, avg_loss_pct: float) -> float:
@@ -247,12 +229,10 @@ def _kelly_fraction(win_rate: float, avg_win_pct: float, avg_loss_pct: float) ->
 
 def _count_trading_days(start_date: date, end_date: date) -> int:
     """Approximate trading days (weekdays only) in date range."""
-    from datetime import timedelta
     delta = (end_date - start_date).days + 1
     total_weeks = delta // 7
     remaining = delta % 7
     # Count weekdays in remaining days
-    from datetime import date as date_type
     start_weekday = start_date.weekday() if hasattr(start_date, "weekday") else 0
     extra = sum(
         1 for i in range(remaining)

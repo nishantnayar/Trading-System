@@ -597,6 +597,8 @@ class PortfolioRiskState(Base):
     circuit_breaker_active   - True = no new entries allowed until manually reset
     circuit_breaker_triggered_at - when the circuit breaker last fired
     drawdown_threshold       - fraction (e.g. 0.05 = 5%) below peak that triggers breaker
+    strategy_enabled         - global pairs on/off switch (Start/Stop in the UI);
+                               migration 28_add_strategy_enabled_flag.sql
     """
 
     __tablename__ = "portfolio_risk_state"
@@ -614,6 +616,9 @@ class PortfolioRiskState(Base):
     )
     drawdown_threshold: Mapped[float] = mapped_column(
         Numeric(5, 4), nullable=False, default=0.05
+    )
+    strategy_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
     )
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
@@ -639,115 +644,8 @@ class PortfolioRiskState(Base):
                 else None
             ),
             "drawdown_threshold": float(self.drawdown_threshold),
+            "strategy_enabled": self.strategy_enabled,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
-
-
-class HarmonicTrade(Base):
-    """
-    Open and closed single-leg harmonic pattern trades (Gartley, Bat, Butterfly).
-
-    pattern:   'gartley' (others added later)
-    direction: 'bullish' or 'bearish'
-    side:      'buy' (bullish D entry) or 'sell' (bearish D entry)
-    status:    'OPEN', 'CLOSED', 'STOPPED'
-    exit_reason: 'TARGET_1', 'TARGET_2', 'STOP_LOSS', 'MANUAL'
-    """
-
-    __tablename__ = "harmonic_trade"
-    __table_args__ = (
-        Index("idx_harmonic_trade_symbol_status", "symbol", "status"),
-        Index("idx_harmonic_trade_entry_time", "entry_time"),
-        {"schema": "strategy_engine"},
-    )
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    symbol: Mapped[str] = mapped_column(String(20), nullable=False)
-    pattern: Mapped[str] = mapped_column(String(30), nullable=False, default="gartley")
-    direction: Mapped[str] = mapped_column(String(10), nullable=False)
-    side: Mapped[str] = mapped_column(String(10), nullable=False)
-
-    # XABCD swing prices at detection time
-    x_price: Mapped[float] = mapped_column(Numeric(15, 4), nullable=False)
-    a_price: Mapped[float] = mapped_column(Numeric(15, 4), nullable=False)
-    b_price: Mapped[float] = mapped_column(Numeric(15, 4), nullable=False)
-    c_price: Mapped[float] = mapped_column(Numeric(15, 4), nullable=False)
-    d_price: Mapped[float] = mapped_column(Numeric(15, 4), nullable=False)
-
-    # Position
-    qty: Mapped[int] = mapped_column(Integer, nullable=False)
-    entry_price: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
-    entry_time: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True), nullable=False
-    )
-    order_id: Mapped[Optional[str]] = mapped_column(String(50))
-
-    # Risk levels set at entry
-    stop_loss: Mapped[float] = mapped_column(Numeric(15, 4), nullable=False)
-    target_1: Mapped[float] = mapped_column(Numeric(15, 4), nullable=False)
-    target_2: Mapped[float] = mapped_column(Numeric(15, 4), nullable=False)
-
-    # Exit
-    exit_price: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
-    exit_time: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
-    exit_reason: Mapped[Optional[str]] = mapped_column(String(30))
-
-    # P&L
-    pnl: Mapped[Optional[float]] = mapped_column(Numeric(15, 4))
-    pnl_pct: Mapped[Optional[float]] = mapped_column(Numeric(8, 4))
-
-    # Pattern quality at detection time (0.0-1.0); used by learning agent
-    quality_score: Mapped[Optional[float]] = mapped_column(Numeric(6, 4))
-
-    status: Mapped[str] = mapped_column(String(10), default="OPEN", nullable=False)
-
-    created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False,
-    )
-
-    def __repr__(self) -> str:
-        return (
-            f"<HarmonicTrade(id={self.id}, symbol={self.symbol}, "
-            f"pattern={self.pattern}, direction={self.direction}, "
-            f"status={self.status}, pnl={self.pnl})>"
-        )
-
-    def to_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "symbol": self.symbol,
-            "pattern": self.pattern,
-            "direction": self.direction,
-            "side": self.side,
-            "x_price": float(self.x_price) if self.x_price else None,
-            "a_price": float(self.a_price) if self.a_price else None,
-            "b_price": float(self.b_price) if self.b_price else None,
-            "c_price": float(self.c_price) if self.c_price else None,
-            "d_price": float(self.d_price) if self.d_price else None,
-            "qty": self.qty,
-            "entry_price": float(self.entry_price) if self.entry_price else None,
-            "entry_time": self.entry_time.isoformat() if self.entry_time else None,
-            "order_id": self.order_id,
-            "stop_loss": float(self.stop_loss) if self.stop_loss else None,
-            "target_1": float(self.target_1) if self.target_1 else None,
-            "target_2": float(self.target_2) if self.target_2 else None,
-            "exit_price": float(self.exit_price) if self.exit_price else None,
-            "exit_time": self.exit_time.isoformat() if self.exit_time else None,
-            "exit_reason": self.exit_reason,
-            "pnl": float(self.pnl) if self.pnl else None,
-            "pnl_pct": float(self.pnl_pct) if self.pnl_pct else None,
-            "quality_score": (
-                float(self.quality_score) if self.quality_score is not None else None
-            ),
-            "status": self.status,
         }
 
 
@@ -756,7 +654,6 @@ __all__ = [
     "BasketRegistry",
     "BasketSpread",
     "BasketTrade",
-    "HarmonicTrade",
     "PairPerformance",
     "PairRegistry",
     "PairSignal",

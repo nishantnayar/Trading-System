@@ -28,8 +28,8 @@ class MarketData(Base):
 
     # Data source
     data_source: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="polygon", index=True
-    )  # 'polygon', 'yahoo', 'alpaca', etc.
+        String(20), nullable=False, default="yahoo", index=True
+    )  # 'yahoo', 'yahoo_adjusted'
 
     # OHLCV data
     open: Mapped[Optional[float]] = mapped_column(Numeric(15, 4), nullable=True)

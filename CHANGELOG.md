@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **Harmonic (Gartley) strategy**: removed `src/services/strategy_engine/harmonic/`, `harmonic_flow.py`, the `HarmonicTrade` ORM model, the `HARMONIC_LONG_ONLY` setting, the Strategy Monitor "Harmonic" tab, the Pair Lab "Harmonic Lab" tab and their unit tests. Live paper results (May-Oct 2026): 173 closed trades, net -$80.81 - 72 stop-losses (-$2,039.82) cancelled out all target hits (+$1,959.01). The `strategy_engine.harmonic_trade` table and migrations 26/27 are kept for history
+- **Dead code** (see `docs/development/code-redundancy-review.md`): Polygon client + `historical_loader.py` + Polygon-based symbol health checks; `AlpacaClient.get_bars()` and its market-data client; `alpaca/websocket.py`; Ops Monitor Agent stub; Screener LLM stub and its Natural Language / AI analysis / chat UI; `web/api/timezone_helpers.py`; `logging/performance.py`; empty `execution/` and `strategies/` packages; `examples/`; `tools/`; `scripts/test_database_connections.py`, `scripts/test_prefect.py`; `config/strategies.yaml`, `config/pairs.yaml`; ~25 unused Streamlit helpers; old notebook versions
+- **Unused API endpoints**: pairs `/config` (GET/POST), `/{pair_id}/close`, `/backtest`, `/backtest/history`; market-data `/stats`, `/symbols`, `/data/{symbol}/count`
+- **Redis** (requirements, CI stubs, settings) and ~30 settings fields nothing read (JWT, risk/order limits, logging, timezones, Polygon, Alpaca URLs, duplicate Postgres fields)
+- **`yahoo_adjusted_1h` data source**: merged into `yahoo_adjusted` (migration 29)
+
+### Changed
+- **One FastAPI app**: root `main.py` wraps `src/web/main.py`; `routes.py` no longer re-mounts the pairs router (every pairs route was registered twice)
+- **One price source**: all reads go through `src/shared/market_data.py` (`PRICE_SOURCE = "yahoo_adjusted"`, `get_close_panel`/`get_close_series`); `refresh_pair_prices_task` writes there via new `YahooClient.download_bars()` + `YahooDataLoader.upsert_bars()`
+- **Shared strategy core**: `evaluate_signal()` is the single signal rule set (live, backtest, baskets - basket SimpleNamespace shim reduced); `strategy_engine/pnl.py` used by pair executor, backtest, baskets and risk manager; backtest sizes with the live `KellySizer`
+- **Discovery** moved to `src/services/strategy_engine/discovery/` (`stats`, `data`, `pairs`, `baskets`); `scripts/discover_*.py` are thin CLIs and the Prefect flow imports it directly (no `importlib`)
+- **Indicators** moved from `streamlit_ui/utils/technical_indicators.py` to `src/shared/indicators.py` (+ shared `sharpe_ratio`, `max_drawdown_pct`); the `streamlit_ui/utils/` re-export package is gone
+- **Start/Stop** toggle `portfolio_risk_state.strategy_enabled` (migration 28) instead of flipping `is_active` on every pair (Start used to re-enable auto-deactivated pairs)
+- **Paper flag**: `PAPER_TRADING` constant in `alpaca/client.py` is the single switch (was hardcoded at every call site plus an unrelated env setting)
+- **UI**: pages use typed `api_client` methods and one `load_custom_css()`; loguru everywhere in `src/` (stdlib `%s` calls in `pairs_flow.py` were printing literally)
+
+### Fixed
+- **Yahoo timestamps stored 4-5h early** (`src/services/yahoo/client.py`): `get_historical_data()` used `.replace(tzinfo=utc)` on yfinance's ET-aware index, relabelling ET wall-clock time as UTC. Now uses `.astimezone(utc)`; migrations 29/29b re-stamped the ~9.6M existing `yahoo` / `yahoo_adjusted` rows
+- **Basket half-life inflated 7x** (`discover_baskets`): removed the `* 7.0` daily-to-hourly conversion; `yahoo_adjusted` holds 1h bars
+- **Backtest equity curve double-counted realized P&L** on no-signal bars (inflated equity, distorted Sharpe/drawdown)
+- **Backtest sized 2x live**: 2% per leg vs live 2% split across both legs
+- **P&L Report returns shown 100x too large** (`pnl_pct` is already a percentage)
+- **Basket `pnl_pct` stored as a fraction**; now a percentage like pairs (existing rows migrated)
+- **RSI returned None for loss-free series** (`calculate_rsi`); now 100 (50 if flat)
+
 ### Added
 - **Pair boundary optimizer** (`src/services/strategy_engine/pairs/boundary_optimizer.py`): new research/backtest module implementing minimum-profit optimization for mean-reversion entry boundaries (Lin, McCrae & Gulati 2006; Puspaningrum, Lin & Gulati 2010). Given a pair's AR(1) spread parameters (phi, sigma_a), `optimize_boundary()` solves for the entry z-score boundary `U` that maximizes expected profit rate `U / (trade_duration + inter_trade_interval)`, using mean first-passage times of the stationary AR(1) process. Pure function, no DB/network access — not wired into live trading or `PairSignal` generation
   - `scripts/discover_pairs.py`: `compute_half_life()` split into `compute_half_life_and_ar1()`, which now also returns the AR(1) beta and residual std already computed by the existing OLS fit (previously discarded). `run_discovery()` calls `optimize_boundary()` per candidate pair and prints a `suggested_entry_z` column/detail line alongside the existing `rank_score` — display-only, does not change the `pair_registry` upsert or `entry_threshold` defaults

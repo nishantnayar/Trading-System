@@ -22,7 +22,8 @@ from typing import Optional, Tuple
 from loguru import logger
 
 from src.services.alpaca.client import AlpacaClient
-from src.shared.database.base import db_readonly_session, db_transaction
+from src.services.strategy_engine.pnl import pair_pnl
+from src.shared.database.base import db_transaction
 from src.shared.database.models.strategy_models import (
     PairRegistry,
     PairSignal,
@@ -307,18 +308,12 @@ def _compute_pnl(
     ):
         return None, None
 
-    ep1 = float(trade.entry_price1)
-    ep2 = float(trade.entry_price2)
-    xp1 = float(exit_price1)
-    xp2 = float(exit_price2)
-    q1 = float(trade.qty1)
-    q2 = float(trade.qty2)
-
-    if trade.side == "LONG_SPREAD":
-        pnl = q1 * (xp1 - ep1) - q2 * (xp2 - ep2)
-    else:  # SHORT_SPREAD
-        pnl = -q1 * (xp1 - ep1) + q2 * (xp2 - ep2)
-
-    entry_cost = q1 * ep1 + q2 * ep2
-    pnl_pct = (pnl / entry_cost * 100) if entry_cost > 0 else 0.0
-    return pnl, pnl_pct
+    return pair_pnl(
+        trade.side,
+        float(trade.qty1),
+        float(trade.qty2),
+        float(trade.entry_price1),
+        float(trade.entry_price2),
+        float(exit_price1),
+        float(exit_price2),
+    )

@@ -2,15 +2,14 @@
 Alpaca Trading API Routes
 """
 
-import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
 
 from src.config.settings import get_settings
 from src.services.alpaca import AlpacaAPIError, AlpacaClient, AlpacaConnectionError
 
-logger = logging.getLogger(__name__)
 router = APIRouter(tags=["alpaca"])
 
 # Global Alpaca client instance
@@ -27,7 +26,6 @@ def get_alpaca_client() -> AlpacaClient:
             _alpaca_client = AlpacaClient(
                 api_key=settings.alpaca_api_key,
                 secret_key=settings.alpaca_secret_key,
-                is_paper=True,
             )
         except Exception as e:
             logger.error(f"Failed to initialize Alpaca client: {e}")

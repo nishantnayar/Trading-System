@@ -23,6 +23,7 @@ from typing import Optional
 from loguru import logger
 
 from src.config.settings import get_settings
+from src.services.alpaca.client import PAPER_TRADING
 
 
 class EmailNotifier:
@@ -41,7 +42,7 @@ class EmailNotifier:
         self._password: Optional[str] = s.smtp_password
         self._from_email: Optional[str] = s.smtp_from_email
         self._to_email: Optional[str] = s.smtp_to_email
-        self._paper: bool = s.paper_trading
+        self._paper: bool = PAPER_TRADING
 
     @property
     def _configured(self) -> bool:

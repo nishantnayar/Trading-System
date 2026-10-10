@@ -5,57 +5,44 @@ Market data analysis, technical indicators, and trading opportunities
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
-from streamlit_lightweight_charts import Chart, renderLightweightCharts
 
 # Add parent directory to path for imports
 parent_dir = os.path.dirname(os.path.dirname(__file__))
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
+project_root = os.path.dirname(parent_dir)
+for _p in (parent_dir, project_root):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
-# Import from utils package (which re-exports from utils.py)
 from utils import (
-    calculate_max_drawdown,
     calculate_returns,
-    calculate_sharpe_ratio,
     calculate_volatility,
-    convert_api_data_to_ohlc,
-    create_candlestick_chart,
     create_candlestick_chart_with_overlays,
     create_lightweight_macd_chart,
-    create_lightweight_ohlc_chart,
     create_lightweight_rsi_chart,
     create_lightweight_volume_chart,
-    create_macd_chart,
-    create_price_chart,
-    create_rsi_chart,
-    create_volume_chart,
     display_institutional_holders_grid,
     filter_ohlc_data_by_timeframe,
     format_currency,
-    format_number,
     format_percentage,
-    get_date_range,
     get_institutional_holders,
     get_latest_esg_scores,
     get_latest_key_statistics,
     get_latest_technical_indicators,
     get_real_market_data,
     get_technical_indicators_from_db,
-    get_timeframe_days,
+    load_custom_css,
     ohlc_data_to_dataframe,
-    show_error_message,
-    show_info_message,
     show_loading_spinner,
-    validate_symbol,
 )
+
+from src.shared.indicators import max_drawdown_pct  # noqa: E402
+from src.shared.indicators import sharpe_ratio as annualized_sharpe  # noqa: E402
 
 # Note: Technical indicators are now fetched from database, not calculated on the fly
 # The calculation functions are kept for fallback scenarios only
@@ -102,29 +89,6 @@ def get_cached_industries(_api_client, sector=None):
 def get_cached_symbols(_api_client, sector=None, industry=None):
     """Get cached symbols data"""
     return _api_client.get_symbols_by_filter(sector=sector, industry=industry)
-
-
-def load_custom_css():
-    """Load custom CSS from file and configuration"""
-    css_file = os.path.join(os.path.dirname(__file__), "..", "styles.css")
-    try:
-        with open(css_file, "r") as f:
-            css_content = f.read()
-
-        # Add CSS variables from configuration
-        from css_config import generate_css_variables, get_theme_css
-
-        css_variables = generate_css_variables()
-        theme_css = get_theme_css()
-
-        # Combine all CSS
-        full_css = css_variables + css_content + theme_css
-        st.markdown(f"<style>{full_css}</style>", unsafe_allow_html=True)
-
-    except FileNotFoundError:
-        st.warning("Custom CSS file not found. Using default styling.")
-    except Exception as e:
-        st.error(f"Error loading custom CSS: {e}")
 
 
 def analysis_page():
@@ -552,9 +516,8 @@ def analysis_page():
                                 "High": "#ef5350",
                                 "Very High": "#c62828",
                             }.get(controversy, "#999999")
-                            st.markdown(
-                                f"**Controversy Level:** <span style='color: {controversy_color}'>{controversy}</span>",
-                                unsafe_allow_html=True,
+                            st.html(
+                                f"<strong>Controversy Level:</strong> <span style='color: {controversy_color}'>{controversy}</span>"
                             )
 
                             # ESG Performance
@@ -984,11 +947,11 @@ def analysis_page():
                     if len(df) > 1:
                         returns = calculate_returns(df["close"])
                         sharpe_ratio = (
-                            calculate_sharpe_ratio(returns, risk_free_rate=0.02)
+                            annualized_sharpe(returns, periods_per_year=252, risk_free_rate=0.02)
                             if len(returns) > 0
                             else 0.0
                         )
-                        max_dd = calculate_max_drawdown(df["close"]) * 100
+                        max_dd = -max_drawdown_pct(df["close"])
                     else:
                         sharpe_ratio = 0.0
                         max_dd = 0.0
@@ -1010,11 +973,11 @@ def analysis_page():
                             else returns.std() * np.sqrt(252) * 100
                         )
                         sharpe_ratio = (
-                            calculate_sharpe_ratio(returns, risk_free_rate=0.02)
+                            annualized_sharpe(returns, periods_per_year=252, risk_free_rate=0.02)
                             if len(returns) > 0
                             else 0.0
                         )
-                        max_dd = calculate_max_drawdown(df["close"]) * 100
+                        max_dd = -max_drawdown_pct(df["close"])
                     else:
                         total_return = 0
                         annual_volatility = 0

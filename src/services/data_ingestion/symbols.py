@@ -8,17 +8,12 @@ from typing import List, Optional
 from loguru import logger
 from sqlalchemy import and_, func, select
 
-from src.services.polygon.client import PolygonClient
-from src.services.polygon.exceptions import PolygonDataError
 from src.shared.database.base import db_transaction
 from src.shared.database.models.symbols import DelistedSymbol, Symbol, SymbolDataStatus
 
 
 class SymbolService:
-    """Service for managing symbols and delisting detection"""
-
-    def __init__(self) -> None:
-        self._polygon_client: Optional[PolygonClient] = None  # Lazy initialization - only create when needed
+    """Service for managing symbols and their data status"""
 
     async def get_active_symbols(self) -> List[Symbol]:
         """Get all active symbols, sorted alphabetically by symbol."""
@@ -133,58 +128,11 @@ class SymbolService:
             logger.info(f"Marked symbol {symbol} as delisted")
             return True
 
-    @property
-    def polygon_client(self) -> PolygonClient:
-        """Lazy-load Polygon client only when needed"""
-        if self._polygon_client is None:
-            self._polygon_client = PolygonClient()
-        # Type narrowing: after the check above, _polygon_client cannot be None
-        assert self._polygon_client is not None
-        return self._polygon_client
-
-    async def check_symbol_health(self, symbol: str) -> bool:
-        """Check if a symbol is still valid by attempting to fetch data"""
-        try:
-            # Try to get ticker details from Polygon
-            await self.polygon_client.get_ticker_details(symbol)
-            return True
-        except PolygonDataError as e:
-            if "not found" in str(e).lower() or "404" in str(e):
-                logger.warning(f"Symbol {symbol} appears to be delisted: {e}")
-                return False
-            else:
-                # Other errors might be temporary
-                logger.error(f"Error checking symbol {symbol}: {e}")
-                return True
-        except Exception as e:
-            logger.error(f"Unexpected error checking symbol {symbol}: {e}")
-            return True
-
-    async def detect_delisted_symbols(self) -> List[str]:
-        """Detect and mark delisted symbols"""
-        delisted_symbols = []
-        active_symbols = await self.get_active_symbol_strings()
-
-        for symbol in active_symbols:
-            logger.info(f"Checking health of symbol: {symbol}")
-
-            is_healthy = await self.check_symbol_health(symbol)
-            if not is_healthy:
-                # Mark as delisted
-                success = await self.mark_symbol_delisted(symbol)
-                if success:
-                    delisted_symbols.append(symbol)
-
-        logger.info(
-            f"Detected {len(delisted_symbols)} delisted symbols: {delisted_symbols}"
-        )
-        return delisted_symbols
-
     async def get_symbol_data_status(
         self,
         symbol: str,
         date: date,
-        data_source: str = "polygon",
+        data_source: str = "yahoo",
     ) -> Optional[SymbolDataStatus]:
         """Get data ingestion status for a symbol"""
         with db_transaction() as session:
@@ -246,7 +194,7 @@ class SymbolService:
     async def get_symbols_needing_data(
         self,
         target_date: date,
-        data_source: str = "polygon",
+        data_source: str = "yahoo",
     ) -> List[Symbol]:
         """Get symbols that need data for a specific date"""
         with db_transaction() as session:

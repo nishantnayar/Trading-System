@@ -51,12 +51,6 @@ from .logger import (
     setup_logging,
     shutdown_logging,
 )
-from .performance import (
-    log_database_query,
-    log_memory_usage,
-    log_performance,
-    track_execution_time,
-)
 
 __all__ = [
     # Main logging functions
@@ -94,11 +88,6 @@ __all__ = [
     "with_correlation_id",
     "get_correlation_context",
     "format_correlation_message",
-    # Performance tracking
-    "log_performance",
-    "track_execution_time",
-    "log_memory_usage",
-    "log_database_query",
     # Loguru logger
     "logger",
 ]

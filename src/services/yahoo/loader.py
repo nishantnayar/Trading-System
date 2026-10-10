@@ -181,6 +181,32 @@ class YahooDataLoader:
 
         return len(records)
 
+    def upsert_bars(self, bars: List[Any], data_source: str) -> int:
+        """Upsert YahooBars into market_data (keyed on symbol/timestamp/source)."""
+        records = [
+            {
+                "symbol": bar.symbol,
+                "timestamp": bar.timestamp,
+                "data_source": data_source,
+                "open": bar.open,
+                "high": bar.high,
+                "low": bar.low,
+                "close": bar.close,
+                "volume": bar.volume,
+            }
+            for bar in bars
+        ]
+        count = 0
+        for i in range(0, len(records), self.batch_size):
+            batch = records[i : i + self.batch_size]
+            count += self._upsert_records(
+                model=MarketData,
+                records=batch,
+                index_elements=["symbol", "timestamp", "data_source"],
+                update_fields=["open", "high", "low", "close", "volume"],
+            )
+        return count
+
     async def load_market_data(
         self,
         symbol: str,
@@ -223,31 +249,7 @@ class YahooDataLoader:
                 logger.warning(f"No market data found for {symbol}")
                 return 0
 
-            records = [
-                {
-                    "symbol": symbol,
-                    "timestamp": bar.timestamp,
-                    "data_source": data_source,
-                    "open": bar.open,
-                    "high": bar.high,
-                    "low": bar.low,
-                    "close": bar.close,
-                    "volume": bar.volume,
-                }
-                for bar in bars
-            ]
-
-            # Insert in batches
-            inserted_count = 0
-            for i in range(0, len(records), self.batch_size):
-                batch = records[i : i + self.batch_size]
-                self._upsert_records(
-                    model=MarketData,
-                    records=batch,
-                    index_elements=["symbol", "timestamp", "data_source"],
-                    update_fields=["open", "high", "low", "close", "volume"],
-                )
-                inserted_count += len(batch)
+            inserted_count = self.upsert_bars(bars, data_source)
 
             logger.info(
                 f"Loaded {inserted_count} market data records for {symbol} "

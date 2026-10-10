@@ -14,7 +14,6 @@ from src.shared.logging import (
     get_config,
     get_logger,
     get_service_logger,
-    log_performance,
     setup_logging,
 )
 
@@ -126,21 +125,6 @@ class TestLoggingCore:
         assert generate_correlation_id() is not None
         assert len(generate_correlation_id()) > 0
 
-    def test_performance_tracking(self):
-        """Test performance tracking decorator"""
-
-        @log_performance(track_memory=True, track_args=False)
-        def sample_function(duration: float = 0.1):
-            """Sample function for performance testing"""
-            import time
-
-            time.sleep(duration)
-            return "completed"
-
-        # Test performance tracking
-        result = sample_function(0.1)
-        assert result == "completed"
-
     def test_structured_logging(self):
         """Test structured logging with metadata"""
         logger = get_logger(__name__)
@@ -233,27 +217,6 @@ class TestLoggingCore:
         # Should be cleared after context
         assert get_correlation_id() is None
 
-    def test_performance_decorator_options(self):
-        """Test performance decorator with different options"""
-
-        @log_performance(track_memory=False, track_args=True)
-        def test_function_with_args(arg1, arg2, kwarg1=None):
-            return f"{arg1}-{arg2}-{kwarg1}"
-
-        @log_performance(track_memory=True, track_args=False)
-        def test_function_with_memory():
-            import time
-
-            time.sleep(0.01)
-            return "memory_test"
-
-        # Test both decorators
-        result1 = test_function_with_args("a", "b", kwarg1="c")
-        result2 = test_function_with_memory()
-
-        assert result1 == "a-b-c"
-        assert result2 == "memory_test"
-
     def test_logger_with_different_modules(self):
         """Test logger creation with different module names"""
         test_modules = [
@@ -296,17 +259,6 @@ class TestLoggingIntegration:
             logger.info("Validating order parameters")
             logger.info("Executing order")
             logger.info("Order completed successfully")
-
-        # Test performance tracking
-        @log_performance(track_memory=True)
-        def workflow_function():
-            import time
-
-            time.sleep(0.01)
-            return "workflow_completed"
-
-        result = workflow_function()
-        assert result == "workflow_completed"
 
         # Test structured logging
         logger.info(

@@ -121,58 +121,13 @@ class SignalGenerator:
         open_trade: Optional[PairTrade],
         current_time: datetime,
     ) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Core signal logic.
-
-        Returns:
-            (signal_type, reason) or (None, None)
-        """
-        entry_thr = float(self.pair.entry_threshold)
-        exit_thr = float(self.pair.exit_threshold)
-        stop_thr = float(self.pair.stop_loss_threshold)
-        max_hold = self.pair.max_hold_hours  # 3x half-life
-
-        # ---- Exit conditions (only when a trade is open) ----
-        if open_trade is not None:
-            hold_hours = _hours_since(open_trade.entry_time, current_time)
-
-            if abs(z) > stop_thr:
-                return (
-                    "STOP_LOSS",
-                    f"|z|={abs(z):.3f} exceeded stop threshold {stop_thr}",
-                )
-
-            if max_hold is not None and hold_hours >= max_hold:
-                return (
-                    "EXPIRE",
-                    f"Max hold time {max_hold}h exceeded (held {hold_hours:.1f}h)",
-                )
-
-            if abs(z) < exit_thr:
-                return (
-                    "EXIT",
-                    f"|z|={abs(z):.3f} crossed below exit threshold {exit_thr}",
-                )
-
-            # No exit trigger - hold position
-            return None, None
-
-        # ---- Entry conditions (only when no open trade) ----
-        if z < -entry_thr:
-            return (
-                "LONG_SPREAD",
-                f"z={z:.3f} below -{entry_thr} -> "
-                f"long {self.pair.symbol1}, short {self.pair.symbol2}",
-            )
-
-        if z > entry_thr:
-            return (
-                "SHORT_SPREAD",
-                f"z={z:.3f} above +{entry_thr} -> "
-                f"short {self.pair.symbol1}, long {self.pair.symbol2}",
-            )
-
-        return None, None
+        """Core signal logic - delegates to evaluate_signal()."""
+        return evaluate_signal(
+            self.pair,
+            z,
+            open_trade.entry_time if open_trade is not None else None,
+            current_time,
+        )
 
     def _get_open_trade(self) -> Optional[PairTrade]:
         """Return the single open trade for this pair, or None."""
@@ -227,32 +182,76 @@ class BacktestSignalGenerator:
         Returns:
             (signal_type, reason) or (None, None)
         """
-        entry_thr = float(self.pair.entry_threshold)
-        exit_thr = float(self.pair.exit_threshold)
-        stop_thr = float(self.pair.stop_loss_threshold)
-        max_hold = self.pair.max_hold_hours
+        return evaluate_signal(self.pair, z, open_trade_entry_time, current_time)
 
-        if open_trade_entry_time is not None:
-            hold_hours = _hours_since(open_trade_entry_time, current_time)
 
-            if abs(z) > stop_thr:
-                return "STOP_LOSS", f"|z|={abs(z):.3f} > {stop_thr}"
+# ------------------------------------------------------------------
+# Signal rules (shared by live and backtest - keep them in one place)
+# ------------------------------------------------------------------
 
-            if max_hold is not None and hold_hours >= max_hold:
-                return "EXPIRE", f"Held {hold_hours:.1f}h >= max {max_hold}h"
 
-            if abs(z) < exit_thr:
-                return "EXIT", f"|z|={abs(z):.3f} < {exit_thr}"
+def evaluate_signal(
+    pair: Any,
+    z: float,
+    open_trade_entry_time: Optional[datetime],
+    current_time: datetime,
+) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Pure signal decision for one bar - no DB access.
 
-            return None, None
+    `pair` needs entry_threshold, exit_threshold, stop_loss_threshold,
+    max_hold_hours, symbol1 and symbol2 (PairRegistry or a duck-typed shim).
 
-        # Entry
-        if z < -entry_thr:
-            return "LONG_SPREAD", f"z={z:.3f} < -{entry_thr}"
-        if z > entry_thr:
-            return "SHORT_SPREAD", f"z={z:.3f} > +{entry_thr}"
+    Exit checks run first and only when a trade is open, in priority order
+    STOP_LOSS -> EXPIRE -> EXIT. Entry checks run only when flat.
 
+    Returns:
+        (signal_type, reason) or (None, None)
+    """
+    entry_thr = float(pair.entry_threshold)
+    exit_thr = float(pair.exit_threshold)
+    stop_thr = float(pair.stop_loss_threshold)
+    max_hold = pair.max_hold_hours  # 3x half-life
+
+    if open_trade_entry_time is not None:
+        hold_hours = _hours_since(open_trade_entry_time, current_time)
+
+        if abs(z) > stop_thr:
+            return (
+                "STOP_LOSS",
+                f"|z|={abs(z):.3f} exceeded stop threshold {stop_thr}",
+            )
+
+        if max_hold is not None and hold_hours >= float(max_hold):
+            return (
+                "EXPIRE",
+                f"Max hold time {max_hold}h exceeded (held {hold_hours:.1f}h)",
+            )
+
+        if abs(z) < exit_thr:
+            return (
+                "EXIT",
+                f"|z|={abs(z):.3f} crossed below exit threshold {exit_thr}",
+            )
+
+        # No exit trigger - hold position
         return None, None
+
+    if z < -entry_thr:
+        return (
+            "LONG_SPREAD",
+            f"z={z:.3f} below -{entry_thr} -> "
+            f"long {pair.symbol1}, short {pair.symbol2}",
+        )
+
+    if z > entry_thr:
+        return (
+            "SHORT_SPREAD",
+            f"z={z:.3f} above +{entry_thr} -> "
+            f"short {pair.symbol1}, long {pair.symbol2}",
+        )
+
+    return None, None
 
 
 # ------------------------------------------------------------------

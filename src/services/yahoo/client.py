@@ -6,7 +6,7 @@ Client for fetching market data from Yahoo Finance using yfinance library.
 
 import warnings
 from datetime import date, datetime, timezone
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import pandas as pd
 import yfinance as yf
@@ -85,28 +85,7 @@ class YahooClient:
             if hist.empty:
                 raise YahooDataError(f"No historical data available for {symbol}")
 
-            # Convert to YahooBar objects
-            bars = []
-            for timestamp, row in hist.iterrows():
-                try:
-                    bar = YahooBar(
-                        symbol=symbol,
-                        timestamp=timestamp.to_pydatetime().replace(
-                            tzinfo=timezone.utc
-                        ),
-                        open=float(row["Open"]),
-                        high=float(row["High"]),
-                        low=float(row["Low"]),
-                        close=float(row["Close"]),
-                        volume=int(row["Volume"]),
-                        dividends=float(row.get("Dividends", 0.0)),
-                        stock_splits=float(row.get("Stock Splits", 0.0)),
-                    )
-                    bars.append(bar)
-                except Exception as e:
-                    logger.warning(f"Failed to parse bar for {symbol}: {e}")
-                    continue
-
+            bars = _frame_to_bars(symbol, hist)
             logger.info(f"Fetched {len(bars)} bars for {symbol}")
             return bars
 
@@ -114,6 +93,48 @@ class YahooClient:
             raise
         except Exception as e:
             raise YahooAPIError(f"Failed to get historical data for {symbol}: {str(e)}")
+
+    async def download_bars(
+        self,
+        symbols: List[str],
+        start_date: date,
+        end_date: date,
+        interval: str = "1h",
+        auto_adjust: bool = True,
+    ) -> Dict[str, List[YahooBar]]:
+        """
+        Fetch bars for many symbols in one batched yf.download() call.
+
+        Fewer round-trips than per-ticker history() calls, so less exposure to
+        Yahoo rate limiting. `end_date` is exclusive (yfinance semantics).
+        Symbols with no data map to an empty list.
+        """
+        try:
+            data = yf.download(
+                tickers=symbols,
+                start=str(start_date),
+                end=str(end_date),
+                interval=interval,
+                auto_adjust=auto_adjust,
+                group_by="ticker",
+                threads=True,
+                progress=False,
+            )
+        except Exception as e:
+            raise YahooAPIError(f"Batch download failed for {symbols}: {e}")
+
+        if data is None or data.empty:
+            return {sym: [] for sym in symbols}
+
+        result: Dict[str, List[YahooBar]] = {}
+        for sym in symbols:
+            try:
+                hist = data[sym] if len(symbols) > 1 else data
+            except KeyError:
+                result[sym] = []
+                continue
+            result[sym] = _frame_to_bars(sym, hist.dropna(how="all"))
+        return result
 
     async def get_company_info(self, symbol: str) -> CompanyInfo:
         """
@@ -732,3 +753,35 @@ class YahooClient:
                 error_message=str(e),
                 timestamp=datetime.now(timezone.utc),
             )
+
+
+def _frame_to_bars(symbol: str, hist: pd.DataFrame) -> List[YahooBar]:
+    """Convert a yfinance OHLCV frame to YahooBars with UTC timestamps."""
+    bars = []
+    for timestamp, row in hist.iterrows():
+        try:
+            if pd.isna(row["Close"]):
+                continue
+            # yfinance returns exchange-local (ET) aware timestamps;
+            # convert to UTC rather than relabelling the wall clock.
+            ts = cast(pd.Timestamp, timestamp).to_pydatetime()
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            else:
+                ts = ts.astimezone(timezone.utc)
+            bars.append(
+                YahooBar(
+                    symbol=symbol,
+                    timestamp=ts,
+                    open=float(row["Open"]),
+                    high=float(row["High"]),
+                    low=float(row["Low"]),
+                    close=float(row["Close"]),
+                    volume=int(row["Volume"]),
+                    dividends=float(row.get("Dividends", 0.0)),
+                    stock_splits=float(row.get("Stock Splits", 0.0)),
+                )
+            )
+        except Exception as e:
+            logger.warning(f"Failed to parse bar for {symbol}: {e}")
+    return bars

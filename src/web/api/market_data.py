@@ -12,7 +12,6 @@ from sqlalchemy import and_, desc, func, select
 
 from src.shared.database.base import db_transaction
 from src.shared.database.models.market_data import MarketData
-from src.shared.database.models.symbols import Symbol
 
 router = APIRouter(prefix="/api/market-data", tags=["market-data"])
 
@@ -30,124 +29,6 @@ class MarketDataResponse(BaseModel):
     data_source: str
 
 
-class MarketDataStats(BaseModel):
-    """Market data statistics"""
-
-    total_records: int
-    symbols_count: int
-    date_range: dict
-    latest_update: Optional[datetime]
-
-
-class SymbolInfo(BaseModel):
-    """Symbol information"""
-
-    symbol: str
-    name: Optional[str]
-    exchange: Optional[str]
-    sector: Optional[str]
-    status: str
-    record_count: int
-
-
-@router.get("/stats", response_model=MarketDataStats)
-async def get_market_data_stats() -> MarketDataStats:
-    """Get market data statistics"""
-    try:
-        with db_transaction() as session:
-            # Total records count
-            total_records = session.scalar(select(func.count(MarketData.id)))
-
-            # Unique symbols count
-            symbols_count = session.scalar(
-                select(func.count(func.distinct(MarketData.symbol)))
-            )
-
-            # Date range
-            date_range_result = session.execute(
-                select(
-                    func.min(MarketData.timestamp).label("min_date"),
-                    func.max(MarketData.timestamp).label("max_date"),
-                )
-            ).fetchone()
-
-            # Latest update
-            latest_update = session.scalar(select(func.max(MarketData.created_at)))
-
-            return MarketDataStats(
-                total_records=total_records or 0,
-                symbols_count=symbols_count or 0,
-                date_range={
-                    "min_date": (
-                        date_range_result.min_date.isoformat()
-                        if date_range_result and date_range_result.min_date
-                        else None
-                    ),
-                    "max_date": (
-                        date_range_result.max_date.isoformat()
-                        if date_range_result and date_range_result.max_date
-                        else None
-                    ),
-                },
-                latest_update=latest_update,
-            )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get market data stats: {str(e)}"
-        )
-
-
-@router.get("/symbols", response_model=List[SymbolInfo])
-async def get_available_symbols() -> List[SymbolInfo]:
-    """Get list of available symbols with their data counts"""
-    try:
-        with db_transaction() as session:
-            # Get symbols with their record counts
-            query = session.execute(
-                select(
-                    MarketData.symbol, func.count(MarketData.id).label("record_count")
-                )
-                .group_by(MarketData.symbol)
-                .order_by(MarketData.symbol)
-            )
-
-            symbols_data = []
-            for row in query.fetchall():
-                # Get additional symbol info if available
-                symbol_info = session.scalar(
-                    select(Symbol).where(Symbol.symbol == row.symbol)
-                )
-
-                symbols_data.append(
-                    SymbolInfo(
-                        symbol=row.symbol,
-                        name=(
-                            str(symbol_info.name)
-                            if symbol_info and symbol_info.name
-                            else None
-                        ),
-                        exchange=(
-                            str(symbol_info.exchange)
-                            if symbol_info and symbol_info.exchange
-                            else None
-                        ),
-                        sector=(
-                            str(symbol_info.sector)
-                            if symbol_info and symbol_info.sector
-                            else None
-                        ),
-                        status=str(symbol_info.status) if symbol_info else "unknown",
-                        record_count=row.record_count,
-                    )
-                )
-
-            return symbols_data
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get symbols: {str(e)}")
-
-
 @router.get("/data/{symbol}", response_model=List[MarketDataResponse])
 async def get_market_data(
     symbol: str,
@@ -161,7 +42,7 @@ async def get_market_data(
     ),
     end_date: Optional[str] = Query(default=None, description="End date (ISO format)"),
     data_source: Optional[str] = Query(
-        default=None, description="Data source filter (polygon, yahoo, alpaca)"
+        default=None, description="Data source filter (yahoo, yahoo_adjusted)"
     ),
 ) -> List[MarketDataResponse]:
     """Get market data for a specific symbol"""
@@ -237,7 +118,7 @@ async def get_market_data(
 async def get_latest_market_data(
     symbol: str,
     data_source: Optional[str] = Query(
-        default=None, description="Data source filter (polygon, yahoo, alpaca)"
+        default=None, description="Data source filter (yahoo, yahoo_adjusted)"
     ),
 ) -> MarketDataResponse:
     """Get the latest market data for a specific symbol"""
@@ -309,25 +190,6 @@ async def get_available_sources(symbol: str) -> dict:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get sources for {symbol}: {str(e)}",
-        )
-
-
-@router.get("/data/{symbol}/count")
-async def get_market_data_count(symbol: str) -> dict:
-    """Get the count of market data records for a specific symbol"""
-    try:
-        symbol = symbol.upper()
-
-        with db_transaction() as session:
-            count = session.scalar(
-                select(func.count(MarketData.id)).where(MarketData.symbol == symbol)
-            )
-
-            return {"symbol": symbol, "count": count or 0}
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get count for {symbol}: {str(e)}"
         )
 
 

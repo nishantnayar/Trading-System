@@ -3,7 +3,6 @@ pydantic>=2.0.0
 pydantic-settings>=2.0.0
 sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.0
-redis>=4.5.0
 python-dotenv>=1.0.0
 loguru>=0.7.0
 PyYAML>=6.0.0
@@ -47,5 +46,4 @@ streamlit-aggrid>=1.2.1
 streamlit-lightweight-charts>=0.1.0
 
 # Local LLM Integration
-ollama>=0.1.0
 requests>=2.31.0

@@ -36,7 +36,6 @@ class TestAlpacaClientInitialization:
         """Test successful client initialization for paper trading"""
         with (
             patch("src.services.alpaca.client.TradingClient") as mock_trading,
-            patch("src.services.alpaca.client.StockHistoricalDataClient"),
         ):
             mock_client = Mock()
             mock_trading.return_value = mock_client
@@ -57,7 +56,6 @@ class TestAlpacaClientInitialization:
         """Test successful client initialization for live trading"""
         with (
             patch("src.services.alpaca.client.TradingClient") as mock_trading,
-            patch("src.services.alpaca.client.StockHistoricalDataClient"),
         ):
             mock_client = Mock()
             mock_trading.return_value = mock_client
@@ -71,7 +69,6 @@ class TestAlpacaClientInitialization:
         """Test client initialization with custom credentials"""
         with (
             patch("src.services.alpaca.client.TradingClient") as mock_trading,
-            patch("src.services.alpaca.client.StockHistoricalDataClient"),
         ):
             mock_client = Mock()
             mock_trading.return_value = mock_client
@@ -125,7 +122,6 @@ class TestAlpacaClientAccountMethods:
         ):
             with (
                 patch("src.services.alpaca.client.TradingClient"),
-                patch("src.services.alpaca.client.StockHistoricalDataClient"),
             ):
                 return AlpacaClient()
 
@@ -208,7 +204,6 @@ class TestAlpacaClientPositionMethods:
         ):
             with (
                 patch("src.services.alpaca.client.TradingClient"),
-                patch("src.services.alpaca.client.StockHistoricalDataClient"),
             ):
                 return AlpacaClient()
 
@@ -315,7 +310,6 @@ class TestAlpacaClientOrderMethods:
         ):
             with (
                 patch("src.services.alpaca.client.TradingClient"),
-                patch("src.services.alpaca.client.StockHistoricalDataClient"),
             ):
                 return AlpacaClient()
 
@@ -552,7 +546,6 @@ class TestAlpacaClientMarketMethods:
         ):
             with (
                 patch("src.services.alpaca.client.TradingClient"),
-                patch("src.services.alpaca.client.StockHistoricalDataClient"),
             ):
                 return AlpacaClient()
 

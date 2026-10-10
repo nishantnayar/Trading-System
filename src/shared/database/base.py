@@ -5,7 +5,7 @@ Provides SQLAlchemy declarative base and session management
 
 from contextlib import contextmanager
 from threading import Lock
-from typing import Any, Callable, Dict, Generator, Optional, TypeVar
+from typing import Any, Callable, Dict, Generator, TypeVar
 
 from loguru import logger
 from sqlalchemy import Engine

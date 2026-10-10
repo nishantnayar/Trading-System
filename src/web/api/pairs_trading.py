@@ -3,21 +3,18 @@ Pairs Trading Strategy API Endpoints
 
 Real implementations backed by the strategy_engine DB schema.
 All endpoints read from PairRegistry, PairTrade, PairPerformance,
-PairSpread, PairSignal, and BacktestRun tables.
+PairSpread and PairSignal tables.
 """
 
-import os
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-import yaml
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ...services.risk_management.portfolio_risk_manager import PortfolioRiskManager
-from ...shared.database.base import db_readonly_session, db_transaction
+from ...shared.database.base import db_readonly_session
 from ...shared.database.models.strategy_models import (
-    BacktestRun,
     PairPerformance,
     PairRegistry,
     PairSignal,
@@ -37,29 +34,6 @@ router = APIRouter(prefix="/api/strategies/pairs", tags=["pairs-trading"])
 
 class DrawdownThresholdRequest(BaseModel):
     threshold: float
-
-
-class PairConfig(BaseModel):
-    entry_threshold: float = 2.0
-    exit_threshold: float = 0.5
-    stop_loss_threshold: float = 3.0
-    position_size: float = 0.05
-    lookback_period: int = 252
-    max_active_pairs: int = 6
-    max_drawdown_limit: float = 0.08
-    max_daily_loss: float = 0.03
-    max_sector_exposure: float = 0.4
-    rebalance_frequency: str = "daily"
-
-
-class BacktestConfig(BaseModel):
-    pair_id: int
-    start_date: str
-    end_date: str
-    initial_capital: float = 100_000
-    entry_threshold: float = 2.0
-    exit_threshold: float = 0.5
-    stop_loss_threshold: float = 3.0
 
 
 class PairData(BaseModel):
@@ -101,17 +75,6 @@ class StrategyStatus(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _load_strategy_config() -> Dict[str, Any]:
-    config_path = os.path.join(
-        os.path.dirname(__file__), "../../../config/strategies.yaml"
-    )
-    try:
-        with open(config_path, "r") as f:
-            return yaml.safe_load(f) or {}
-    except Exception:
-        return {}
 
 
 def _latest_z_score(pair_id: int) -> Optional[float]:
@@ -293,7 +256,7 @@ async def get_strategy_status() -> StrategyStatus:
         last_update = datetime.utcnow()
 
         return StrategyStatus(
-            is_active=active > 0,
+            is_active=PortfolioRiskManager().is_strategy_enabled() and active > 0,
             last_update=last_update,
             total_pairs=total,
             active_pairs=active,
@@ -305,87 +268,11 @@ async def get_strategy_status() -> StrategyStatus:
         raise HTTPException(status_code=500, detail="Failed to get strategy status")
 
 
-@router.get("/config", response_model=PairConfig)
-async def get_configuration() -> PairConfig:
-    """Return strategy config from YAML (unchanged from original)."""
-    try:
-        cfg = _load_strategy_config()
-        pairs_strategy = next(
-            (
-                s
-                for s in cfg.get("strategies", [])
-                if s.get("name") == "pairs_trading_strategy"
-            ),
-            None,
-        )
-        if not pairs_strategy:
-            return PairConfig()
-
-        params = pairs_strategy.get("parameters", {})
-        risk = pairs_strategy.get("risk_limits", {})
-        return PairConfig(
-            entry_threshold=params.get("entry_threshold", 2.0),
-            exit_threshold=params.get("exit_threshold", 0.5),
-            stop_loss_threshold=params.get("stop_loss_threshold", 3.0),
-            position_size=params.get("position_size", 0.05),
-            lookback_period=params.get("lookback_period", 252),
-            max_active_pairs=risk.get("max_positions", 6),
-            max_drawdown_limit=risk.get("max_drawdown", 0.08),
-            max_daily_loss=risk.get("max_daily_loss", 0.03),
-            max_sector_exposure=risk.get("max_sector_exposure", 0.4),
-            rebalance_frequency=params.get("rebalance_frequency", "daily"),
-        )
-    except Exception as e:
-        logger.error(f"Error getting configuration: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get configuration")
-
-
-@router.post("/config")
-async def save_configuration(config: PairConfig) -> Dict[str, str]:
-    """Save strategy configuration to YAML (unchanged from original)."""
-    try:
-        cfg = _load_strategy_config()
-        for strategy in cfg.get("strategies", []):
-            if strategy.get("name") == "pairs_trading_strategy":
-                strategy.setdefault("parameters", {}).update(
-                    {
-                        "entry_threshold": config.entry_threshold,
-                        "exit_threshold": config.exit_threshold,
-                        "stop_loss_threshold": config.stop_loss_threshold,
-                        "position_size": config.position_size,
-                        "lookback_period": config.lookback_period,
-                        "rebalance_frequency": config.rebalance_frequency,
-                    }
-                )
-                strategy.setdefault("risk_limits", {}).update(
-                    {
-                        "max_positions": config.max_active_pairs,
-                        "max_drawdown": config.max_drawdown_limit,
-                        "max_daily_loss": config.max_daily_loss,
-                        "max_sector_exposure": config.max_sector_exposure,
-                    }
-                )
-                break
-
-        config_path = os.path.join(
-            os.path.dirname(__file__), "../../../config/strategies.yaml"
-        )
-        with open(config_path, "w") as f:
-            yaml.dump(cfg, f, default_flow_style=False)
-
-        return {"message": "Configuration saved successfully"}
-    except Exception as e:
-        logger.error(f"Error saving configuration: {e}")
-        raise HTTPException(status_code=500, detail="Failed to save configuration")
-
-
 @router.post("/start")
 async def start_strategy() -> Dict[str, str]:
-    """Mark all registered pairs as active."""
+    """Enable the pairs strategy. Per-pair is_active flags are not touched."""
     try:
-        with db_transaction() as session:
-            session.query(PairRegistry).update({"is_active": True})
-        logger.info("Pairs trading strategy activated")
+        PortfolioRiskManager().set_strategy_enabled(True)
         return {"message": "Strategy started successfully", "status": "active"}
     except Exception as e:
         logger.error(f"Error starting strategy: {e}")
@@ -394,11 +281,9 @@ async def start_strategy() -> Dict[str, str]:
 
 @router.post("/stop")
 async def stop_strategy() -> Dict[str, str]:
-    """Mark all pairs as inactive."""
+    """Disable the pairs strategy. Per-pair is_active flags are not touched."""
     try:
-        with db_transaction() as session:
-            session.query(PairRegistry).update({"is_active": False})
-        logger.info("Pairs trading strategy deactivated")
+        PortfolioRiskManager().set_strategy_enabled(False)
         return {"message": "Strategy stopped successfully", "status": "inactive"}
     except Exception as e:
         logger.error(f"Error stopping strategy: {e}")
@@ -407,12 +292,12 @@ async def stop_strategy() -> Dict[str, str]:
 
 @router.post("/emergency-stop")
 async def emergency_stop() -> Dict[str, str]:
-    """Close all open trades via Alpaca and mark pairs inactive."""
+    """Close all open trades via Alpaca and disable the strategy."""
     try:
         from src.services.alpaca.client import AlpacaClient
         from src.services.strategy_engine.pairs.pair_executor import PairExecutor
 
-        alpaca = AlpacaClient(is_paper=True)
+        alpaca = AlpacaClient()
 
         with db_readonly_session() as session:
             pairs = (
@@ -423,14 +308,11 @@ async def emergency_stop() -> Dict[str, str]:
             for p in pairs:
                 session.expunge(p)
 
-        import asyncio
-
         for pair in pairs:
             executor = PairExecutor(pair, alpaca)
             await executor.emergency_stop()
 
-        with db_transaction() as session:
-            session.query(PairRegistry).update({"is_active": False})
+        PortfolioRiskManager().set_strategy_enabled(False)
 
         logger.warning("Emergency stop executed for all pairs")
         return {"message": "Emergency stop executed successfully"}
@@ -580,95 +462,6 @@ async def get_pair_sparkline(pair_id: int, points: int = 48) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error getting sparkline for pair {pair_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to get sparkline data")
-
-
-@router.post("/{pair_id}/close")
-async def close_pair(pair_id: int) -> Dict[str, str]:
-    """Manually close an open trade for a pair."""
-    try:
-        trade = _open_trade(pair_id)
-        if trade is None:
-            return {"message": f"No open trade for pair {pair_id}"}
-
-        from src.services.alpaca.client import AlpacaClient
-        from src.services.strategy_engine.pairs.pair_executor import PairExecutor
-
-        with db_readonly_session() as session:
-            pair = session.query(PairRegistry).filter_by(id=pair_id).first()
-            if pair is None:
-                raise HTTPException(status_code=404, detail="Pair not found")
-            session.expunge(pair)
-
-        alpaca = AlpacaClient(is_paper=True)
-        executor = PairExecutor(pair, alpaca)
-        await executor.close_pair_trade(trade, exit_reason="MANUAL_CLOSE")
-
-        return {"message": f"Pair {pair_id} closed successfully"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error closing pair {pair_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to close pair")
-
-
-@router.post("/backtest")
-async def run_backtest(config: BacktestConfig) -> Dict[str, Any]:
-    """Run BacktestEngine and return metrics + equity curve."""
-    try:
-        from datetime import date as date_type
-
-        from src.services.strategy_engine.backtesting.engine import BacktestEngine
-        from src.services.strategy_engine.backtesting.metrics import MetricsCalculator
-        from src.services.strategy_engine.backtesting.report import BacktestReport
-
-        with db_readonly_session() as session:
-            pair = session.query(PairRegistry).filter_by(id=config.pair_id).first()
-            if pair is None:
-                raise HTTPException(status_code=404, detail="Pair not found")
-            # Override thresholds with request values
-            pair.entry_threshold = config.entry_threshold
-            pair.exit_threshold = config.exit_threshold
-            pair.stop_loss_threshold = config.stop_loss_threshold
-            session.expunge(pair)
-
-        start = datetime.strptime(config.start_date, "%Y-%m-%d").date()
-        end = datetime.strptime(config.end_date, "%Y-%m-%d").date()
-
-        engine = BacktestEngine(
-            pair=pair,
-            start_date=start,
-            end_date=end,
-            initial_capital=config.initial_capital,
-        )
-        result = engine.run()
-        metrics = MetricsCalculator().compute(result)
-        run_id = BacktestReport().save(result, metrics)
-
-        return {
-            "run_id": run_id,
-            "passed_gate": metrics.passed_gate,
-            **metrics.to_dict(),
-            "equity_curve": result.equity_curve,
-            "trade_log": [
-                {
-                    "side": t.side,
-                    "entry_time": t.entry_time.isoformat() if t.entry_time else None,
-                    "exit_time": t.exit_time.isoformat() if t.exit_time else None,
-                    "pnl": t.pnl,
-                    "pnl_pct": t.pnl_pct,
-                    "hold_hours": t.hold_hours,
-                    "exit_reason": t.exit_reason,
-                }
-                for t in result.trades
-            ],
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error running backtest: {e}")
-        raise HTTPException(status_code=500, detail=f"Backtest failed: {e}")
 
 
 @router.get("/pnl/trades")
@@ -945,21 +738,6 @@ async def get_monthly_pnl() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error getting monthly P&L: {e}")
         raise HTTPException(status_code=500, detail="Failed to get monthly P&L")
-
-
-@router.get("/backtest/history")
-async def get_backtest_history(pair_id: Optional[int] = None) -> List[Dict[str, Any]]:
-    """Return list of BacktestRun records."""
-    try:
-        with db_readonly_session() as session:
-            q = session.query(BacktestRun)
-            if pair_id is not None:
-                q = q.filter(BacktestRun.pair_id == pair_id)
-            runs = q.order_by(BacktestRun.run_date.desc()).limit(50).all()
-            return [r.to_dict() for r in runs]
-    except Exception as e:
-        logger.error(f"Error getting backtest history: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get backtest history")
 
 
 # ---------------------------------------------------------------------------

@@ -38,7 +38,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-test.txt
-        pip install flake8 black isort "mypy==2.1.0" types-python-dateutil types-redis
+        pip install flake8 black isort "mypy==2.1.0" types-python-dateutil
 
     - name: Code formatting check (Black)
       run: black --check --diff .
@@ -120,7 +120,7 @@ jobs:
         
     - name: Run database connection tests
       run: |
-        python scripts/test_database_connections.py
+        python -m pytest tests/unit/test_database_connections.py -v
         
     - name: Run unit tests
       run: |

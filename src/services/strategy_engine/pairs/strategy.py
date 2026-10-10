@@ -19,7 +19,6 @@ The strategy reads prices from data_ingestion.market_data (yahoo_adjusted
 hourly bars).  Alpaca is used only for order execution and account info.
 """
 
-import asyncio
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -33,6 +32,7 @@ from src.services.strategy_engine.pairs.pair_executor import PairExecutor
 from src.services.strategy_engine.pairs.position_sizer import KellySizer
 from src.services.strategy_engine.pairs.signal_generator import SignalGenerator
 from src.services.strategy_engine.pairs.spread_calculator import SpreadCalculator
+from src.shared.cache.file_cache import set_json
 from src.shared.database.base import db_readonly_session, db_transaction
 from src.shared.database.models.strategy_models import (
     PairPerformance,
@@ -41,11 +41,10 @@ from src.shared.database.models.strategy_models import (
     PairTrade,
 )
 from src.shared.market_data import get_price_series
-from src.shared.redis.client import set_json
 
 
 def _cache_bars(symbol: str, prices: "pd.Series", ts: str) -> None:
-    """Store bar fetch metadata in Redis under pairs:bars:{symbol}."""
+    """Store bar fetch metadata in the file cache under pairs:bars:{symbol}."""
     if prices.empty:
         set_json(f"pairs:bars:{symbol}", {"symbol": symbol, "ts": ts, "count": 0})
         return

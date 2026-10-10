@@ -2,7 +2,7 @@
 Boundary Optimizer - Minimum Profit Optimization for pairs trading.
 
 Research/backtest tool. Given the AR(1) parameters of a pair's spread
-(the same phi fitted for half-life in scripts/discover_pairs.py), finds
+(the same phi fitted for half-life in discovery/stats.py), finds
 the entry z-score boundary U that maximizes expected profit rate:
 
     expected_profit_rate(U) = U / (trade_duration(U) + inter_trade_interval(U))
@@ -55,7 +55,7 @@ def _mean_first_passage_time(
     """
     sigma_eq = _stationary_std(phi, sigma_a)
     bound = 6 * sigma_eq
-    grid = np.linspace(-bound, bound, n_grid)
+    grid = cast(npt.NDArray[np.float64], np.linspace(-bound, bound, n_grid))
     dx = grid[1] - grid[0]
 
     # Transition density: s' | s ~ N(phi*s, sigma_a^2)
@@ -127,7 +127,7 @@ def optimize_boundary(
 
     Args:
         phi:     AR(1) coefficient of the spread, |phi| < 1 (mean-reverting).
-                 Same fit as half_life in scripts/discover_pairs.py, via
+                 Same fit as half_life in discovery/stats.py, via
                  phi = 1 + beta from compute_half_life's OLS regression.
         sigma_a: Residual (innovation) std dev from that same OLS fit
                  (model.resid.std()).
@@ -149,7 +149,9 @@ def optimize_boundary(
     hi = u_max if u_max is not None else 3.0 * sigma_eq
 
     neg_rate = lambda u: -expected_profit_rate(u, phi, sigma_a)  # noqa: E731
-    result = optimize.minimize_scalar(neg_rate, bounds=(lo, hi), method="bounded")
+    result = optimize.minimize_scalar(  # type: ignore[call-overload]
+        neg_rate, bounds=(lo, hi), method="bounded"
+    )
 
     u_star = float(result.x)
     duration = trade_duration(u_star, phi, sigma_a)

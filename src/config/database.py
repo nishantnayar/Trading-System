@@ -31,11 +31,6 @@ class DatabaseConfig(BaseSettings):
     # Prefect Database
     prefect_db_name: str = Field(default="Prefect", alias="PREFECT_DB_NAME")
 
-    # Redis Configuration
-    redis_host: str = Field(default="localhost", alias="REDIS_HOST")
-    redis_port: int = Field(default=6379, alias="REDIS_PORT")
-    redis_db: int = Field(default=0, alias="REDIS_DB")
-    redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
 
     # Connection Pool Settings
     pool_size: int = Field(default=10, alias="DB_POOL_SIZE")

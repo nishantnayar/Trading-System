@@ -9,7 +9,6 @@ Z-score:         z = (spread - rolling_mean) / rolling_std
 The z-score window is typically 2x the half-life of mean reversion (in hours).
 """
 
-from datetime import datetime
 from typing import Optional, Tuple
 
 import numpy as np

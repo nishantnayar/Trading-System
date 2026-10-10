@@ -15,9 +15,9 @@ Deploy alongside existing flows in the Prefect work pool.
 
 import logging
 import sys
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Awaitable, Optional, cast
+from typing import Awaitable, cast
 
 
 class _IgnoreWinError10054(logging.Filter):
@@ -41,22 +41,23 @@ if __file__ and Path(__file__).exists():
     if project_root.exists() and str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
-import pandas as pd
 from loguru import logger
 from prefect import flow, task
 
 from src.config.settings import get_settings
 from src.services.alpaca.client import AlpacaClient
 from src.services.notification.email_notifier import get_notifier
+from src.services.risk_management.portfolio_risk_manager import PortfolioRiskManager
 from src.services.strategy_engine.baskets.strategy import BasketStrategy
 from src.services.strategy_engine.pairs.strategy import PairsStrategy
+from src.services.yahoo.loader import YahooDataLoader
 from src.shared.database.base import db_readonly_session, db_transaction
-from src.shared.database.models.market_data import MarketData
 from src.shared.database.models.strategy_models import (
     BasketRegistry,
     PairRegistry,
     PairTrade,
 )
+from src.shared.market_data import PRICE_SOURCE
 
 # ---------------------------------------------------------------------------
 # Run name helper
@@ -131,146 +132,66 @@ _MIN_BARS_EXPECTED = 20  # below this, treat the symbol's fetch as degraded
 )
 async def refresh_pair_prices_task() -> dict:
     """
-    Load today's hourly Yahoo bars into market_data for every active pair symbol.
+    Upsert recent hourly Yahoo bars for every active pair/basket symbol into
+    market_data under PRICE_SOURCE - the same series discovery and backtests
+    read - so get_price_series() sees bars up to the current hour.
 
-    Runs before the strategy cycle so _fetch_prices() always sees bars up to
-    the current hour.  Uses days_back=14 (2 calendar weeks) to cover the
-    largest z_score_window (60 bars = ~9 trading days at 7 bars/day).
-    2 days was insufficient - caused INSUFFICIENT_DATA on every cycle.
-    Yahoo `end` must be strictly after ``date.today()`` or today's hourly bars
-    are omitted (yfinance treats ``end`` as exclusive).
-
-    Fetches all symbols in a single batched yf.download() call rather than
-    one request per symbol - fewer round-trips to Yahoo means less exposure
-    to per-request rate limiting, and the batch endpoint is less prone to
-    the truncated-response failures seen from repeated single-ticker calls.
+    Uses 14 calendar days to cover the largest z_score_window (60 bars = ~9
+    trading days at 7 bars/day). yfinance `end` is exclusive, so tomorrow is
+    passed to include today's bars. One batched download for all symbols.
     """
     with db_readonly_session() as session:
         pairs = (
             session.query(PairRegistry).filter(PairRegistry.is_active.is_(True)).all()
         )
         pair_syms = {sym for p in pairs for sym in (p.symbol1, p.symbol2)}
-        for p in pairs:
-            session.expunge(p)
-
         baskets = (
             session.query(BasketRegistry)
             .filter(BasketRegistry.is_active.is_(True))
             .all()
         )
         basket_syms = {sym for b in baskets for sym in (b.symbols or [])}
-        for b in baskets:
-            session.expunge(b)
 
     symbols = sorted(pair_syms | basket_syms)
-
     if not symbols:
         logger.info("refresh-pair-prices: no active pairs or baskets, skipping")
         return {"symbols": [], "loaded": 0, "failed": []}
 
-    logger.info(
-        "Refreshing hourly bars for %d symbols (batched): %s", len(symbols), symbols
-    )
+    logger.info(f"Refreshing hourly bars for {len(symbols)} symbols: {symbols}")
 
-    from datetime import date, timedelta, timezone
-
-    import yfinance as yf
-    from sqlalchemy.dialects.postgresql import insert as pg_insert
-
-    from_date = date.today() - timedelta(days=14)
-    # yfinance `end` is exclusive on the calendar day; today's 1h bars are
-    # dropped if end==today. Use tomorrow so the current session is included.
-    to_date = date.today() + timedelta(days=1)
-    total = 0
-    failed: list[str] = []
-
+    loader = YahooDataLoader()
     try:
-        data = yf.download(
-            tickers=symbols,
-            start=str(from_date),
-            end=str(to_date),
+        bars_by_symbol = await loader.client.download_bars(
+            symbols,
+            start_date=date.today() - timedelta(days=14),
+            end_date=date.today() + timedelta(days=1),
             interval="1h",
             auto_adjust=True,
-            group_by="ticker",
-            threads=True,
-            progress=False,
         )
     except Exception as exc:
-        logger.error("Batch Yahoo download failed for %s: %s", symbols, exc)
+        logger.error(f"Batch Yahoo download failed for {symbols}: {exc}")
         return {"symbols": symbols, "loaded": 0, "failed": symbols}
 
-    if data is None or data.empty:
-        logger.warning("Batch Yahoo download returned no data for %s", symbols)
-        return {"symbols": symbols, "loaded": 0, "failed": symbols}
-
-    multi_symbol = len(symbols) > 1
-
+    total = 0
+    failed: list[str] = []
     for symbol in symbols:
+        bars = bars_by_symbol.get(symbol, [])
+        if len(bars) < _MIN_BARS_EXPECTED:
+            logger.warning(
+                f"Only {len(bars)} bars returned for {symbol} "
+                f"(expected >= {_MIN_BARS_EXPECTED}) - treating as a degraded fetch"
+            )
+            failed.append(symbol)
+            continue
         try:
-            hist = data[symbol] if multi_symbol else data
-            hist = hist.dropna(how="all")
-
-            if hist.empty:
-                logger.warning("No Yahoo bars returned for %s", symbol)
-                failed.append(symbol)
-                continue
-
-            if len(hist) < _MIN_BARS_EXPECTED:
-                logger.warning(
-                    "Only %d bars returned for %s (expected >= %d) - "
-                    "treating as a degraded fetch",
-                    len(hist),
-                    symbol,
-                    _MIN_BARS_EXPECTED,
-                )
-                failed.append(symbol)
-                continue
-
-            records = []
-            for ts, row in hist.iterrows():
-                if pd.isna(row["Close"]):
-                    continue
-                records.append(
-                    {
-                        "symbol": symbol,
-                        "timestamp": ts.to_pydatetime().astimezone(timezone.utc),
-                        "data_source": "yahoo_adjusted_1h",
-                        "open": float(row["Open"]),
-                        "high": float(row["High"]),
-                        "low": float(row["Low"]),
-                        "close": float(row["Close"]),
-                        "volume": int(row["Volume"]),
-                    }
-                )
-
-            if not records:
-                failed.append(symbol)
-                continue
-
-            with db_transaction() as session:
-                stmt = pg_insert(MarketData).values(records)
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=["symbol", "timestamp", "data_source"],
-                    set_={
-                        "open": stmt.excluded.open,
-                        "high": stmt.excluded.high,
-                        "low": stmt.excluded.low,
-                        "close": stmt.excluded.close,
-                        "volume": stmt.excluded.volume,
-                    },
-                )
-                session.execute(stmt)
-
-            total += len(records)
-            logger.info("Refreshed %d bars for %s", len(records), symbol)
+            total += loader.upsert_bars(bars, PRICE_SOURCE)
         except Exception as exc:
-            logger.warning("Failed to process bars for %s: %s", symbol, exc)
+            logger.warning(f"Failed to upsert bars for {symbol}: {exc}")
             failed.append(symbol)
 
     if failed:
-        logger.warning("refresh-pair-prices: degraded/failed symbols: %s", failed)
-
-    logger.info("refresh-pair-prices: %d total records for %s", total, symbols)
+        logger.warning(f"refresh-pair-prices: degraded/failed symbols: {failed}")
+    logger.info(f"refresh-pair-prices: {total} total records for {len(symbols)} symbols")
     return {"symbols": symbols, "loaded": total, "failed": failed}
 
 
@@ -310,17 +231,6 @@ async def run_basket_strategy_task(alpaca: AlpacaClient) -> dict:
     )
     return summary
 
-
-@task(
-    name="run-ops-monitor",
-    retries=0,
-    log_prints=True,
-)
-async def run_ops_monitor_task(cycle_summary: dict) -> None:
-    """Run the Ops Monitor Agent post-cycle. Never raises."""
-    from src.services.agent import ops_monitor_agent
-
-    await ops_monitor_agent.run(cycle_summary)
 
 
 # Degradation thresholds for auto-disabling pairs
@@ -439,7 +349,6 @@ async def intraday_pairs_flow(skip_market_check: bool = False) -> dict:
     alpaca = AlpacaClient(
         api_key=settings.alpaca_api_key,
         secret_key=settings.alpaca_secret_key,
-        is_paper=True,
     )
 
     if not skip_market_check:
@@ -449,13 +358,16 @@ async def intraday_pairs_flow(skip_market_check: bool = False) -> dict:
 
     try:
         refresh_result = await refresh_pair_prices_task()
-        summary = await run_pairs_strategy_task(alpaca)
+        if PortfolioRiskManager().is_strategy_enabled():
+            summary = await run_pairs_strategy_task(alpaca)
+        else:
+            logger.info("Pairs strategy disabled (Stop in Strategy Monitor) - skipping")
+            summary = {"total_pairs": 0, "with_signal": 0, "no_signal": 0, "errors": 0}
         basket_summary = await run_basket_strategy_task(alpaca)
         deactivation = await check_and_disable_failing_pairs_task()
         summary["deactivated_pairs"] = deactivation["deactivated"]
         summary["basket_summary"] = basket_summary
         summary["ingestion_failed_symbols"] = refresh_result.get("failed", [])
-        await run_ops_monitor_task(summary)
     except Exception as exc:
         err_msg = str(exc)
         logger.error(f"Unhandled flow error: {err_msg}")

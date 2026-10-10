@@ -14,16 +14,12 @@ import threading
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from uuid import uuid4
 
 from loguru import logger as loguru_logger
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
 
-from src.config.database import get_engine, get_service_engine
-from src.shared.database.base import db_transaction
+from src.config.database import get_service_engine
 from src.shared.database.models.logging_models import PerformanceLog, SystemLog
-from src.shared.logging.formatters import format_for_database
 from src.shared.utils.timezone import ensure_utc_timestamp
 
 
