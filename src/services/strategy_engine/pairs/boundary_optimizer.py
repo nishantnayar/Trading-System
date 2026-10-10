@@ -55,7 +55,7 @@ def _mean_first_passage_time(
     """
     sigma_eq = _stationary_std(phi, sigma_a)
     bound = 6 * sigma_eq
-    grid = cast(npt.NDArray[np.float64], np.linspace(-bound, bound, n_grid))
+    grid: npt.NDArray[np.float64] = np.linspace(-bound, bound, n_grid)
     dx = grid[1] - grid[0]
 
     # Transition density: s' | s ~ N(phi*s, sigma_a^2)
@@ -149,7 +149,7 @@ def optimize_boundary(
     hi = u_max if u_max is not None else 3.0 * sigma_eq
 
     neg_rate = lambda u: -expected_profit_rate(u, phi, sigma_a)  # noqa: E731
-    result = optimize.minimize_scalar(  # type: ignore[call-overload]
+    result = optimize.minimize_scalar(  # type: ignore[call-overload, unused-ignore]
         neg_rate, bounds=(lo, hi), method="bounded"
     )
 
